@@ -33,6 +33,9 @@ namespace VRtist
 
     public class AnimationTool : ToolBase
     {
+        public Transform controlPanel;
+        public Transform displayPanel;
+
         [SerializeField] private NavigationOptions navigation;
 
         public Anim3DCurveManager CurveManager;
@@ -42,6 +45,8 @@ namespace VRtist
 
         private float scaleIndice;
 
+        private Transform ControlPanelButton;
+        private Transform DisplayPanelButton;
         private Transform AddKeyModeButton;
         private Transform ZoneModeButton;
         private Transform SegmentModeButton;
@@ -72,6 +77,27 @@ namespace VRtist
         public GoalGizmo goalGizmo;
         public RigGoalController selectedGoal;
 
+        public enum GizmoTool { Rotation, Position }
+        private GizmoTool currentGizmo = GizmoTool.Rotation;
+        public GizmoTool CurrentGizmo
+        {
+            get { return currentGizmo; }
+            set
+            {
+                currentGizmo = value;
+                if (null != goalGizmo) goalGizmo.ChangeGizmo(currentGizmo);
+            }
+        }
+
+        public void NextGizmo()
+        {
+            if (CurrentGizmo == GizmoTool.Position) CurrentGizmo = GizmoTool.Rotation;
+            else
+            {
+                CurrentGizmo++;
+            }
+        }
+
         public enum EditMode { Curve, Pose }
         private EditMode editMode = EditMode.Pose;
         public EditMode Mode
@@ -98,7 +124,7 @@ namespace VRtist
             get { return curveMode; }
         }
 
-        public enum PoseEditMode { FK, IK, AC }
+        public enum PoseEditMode { FK, IK, GizmoRot, GizmoPosFK, GizmoPosIK }
         private PoseEditMode poseMode;
 
 
@@ -126,6 +152,23 @@ namespace VRtist
         }
 
         #region ButtonEvents
+
+        public void OpenControlPanel()
+        {
+            ChangeControlPanelState(true);
+        }
+
+        public void OpenDisplayPanel()
+        {
+            ChangeControlPanelState(false);
+        }
+        private void ChangeControlPanelState(bool state)
+        {
+            controlPanel.gameObject.SetActive(state);
+            displayPanel.gameObject.SetActive(!state);
+            ControlPanelButton.GetComponent<UIButton>().Checked = state;
+            DisplayPanelButton.GetComponent<UIButton>().Checked = !state;
+        }
 
         public void AddOffset()
         {
@@ -196,18 +239,20 @@ namespace VRtist
         {
             base.Awake();
 
-            AddKeyModeButton = panel.Find("AddKey");
-            ZoneModeButton = panel.Find("Zone");
-            SegmentModeButton = panel.Find("Segment");
-            TangentModeButton = panel.Find("Tangent");
-            ZoneSlider = panel.Find("ZoneSize");
-            CurveModeButton = panel.Find("Curve");
-            PoseModeButton = panel.Find("Pose");
-            FKModeButton = panel.Find("FK");
-            IKModeButton = panel.Find("IK");
-            ContSlider = panel.Find("Tangents");
-            SkeletonDisplay = panel.Find("Skeleton");
-            OffsetLabel = panel.Find("OffsetValue");
+            ControlPanelButton = panel.Find("ControlButton");
+            DisplayPanelButton = panel.Find("DisplayButton");
+            AddKeyModeButton = controlPanel.Find("AddKey");
+            ZoneModeButton = controlPanel.Find("Zone");
+            SegmentModeButton = controlPanel.Find("Segment");
+            TangentModeButton = controlPanel.Find("Tangent");
+            ZoneSlider = controlPanel.Find("ZoneSize");
+            CurveModeButton = controlPanel.Find("Curve");
+            PoseModeButton = controlPanel.Find("Pose");
+            FKModeButton = controlPanel.Find("FK");
+            IKModeButton = controlPanel.Find("IK");
+            ContSlider = controlPanel.Find("Tangents");
+            SkeletonDisplay = displayPanel.Find("Skeleton");
+            OffsetLabel = displayPanel.Find("OffsetValue");
 
             CurveMode = CurveEditMode.AddKeyframe;
             Mode = EditMode.Pose;
@@ -215,8 +260,10 @@ namespace VRtist
             zoneSize = Mathf.RoundToInt(ZoneSlider.GetComponent<UISlider>().Value);
             Offsetvalue = GlobalState.Settings.CurveForwardOffset;
             SkeletonDisplay.GetComponent<UICheckbox>().Checked = GlobalState.Settings.DisplaySkeletons;
+            CurrentGizmo = GizmoTool.Rotation;
 
             SetTangentMode();
+            OpenControlPanel();
         }
 
         protected override void OnEnable()
@@ -395,13 +442,14 @@ namespace VRtist
         public void DrawZone(LineRenderer line, int start, int end)
         {
             lastTexture = (Texture2D)line.material.mainTexture;
+            Color lineColor = line.material.color;
             if (null == lastTexture)
             {
                 lastTexture = new Texture2D(line.positionCount, 1, TextureFormat.RGBA32, false);
                 line.material.mainTexture = lastTexture;
             }
 
-            ApplyTexture(start, end);
+            ApplyTexture(start, end, lineColor);
             lastLine = line;
         }
         public void DrawZoneDrag()
@@ -412,14 +460,14 @@ namespace VRtist
             }
         }
 
-        private void ApplyTexture(int start, int end)
+        private void ApplyTexture(int start, int end, Color lineColor)
         {
             NativeArray<Color32> colors = lastTexture.GetRawTextureData<Color32>();
             for (int i = 0; i < colors.Length; i++)
             {
                 if (i < start || i > end)
                 {
-                    colors[i] = DefaultColor;
+                    colors[i] = lineColor;
                 }
                 else
                 {
@@ -440,7 +488,7 @@ namespace VRtist
 
         public void StartPose(RigGoalController controller, Transform mouthpiece)
         {
-            poseManip = new PoseManipulation(controller.transform, controller.PathToRoot, mouthpiece, controller.RootController, PoseMode);
+            poseManip = new PoseManipulation(controller, mouthpiece, PoseMode);
         }
         public bool DragPose(Transform mouthpiece)
         {
@@ -617,18 +665,15 @@ namespace VRtist
 
         private void UnSelectGoal(RigGoalController controller)
         {
-            goalGizmo.gameObject.SetActive(false);
+            HideActuator();
             controller.gameObject.layer = 21;
             selectedGoal = null;
         }
 
         public void StartAcutator(GameObject actuator, Transform mouthpiece)
         {
-            PoseManipulation.RotationAxis axis = PoseManipulation.RotationAxis.X;
-            if (actuator == goalGizmo.xCurve) axis = PoseManipulation.RotationAxis.X;
-            if (actuator == goalGizmo.yCurve) axis = PoseManipulation.RotationAxis.Y;
-            if (actuator == goalGizmo.zCurve) axis = PoseManipulation.RotationAxis.Z;
-            poseManip = new PoseManipulation(goalGizmo.Controller.transform, goalGizmo.Controller.RootController, mouthpiece, axis);
+            PoseManipulation.AcutatorAxis axis = goalGizmo.GetAcutatorAxis(actuator);
+            poseManip = new PoseManipulation(goalGizmo.Controller, mouthpiece, PoseMode, currentGizmo, axis);
         }
 
         #endregion

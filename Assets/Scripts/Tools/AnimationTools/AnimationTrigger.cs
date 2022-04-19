@@ -110,6 +110,8 @@ namespace VRtist
                     PoseMode();
                     break;
             }
+
+            VRInput.ButtonEvent(VRInput.primaryController, CommonUsages.primaryButton, () => animationTool.NextGizmo());
         }
 
         public void PoseMode()

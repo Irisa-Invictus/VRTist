@@ -48,13 +48,12 @@ namespace VRtist
         private Vector3 fromRotation;
         private Quaternion initialRotation;
 
-        private float rootScale;
-
         private Vector3 acAxis;
         private float previousAngle;
+        private Vector3 previousPosition;
         private Vector3 initForward;
-        private RotationAxis rAxis;
-        public enum RotationAxis { X, Y, Z };
+        private AcutatorAxis rAxis;
+        public enum AcutatorAxis { X, Y, Z };
 
 
         private AnimationTool.PoseEditMode poseMode;
@@ -87,17 +86,27 @@ namespace VRtist
         private List<Quaternion> endRotations;
         private List<Vector3> endScales;
 
-        public PoseManipulation(Transform objectTransform, List<Transform> objectHierarchy, Transform mouthpiece, RigController skinController, AnimationTool.PoseEditMode mode)
+        public PoseManipulation(RigGoalController goalController, Transform mouthpiece, AnimationTool.PoseEditMode mode)
         {
-            MeshController = skinController;
+            MeshController = goalController.RootController;
             poseMode = mode;
-            oTransform = objectTransform;
-            fullHierarchy = new List<Transform>(objectHierarchy);
-            if (!fullHierarchy.Contains(objectTransform))
+            oTransform = goalController.transform;
+
+            InitMatrices(mouthpiece);
+            InitHierarchy(goalController);
+
+            if (mode == AnimationTool.PoseEditMode.FK || fullHierarchy.Count == 1)
             {
-                fullHierarchy.Add(objectTransform);
+                InitFKData();
             }
-            hierarchySize = fullHierarchy.Count;
+            else
+            {
+                InitIkData();
+            }
+        }
+
+        private void InitMatrices(Transform mouthpiece)
+        {
             InitialTRS = Matrix4x4.TRS(oTransform.localPosition, oTransform.localRotation, oTransform.localScale);
 
             initialMouthMatrix = mouthpiece.worldToLocalMatrix;
@@ -105,112 +114,177 @@ namespace VRtist
             InitialParentMatrixWorldToLocal = oTransform.parent.worldToLocalMatrix;
             InitialTRS = Matrix4x4.TRS(oTransform.localPosition, oTransform.localRotation, oTransform.localScale);
             initialTransformMatrix = oTransform.localToWorldMatrix;
+        }
 
-            rootScale = skinController.transform.localScale.x;
-
+        private void InitHierarchy(RigGoalController goalController)
+        {
+            fullHierarchy = new List<Transform>(goalController.PathToRoot);
+            if (!fullHierarchy.Contains(oTransform))
+            {
+                fullHierarchy.Add(oTransform);
+            }
+            hierarchySize = fullHierarchy.Count;
             controllers = new List<RigGoalController>();
             for (int i = 0; i < hierarchySize; i++)
             {
                 controllers.Add(fullHierarchy[i].GetComponent<RigGoalController>());
             }
-
-            if (mode == AnimationTool.PoseEditMode.FK || fullHierarchy.Count == 1)
-            {
-
-                movedObjects = new List<GameObject>() { oTransform.gameObject };
-                startPositions = new List<Vector3>() { oTransform.localPosition };
-                endPositions = new List<Vector3>() { oTransform.localPosition };
-
-                startRotations = new List<Quaternion>() { oTransform.localRotation };
-                endRotations = new List<Quaternion>() { oTransform.localRotation };
-
-                startScales = new List<Vector3> { oTransform.localScale };
-                endScales = new List<Vector3> { oTransform.localScale };
-
-                fromRotation = Quaternion.FromToRotation(Vector3.forward, oTransform.localPosition) * Vector3.forward;
-                if (hierarchySize > 2)
-                {
-                    initialRotation = fullHierarchy[hierarchySize - 2].localRotation;
-
-                    movedObjects.Add(fullHierarchy[hierarchySize - 2].gameObject);
-                    startPositions.Add(fullHierarchy[hierarchySize - 2].localPosition);
-                    endPositions.Add(fullHierarchy[hierarchySize - 2].localPosition);
-
-                    startRotations.Add(fullHierarchy[hierarchySize - 2].localRotation);
-                    endRotations.Add(fullHierarchy[hierarchySize - 2].localRotation);
-
-                    startScales.Add(fullHierarchy[hierarchySize - 2].localScale);
-                    endScales.Add(fullHierarchy[hierarchySize - 2].localScale);
-                }
-            }
-            else
-            {
-
-                movedObjects = new List<GameObject>();
-                startPositions = new List<Vector3>();
-                endPositions = new List<Vector3>();
-                startRotations = new List<Quaternion>();
-                endRotations = new List<Quaternion>();
-                startScales = new List<Vector3>();
-                endScales = new List<Vector3>();
-
-                fullHierarchy.ForEach(x =>
-                {
-                    movedObjects.Add(x.gameObject);
-                    startPositions.Add(x.localPosition);
-                    endPositions.Add(x.localPosition);
-                    startRotations.Add(x.localRotation);
-                    endRotations.Add(x.localRotation);
-                    startScales.Add(x.localScale);
-                    endScales.Add(x.localScale);
-                });
-            }
         }
 
-
-
-        public PoseManipulation(Transform objectTransform, RigController controller, Transform mouthpiece, RotationAxis axis)
+        private void InitIkData()
         {
-            MeshController = controller;
-            oTransform = objectTransform;
-            poseMode = AnimationTool.PoseEditMode.AC;
-            switch (axis)
-            {
-                case RotationAxis.X:
-                    acAxis = oTransform.right;
-                    initForward = oTransform.up;
-                    break;
-                case RotationAxis.Y:
-                    acAxis = oTransform.up;
-                    initForward = oTransform.forward;
-                    break;
-                case RotationAxis.Z:
-                    acAxis = oTransform.forward;
-                    initForward = oTransform.right;
-                    break;
-            }
-            previousAngle = Vector3.SignedAngle(initForward, mouthpiece.position - objectTransform.position, acAxis);
+            movedObjects = new List<GameObject>();
+            startPositions = new List<Vector3>();
+            endPositions = new List<Vector3>();
+            startRotations = new List<Quaternion>();
+            endRotations = new List<Quaternion>();
+            startScales = new List<Vector3>();
+            endScales = new List<Vector3>();
 
+            fullHierarchy.ForEach(x =>
+            {
+                movedObjects.Add(x.gameObject);
+                startPositions.Add(x.localPosition);
+                endPositions.Add(x.localPosition);
+                startRotations.Add(x.localRotation);
+                endRotations.Add(x.localRotation);
+                startScales.Add(x.localScale);
+                endScales.Add(x.localScale);
+            });
+        }
+
+        private void InitFKData()
+        {
             movedObjects = new List<GameObject>() { oTransform.gameObject };
             startPositions = new List<Vector3>() { oTransform.localPosition };
             endPositions = new List<Vector3>() { oTransform.localPosition };
+
             startRotations = new List<Quaternion>() { oTransform.localRotation };
             endRotations = new List<Quaternion>() { oTransform.localRotation };
-            startScales = new List<Vector3>() { oTransform.localScale };
-            endScales = new List<Vector3>() { oTransform.localScale };
+
+            startScales = new List<Vector3> { oTransform.localScale };
+            endScales = new List<Vector3> { oTransform.localScale };
+
+            fromRotation = Quaternion.FromToRotation(Vector3.forward, oTransform.localPosition) * Vector3.forward;
+            if (hierarchySize > 2)
+            {
+                initialRotation = fullHierarchy[hierarchySize - 2].localRotation;
+
+                movedObjects.Add(fullHierarchy[hierarchySize - 2].gameObject);
+                startPositions.Add(fullHierarchy[hierarchySize - 2].localPosition);
+                endPositions.Add(fullHierarchy[hierarchySize - 2].localPosition);
+
+                startRotations.Add(fullHierarchy[hierarchySize - 2].localRotation);
+                endRotations.Add(fullHierarchy[hierarchySize - 2].localRotation);
+
+                startScales.Add(fullHierarchy[hierarchySize - 2].localScale);
+                endScales.Add(fullHierarchy[hierarchySize - 2].localScale);
+            }
+        }
+
+        public PoseManipulation(RigGoalController goalController, Transform mouthpiece, AnimationTool.PoseEditMode mode, AnimationTool.GizmoTool gizmoTool, AcutatorAxis axis)
+        {
+            MeshController = goalController.RootController;
+            oTransform = goalController.transform;
+            switch (gizmoTool)
+            {
+                case AnimationTool.GizmoTool.Rotation:
+                    poseMode = AnimationTool.PoseEditMode.GizmoRot;
+                    switch (axis)
+                    {
+                        case AcutatorAxis.X:
+                            acAxis = oTransform.right;
+                            initForward = oTransform.up;
+                            break;
+                        case AcutatorAxis.Y:
+                            acAxis = oTransform.up;
+                            initForward = oTransform.forward;
+                            break;
+                        case AcutatorAxis.Z:
+                            acAxis = oTransform.forward;
+                            initForward = oTransform.right;
+                            break;
+                    }
+                    previousAngle = Vector3.SignedAngle(initForward, mouthpiece.position - oTransform.position, acAxis);
+
+                    movedObjects = new List<GameObject>() { oTransform.gameObject };
+                    startPositions = new List<Vector3>() { oTransform.localPosition };
+                    endPositions = new List<Vector3>() { oTransform.localPosition };
+                    startRotations = new List<Quaternion>() { oTransform.localRotation };
+                    endRotations = new List<Quaternion>() { oTransform.localRotation };
+                    startScales = new List<Vector3>() { oTransform.localScale };
+                    endScales = new List<Vector3>() { oTransform.localScale };
+                    return;
+
+                case AnimationTool.GizmoTool.Position:
+                    InitMatrices(mouthpiece);
+                    previousPosition = mouthpiece.position;
+                    switch (axis)
+                    {
+                        case AcutatorAxis.X:
+                            acAxis = oTransform.right;
+                            break;
+                        case AcutatorAxis.Y:
+                            acAxis = oTransform.up;
+                            break;
+                        case AcutatorAxis.Z:
+                            acAxis = oTransform.forward;
+                            break;
+                    }
+                    InitHierarchy(goalController);
+                    if (mode == AnimationTool.PoseEditMode.FK || fullHierarchy.Count == 1)
+                    {
+                        poseMode = AnimationTool.PoseEditMode.GizmoPosFK;
+                        acAxis = oTransform.parent.InverseTransformVector(acAxis);
+                        InitFKData();
+                    }
+                    else
+                    {
+                        poseMode = AnimationTool.PoseEditMode.GizmoPosIK;
+
+                        InitIkData();
+                    }
+
+                    return;
+            }
         }
 
         public void SetDestination(Transform mouthpiece)
         {
             Matrix4x4 transformation = mouthpiece.localToWorldMatrix * initialMouthMatrix;
-            if (poseMode == AnimationTool.PoseEditMode.AC)
+            if (poseMode == AnimationTool.PoseEditMode.GizmoRot)
             {
-                float currentAngle = Vector3.SignedAngle(initForward, mouthpiece.position - oTransform.position, acAxis);
-
+                Vector3 projection = Vector3.ProjectOnPlane(mouthpiece.position - oTransform.position, acAxis);
+                float currentAngle = Vector3.SignedAngle(initForward, projection, acAxis);
                 float angleOffset = Mathf.DeltaAngle(previousAngle, currentAngle);
                 oTransform.Rotate(acAxis, angleOffset, Space.World);
                 endRotations[0] = oTransform.localRotation;
                 previousAngle = currentAngle;
+
+                return;
+            }
+            if (poseMode == AnimationTool.PoseEditMode.GizmoPosIK)
+            {
+                Matrix4x4 target = transformation * initialTransformMatrix;
+                Maths.DecomposeMatrix(target, out targetPosition, out Quaternion rotation, out Vector3 scale);
+                Maths.DecomposeMatrix(initialTransformMatrix, out Vector3 initialPosition, out Quaternion initialRotation, out Vector3 s);
+                Vector3 movement = targetPosition - initialPosition;
+                Vector3 movementProj = Vector3.Project(movement, acAxis);
+                targetPosition = initialPosition + movementProj;
+                targetRotation = initialRotation * Quaternion.Euler(-180, 0, 0);
+                return;
+            }
+            if (poseMode == AnimationTool.PoseEditMode.GizmoPosFK)
+            {
+                Matrix4x4 transformed = InitialParentMatrixWorldToLocal *
+                    transformation * InitialParentMatrix *
+                    InitialTRS;
+                Maths.DecomposeMatrix(transformed, out targetPosition, out Quaternion rotation, out Vector3 scale);
+                Vector3 movement = targetPosition - oTransform.localPosition;
+                Vector3 movementProj = Vector3.Project(movement, acAxis);
+                targetPosition = oTransform.localPosition + movementProj;
+
+                Maths.DecomposeMatrix(oTransform.parent.worldToLocalMatrix * initialTransformMatrix, out Vector3 p, out targetRotation, out Vector3 s);
                 return;
             }
             if (poseMode == AnimationTool.PoseEditMode.FK || fullHierarchy.Count == 1)
@@ -234,11 +308,11 @@ namespace VRtist
 
         public bool TrySolver()
         {
-            if (poseMode == AnimationTool.PoseEditMode.AC)
+            if (poseMode == AnimationTool.PoseEditMode.GizmoRot)
             {
                 return true;
             }
-            if (poseMode == AnimationTool.PoseEditMode.FK || fullHierarchy.Count == 1)
+            if (poseMode == AnimationTool.PoseEditMode.FK || fullHierarchy.Count == 1 || poseMode == AnimationTool.PoseEditMode.GizmoPosFK)
             {
                 if (hierarchySize > 2)
                 {

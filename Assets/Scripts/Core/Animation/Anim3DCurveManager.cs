@@ -329,6 +329,8 @@ namespace VRtist
             line.positionCount = positions.Count;
             line.SetPositions(positions.ToArray());
 
+            line.material.color = goalController.color;
+
             line.startWidth = lineWidth / GlobalState.WorldScale;
             line.endWidth = line.startWidth;
 

@@ -41,6 +41,7 @@ namespace VRtist
             public bool showCurve;
             public Vector3 LowerAngleBound;
             public Vector3 UpperAngleBound;
+            public Color color;
         }
 
         public List<Joint> JointsList;
@@ -62,6 +63,7 @@ namespace VRtist
                 controller.ShowCurve = joint.showCurve;
                 controller.LowerAngleBound = joint.LowerAngleBound;
                 controller.UpperAngleBound = joint.UpperAngleBound;
+                controller.color = joint.color;
 
                 if (joint.isGoal)
                 {

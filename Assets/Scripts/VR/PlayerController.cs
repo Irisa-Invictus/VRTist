@@ -38,6 +38,7 @@ namespace VRtist
         [SerializeField] private Transform toolsController = null;
         [SerializeField] private Transform pivot = null;
         [SerializeField] private Transform vrCamera = null;
+        [SerializeField] private Dopesheet dopesheet = null;
         [Tooltip("Player can be xxx times bigger than the world")]
         public float maxPlayerScale = 2000.0f;// world min scale = 0.0005f;
         [Tooltip("Player can be xxx times smaller than the world")]
@@ -352,6 +353,16 @@ namespace VRtist
             bool joyLeftLongPush = false;
             VRInput.GetInstantJoyEvent(VRInput.secondaryController, VRInput.JoyDirection.LEFT, ref joyLeftJustClicked, ref joyLeftJustReleased, ref joyLeftLongPush);
 
+            bool joyUpJustClicked = false;
+            bool joyUpJustReleased = false;
+            bool joyUpLongPush = false;
+            VRInput.GetInstantJoyEvent(VRInput.secondaryController, VRInput.JoyDirection.UP, ref joyUpJustClicked, ref joyUpJustReleased, ref joyUpLongPush);
+
+            bool joyDownJustClicked = false;
+            bool joyDownJustReleased = false;
+            bool joyDownLongPush = false;
+            VRInput.GetInstantJoyEvent(VRInput.secondaryController, VRInput.JoyDirection.DOWN, ref joyDownJustClicked, ref joyDownJustReleased, ref joyDownLongPush);
+
             // Manage time with joystick
             if (joyRightJustClicked || joyLeftJustClicked || joyRightLongPush || joyLeftLongPush)
             {
@@ -366,6 +377,12 @@ namespace VRtist
                 }
                 GlobalState.Animation.CurrentFrame = frame;
             }
+            if (joyUpJustClicked || joyDownJustClicked || joyUpLongPush || joyDownLongPush)
+            {
+                if (joyUpJustClicked || joyUpLongPush) GlobalState.Animation.CurrentFrame = dopesheet.GetNextKeyFrame();
+                else GlobalState.Animation.CurrentFrame = dopesheet.GetPreviousKeyFrame();
+            }
+
         }
 
         public void HandleCommonTooltipsVisibility()

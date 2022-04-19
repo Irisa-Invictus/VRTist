@@ -42,6 +42,7 @@ namespace VRtist
         public Vector3 UpperAngleBound;
         public Renderer MeshRenderer;
         public Collider goalCollider;
+        public Color color;
 
         public void SetPathToRoot(RigController controller, List<Transform> path)
         {

@@ -64,6 +64,7 @@ namespace VRtist
                 if (Target.TryGetComponent<RigGoalController>(out RigGoalController controller) && controller.IsGoal)
                 {
                     Sphere = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+                    Sphere.GetComponent<MeshRenderer>().material.color = controller.color;
                     controller.CheckAnimations();
                 }
                 else

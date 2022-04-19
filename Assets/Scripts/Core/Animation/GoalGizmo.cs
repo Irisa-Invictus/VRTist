@@ -7,14 +7,17 @@ namespace VRtist
     public class GoalGizmo : MonoBehaviour
     {
 
-        public GameObject xCurve;
-        public GameObject yCurve;
-        public GameObject zCurve;
+        public GameObject xRotation;
+        public GameObject yRotation;
+        public GameObject zRotation;
+
+        public GameObject xPosition;
+        public GameObject yPosition;
+        public GameObject zPosition;
 
         public RigGoalController Controller;
 
         private bool isListening;
-
 
         public void Init(RigGoalController controller)
         {
@@ -49,11 +52,47 @@ namespace VRtist
             ResetPosition(Controller.gameObject);
         }
 
+        public PoseManipulation.AcutatorAxis GetAcutatorAxis(GameObject Gizmo)
+        {
+            if (Gizmo == xPosition || Gizmo == xRotation) return PoseManipulation.AcutatorAxis.X;
+            if (Gizmo == yPosition || Gizmo == yRotation) return PoseManipulation.AcutatorAxis.Y;
+            if (Gizmo == zPosition || Gizmo == zRotation) return PoseManipulation.AcutatorAxis.Z;
+            return PoseManipulation.AcutatorAxis.X;
+        }
+
+        public void ChangeGizmo(AnimationTool.GizmoTool newTool)
+        {
+            switch (newTool)
+            {
+                case AnimationTool.GizmoTool.Position:
+                    SetRotationGizmo(false);
+                    SetPositionGizmo(true);
+                    break;
+                case AnimationTool.GizmoTool.Rotation:
+                    SetRotationGizmo(true);
+                    SetPositionGizmo(false);
+                    break;
+            }
+        }
+
+        private void SetRotationGizmo(bool state)
+        {
+            xRotation.SetActive(state);
+            yRotation.SetActive(state);
+            zRotation.SetActive(state);
+        }
+        private void SetPositionGizmo(bool state)
+        {
+            xPosition.SetActive(state);
+            yPosition.SetActive(state);
+            zPosition.SetActive(state);
+        }
+
         /// <summary>
         /// Editor call to create the gizmos curves.
         /// </summary>
-        [ContextMenu("generate")]
-        public void GenerateCurves()
+        [ContextMenu("generate Rotation")]
+        public void generateRotationCurves()
         {
             List<float> cos = new List<float>();
             List<float> sin = new List<float>();
@@ -75,9 +114,9 @@ namespace VRtist
                 curvesZ.Add(new Vector3(sin[j], cos[j], 0));
             }
 
-            LineRenderer lineX = xCurve.GetComponent<LineRenderer>();
-            LineRenderer lineY = yCurve.GetComponent<LineRenderer>();
-            LineRenderer lineZ = zCurve.GetComponent<LineRenderer>();
+            LineRenderer lineX = xRotation.GetComponent<LineRenderer>();
+            LineRenderer lineY = yRotation.GetComponent<LineRenderer>();
+            LineRenderer lineZ = zRotation.GetComponent<LineRenderer>();
 
             lineX.SetPositions(curvesX.ToArray());
             lineX.positionCount = curvesX.Count;
@@ -100,6 +139,32 @@ namespace VRtist
             lineX.GetComponent<MeshCollider>().sharedMesh = meshX;
             lineY.GetComponent<MeshCollider>().sharedMesh = meshY;
             lineZ.GetComponent<MeshCollider>().sharedMesh = meshZ;
+        }
+
+        [ContextMenu("generate position")]
+        public void generatePositionCurves()
+        {
+            LineRenderer posX = xPosition.GetComponent<LineRenderer>();
+            LineRenderer posY = yPosition.GetComponent<LineRenderer>();
+            LineRenderer posZ = zPosition.GetComponent<LineRenderer>();
+
+            posX.SetPositions(new Vector3[] { new Vector3(0, 0, 0), new Vector3(10, 0, 0) });
+            posX.positionCount = 2;
+            posY.SetPositions(new Vector3[] { new Vector3(0, 0, 0), new Vector3(0, 10, 0) });
+            posY.positionCount = 2;
+            posZ.SetPositions(new Vector3[] { new Vector3(0, 0, 0), new Vector3(0, -0.01f, 10) });
+            posZ.positionCount = 2;
+
+            Mesh meshX = new Mesh();
+            posX.BakeMesh(meshX);
+            Mesh meshY = new Mesh();
+            posY.BakeMesh(meshY);
+            Mesh meshZ = new Mesh();
+            posZ.BakeMesh(meshZ);
+
+            posX.GetComponent<MeshCollider>().sharedMesh = meshX;
+            posY.GetComponent<MeshCollider>().sharedMesh = meshY;
+            posZ.GetComponent<MeshCollider>().sharedMesh = meshZ;
         }
 
     }
