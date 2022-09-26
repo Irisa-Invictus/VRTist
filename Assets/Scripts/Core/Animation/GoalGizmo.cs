@@ -52,13 +52,13 @@ namespace VRtist
             ResetPosition(Controller.gameObject);
         }
 
-        public PoseManipulation.AcutatorAxis GetAcutatorAxis(GameObject Gizmo)
-        {
-            if (Gizmo == xPosition || Gizmo == xRotation) return PoseManipulation.AcutatorAxis.X;
-            if (Gizmo == yPosition || Gizmo == yRotation) return PoseManipulation.AcutatorAxis.Y;
-            if (Gizmo == zPosition || Gizmo == zRotation) return PoseManipulation.AcutatorAxis.Z;
-            return PoseManipulation.AcutatorAxis.X;
-        }
+        //public PoseManipulation.AcutatorAxis GetAcutatorAxis(GameObject Gizmo)
+        //{
+        //    if (Gizmo == xPosition || Gizmo == xRotation) return PoseManipulation.AcutatorAxis.X;
+        //    if (Gizmo == yPosition || Gizmo == yRotation) return PoseManipulation.AcutatorAxis.Y;
+        //    if (Gizmo == zPosition || Gizmo == zRotation) return PoseManipulation.AcutatorAxis.Z;
+        //    return PoseManipulation.AcutatorAxis.X;
+        //}
 
         public void ChangeGizmo(AnimationTool.GizmoTool newTool)
         {

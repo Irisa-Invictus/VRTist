@@ -286,7 +286,25 @@ namespace VRtist
                 return response;
             }
         }
+        public static Vector3 RotationBounds(Quaternion rotation, Vector3 bound)
+        {
+            Vector3 result = new Vector3();
+            rotation.x /= rotation.w;
+            rotation.y /= rotation.w;
+            rotation.z /= rotation.w;
+            rotation.w = 1;
 
+            float angleX = 2f * Mathf.Rad2Deg * Mathf.Atan(rotation.x);
+            result.x = -(angleX) + bound.x;
+
+            float angleY = 2f * Mathf.Rad2Deg * Mathf.Atan(rotation.y);
+            result.y = -(angleY) + bound.y;
+
+            float angleZ = 2f * Mathf.Rad2Deg * Mathf.Atan(rotation.z);
+            result.z = -(angleZ) + bound.z;
+
+            return result;
+        }
     }
 
     public class Bezier

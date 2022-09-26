@@ -77,6 +77,8 @@ namespace VRtist
         public GoalGizmo goalGizmo;
         public RigGoalController selectedGoal;
 
+        public enum Vector3Axis { X, Y, Z, None }
+        private Vector3Axis curveDisplayAxe = Vector3Axis.None;
         public enum GizmoTool { Rotation, Position }
         private GizmoTool currentGizmo = GizmoTool.Rotation;
         public GizmoTool CurrentGizmo
@@ -127,7 +129,6 @@ namespace VRtist
         public enum PoseEditMode { FK, IK, GizmoRot, GizmoPosFK, GizmoPosIK }
         private PoseEditMode poseMode;
 
-
         public PoseEditMode PoseMode
         {
             get { return poseMode; }
@@ -152,7 +153,6 @@ namespace VRtist
         }
 
         #region ButtonEvents
-
         public void OpenControlPanel()
         {
             ChangeControlPanelState(true);
@@ -235,6 +235,8 @@ namespace VRtist
         }
         #endregion
 
+        #region Messages
+
         protected override void Awake()
         {
             base.Awake();
@@ -301,40 +303,6 @@ namespace VRtist
             HideActuator();
         }
 
-
-        private UIButton GetCurveModeButton(CurveEditMode mode)
-        {
-            switch (mode)
-            {
-                case CurveEditMode.AddKeyframe: return AddKeyModeButton.GetComponent<UIButton>();
-                case CurveEditMode.Zone: return ZoneModeButton.GetComponent<UIButton>();
-                case CurveEditMode.Segment: return SegmentModeButton.GetComponent<UIButton>();
-                case CurveEditMode.Tangents: return TangentModeButton.GetComponent<UIButton>();
-                default: return null;
-            }
-        }
-
-        private UIButton GetModeButton(EditMode mode)
-        {
-            switch (mode)
-            {
-                case EditMode.Curve: return CurveModeButton.GetComponent<UIButton>();
-                case EditMode.Pose: return PoseModeButton.GetComponent<UIButton>();
-                default: return null;
-            }
-        }
-
-        private UIButton GetPoseModeButton(PoseEditMode mode)
-        {
-            switch (mode)
-            {
-                case PoseEditMode.FK: return FKModeButton.GetComponent<UIButton>();
-                case PoseEditMode.IK: return IKModeButton.GetComponent<UIButton>();
-                default: return null;
-            }
-        }
-
-
         protected override void DoUpdate()
         {
             if (navigation.CanUseControls(NavigationMode.UsedControls.RIGHT_JOYSTICK))
@@ -366,6 +334,41 @@ namespace VRtist
             if (state && null != curveManip) ReleaseCurve();
             if (state && movedObjects.Count > 0) EndDragObject();
         }
+        #endregion
+
+        #region GetButtons
+        private UIButton GetCurveModeButton(CurveEditMode mode)
+        {
+            switch (mode)
+            {
+                case CurveEditMode.AddKeyframe: return AddKeyModeButton.GetComponent<UIButton>();
+                case CurveEditMode.Zone: return ZoneModeButton.GetComponent<UIButton>();
+                case CurveEditMode.Segment: return SegmentModeButton.GetComponent<UIButton>();
+                case CurveEditMode.Tangents: return TangentModeButton.GetComponent<UIButton>();
+                default: return null;
+            }
+        }
+
+        private UIButton GetModeButton(EditMode mode)
+        {
+            switch (mode)
+            {
+                case EditMode.Curve: return CurveModeButton.GetComponent<UIButton>();
+                case EditMode.Pose: return PoseModeButton.GetComponent<UIButton>();
+                default: return null;
+            }
+        }
+
+        private UIButton GetPoseModeButton(PoseEditMode mode)
+        {
+            switch (mode)
+            {
+                case PoseEditMode.FK: return FKModeButton.GetComponent<UIButton>();
+                case PoseEditMode.IK: return IKModeButton.GetComponent<UIButton>();
+                default: return null;
+            }
+        }
+        #endregion
 
         #region Ghost&Curve
         public void HoverLine(GameObject curveObject, Vector3 point)
@@ -488,7 +491,7 @@ namespace VRtist
 
         public void StartPose(RigGoalController controller, Transform mouthpiece)
         {
-            poseManip = new PoseManipulation(controller, mouthpiece, PoseMode);
+            //poseManip = new PoseManipulation(controller, mouthpiece, PoseMode);
         }
         public bool DragPose(Transform mouthpiece)
         {
@@ -502,7 +505,7 @@ namespace VRtist
         public void EndPose()
         {
             poseManip.GetCommand().Submit();
-            if (GlobalState.Animation.autoKeyEnabled) new CommandAddKeyframes(poseManip.MeshController.gameObject, false).Submit();
+            //if (GlobalState.Animation.autoKeyEnabled) new CommandAddKeyframes(poseManip.MeshController.gameObject, false).Submit();
             poseManip = null;
         }
 
@@ -636,7 +639,6 @@ namespace VRtist
         }
         #endregion
 
-
         #region GoalSelection
 
 
@@ -672,8 +674,8 @@ namespace VRtist
 
         public void StartAcutator(GameObject actuator, Transform mouthpiece)
         {
-            PoseManipulation.AcutatorAxis axis = goalGizmo.GetAcutatorAxis(actuator);
-            poseManip = new PoseManipulation(goalGizmo.Controller, mouthpiece, PoseMode, currentGizmo, axis);
+            //PoseManipulation.AcutatorAxis axis = goalGizmo.GetAcutatorAxis(actuator);
+            //poseManip = new PoseManipulation(goalGizmo.Controller, mouthpiece, PoseMode, currentGizmo, axis);
         }
 
         #endregion
