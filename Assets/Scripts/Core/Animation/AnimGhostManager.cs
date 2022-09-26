@@ -61,7 +61,7 @@ namespace VRtist
                 Matrix4x4 objectMatrix = parentMatrix * ObjectAnimation.GetTRSMatrix(frame);
                 Maths.DecomposeMatrix(objectMatrix, out worldPosition, out Quaternion objectRotation, out Vector3 objectScale);
 
-                if (Target.TryGetComponent<RigGoalController>(out RigGoalController controller) && controller.IsGoal)
+                if (Target.TryGetComponent<JointController>(out JointController controller))
                 {
                     Sphere = GameObject.CreatePrimitive(PrimitiveType.Sphere);
                     Sphere.GetComponent<MeshRenderer>().material.color = controller.color;
@@ -178,11 +178,11 @@ namespace VRtist
         {
             ghostDictionary = new Dictionary<RigController, Dictionary<int, Node>>();
 
-            ToolsUIManager.Instance.OnToolChangedEvent += OnToolChanged;
-            Selection.onSelectionChanged.AddListener(OnSelectionChanged);
-            GlobalState.Animation.onFrameEvent.AddListener(UpdateOffset);
-            GlobalState.Animation.onChangeCurve.AddListener(OnCurveChanged);
-            GlobalState.Animation.onRemoveAnimation.AddListener(OnAnimationRemoved);
+            //ToolsUIManager.Instance.OnToolChangedEvent += OnToolChanged;
+            //Selection.onSelectionChanged.AddListener(OnSelectionChanged);
+            //GlobalState.Animation.onFrameEvent.AddListener(UpdateOffset);
+            //GlobalState.Animation.onChangeCurve.AddListener(OnCurveChanged);
+            //GlobalState.Animation.onRemoveAnimation.AddListener(OnAnimationRemoved);
 
             showSkeleton = GlobalState.Settings.DisplaySkeletons;
             currentOffset = GlobalState.Settings.CurveForwardOffset;
@@ -190,24 +190,24 @@ namespace VRtist
 
         public void Update()
         {
-            if (showSkeleton != GlobalState.Settings.DisplaySkeletons)
-            {
-                showSkeleton = GlobalState.Settings.DisplaySkeletons;
-                if (showSkeleton)
-                {
-                    UpdateFromSelection();
-                }
-                else
-                {
-                    ClearGhosts();
-                }
-            }
+            //if (showSkeleton != GlobalState.Settings.DisplaySkeletons)
+            //{
+            //    showSkeleton = GlobalState.Settings.DisplaySkeletons;
+            //    if (showSkeleton)
+            //    {
+            //        UpdateFromSelection();
+            //    }
+            //    else
+            //    {
+            //        ClearGhosts();
+            //    }
+            //}
 
-            if (currentOffset != GlobalState.Settings.CurveForwardOffset)
-            {
-                currentOffset = GlobalState.Settings.CurveForwardOffset;
-                UpdateOffset(GlobalState.Animation.CurrentFrame);
-            }
+            //if (currentOffset != GlobalState.Settings.CurveForwardOffset)
+            //{
+            //    currentOffset = GlobalState.Settings.CurveForwardOffset;
+            //    UpdateOffset(GlobalState.Animation.CurrentFrame);
+            //}
         }
 
         private void OnToolChanged(object sender, ToolChangedArgs args)

@@ -38,6 +38,7 @@ namespace VRtist
 
         public CommandAddKeyframe(GameObject obj, AnimatableProperty property, int frame, float value, Interpolation interpolation, bool updateCurve = true)
         {
+            Debug.Log(obj + " " + property);
             gObject = obj;
             this.property = property;
             newAnimationKey = new AnimationKey(frame, value, interpolation);
@@ -56,12 +57,18 @@ namespace VRtist
 
         public override void Undo()
         {
+            Debug.Log(gObject + "  " + property);
+            UnityEngine.Profiling.Profiler.BeginSample("CommandAddKeyframe");
+            UnityEngine.Profiling.Profiler.BeginSample("Command Add Keyframe - remove key frame");
             SceneManager.RemoveKeyframe(gObject, property, newAnimationKey, updateCurve);
-
+            UnityEngine.Profiling.Profiler.EndSample();
             if (null != oldAnimationKey)
             {
+                UnityEngine.Profiling.Profiler.BeginSample("Command add keyframe - add old keyframe");
                 SceneManager.AddObjectKeyframe(gObject, property, new AnimationKey(oldAnimationKey), updateCurve);
+                UnityEngine.Profiling.Profiler.EndSample();
             }
+            UnityEngine.Profiling.Profiler.EndSample();
         }
 
         public override void Redo()

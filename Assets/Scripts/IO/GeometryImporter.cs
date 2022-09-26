@@ -63,10 +63,10 @@ namespace VRtist
         private GameObject ResolveImportedGameObject(GameObject gobject)
         {
             GameObject result = gobject;
-            if (result.transform.childCount == 1)
-            {
-                result = result.transform.GetChild(0).gameObject;
-            }
+            //if (result.transform.childCount == 1)
+            //{
+            //    result = result.transform.GetChild(0).gameObject;
+            //}
             return result;
         }
 

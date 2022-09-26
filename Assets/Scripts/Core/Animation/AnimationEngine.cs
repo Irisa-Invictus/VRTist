@@ -23,6 +23,7 @@
  * SOFTWARE.
  */
 
+using System;
 using System.Collections.Generic;
 
 using UnityEngine;
@@ -516,7 +517,7 @@ namespace VRtist
                     key.value = delta;
                 }
             }
-            curve.AddTangentKey(key, start, end);
+            curve.AddTangentKey(start, end);
             if (updateCurves) onChangeCurve.Invoke(gobjet, property);
         }
 
@@ -717,5 +718,6 @@ namespace VRtist
             oldAnimations.Clear();
             GlobalState.Settings.interpolation = preRecordInterpolation;
         }
+
     }
 }

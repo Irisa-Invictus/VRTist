@@ -23,6 +23,7 @@
 
 using System;
 using System.Collections.Generic;
+using UnityEngine;
 
 namespace VRtist
 {
@@ -82,10 +83,13 @@ namespace VRtist
             }
             ICommand undoCommand = undoStack[count - 1];
             undoStack.RemoveAt(count - 1);
+            UnityEngine.Profiling.Profiler.BeginSample("undo command");
             undoCommand.Undo();
+            UnityEngine.Profiling.Profiler.EndSample();
             redoStack.Add(undoCommand);
-
+            UnityEngine.Profiling.Profiler.BeginSample("clean scene");
             SceneManager.sceneDirtyEvent.Invoke(IsSceneDirty());
+            UnityEngine.Profiling.Profiler.EndSample();
         }
 
         public static void Redo()

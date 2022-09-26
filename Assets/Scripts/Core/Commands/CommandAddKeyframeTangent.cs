@@ -1,7 +1,5 @@
 /* MIT License
  *
- * Université de Rennes 1 / Invictus Project 
- * &
  * Université de Rennes 1 / Invictus Project
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy

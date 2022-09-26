@@ -514,7 +514,7 @@ namespace VRtist
             {
                 foreach (GameObject gObject in Selection.SelectedObjects)
                 {
-                    if (gObject.TryGetComponent<RigController>(out RigController controller) && ToolsManager.CurrentToolName() != "Animation")
+                    if (gObject.TryGetComponent<RigController>(out RigController controller))
                     {
                         new CommandRemoveRecursiveKeyframes(gObject).Submit();
                     }

@@ -230,6 +230,7 @@ namespace VRtist
 
             GlobalState.Animation.onAnimationStateEvent.AddListener(OnAnimationStateChanged);
 
+            planeContainerMatrix = Matrix4x4.identity;
             // bounding box
             boundingBox = SceneManager.BoundingBox.gameObject;
             planes = new Transform[6];
@@ -944,6 +945,7 @@ namespace VRtist
             }
             else
             {
+                Debug.Log(maxMesh + "  " + maxMesh.localToWorldMatrix);
                 planeContainerMatrix = maxMesh.localToWorldMatrix;
             }
         }
@@ -996,6 +998,7 @@ namespace VRtist
             if (selectionCount == 1 && !foundHierarchicalObject)
             {
                 planeContainerMatrix = SceneManager.RightHanded.worldToLocalMatrix * meshFilter.transform.localToWorldMatrix;
+                Debug.Log(meshFilter + "  " + meshFilter.transform.localToWorldMatrix);
             }
             else
             {

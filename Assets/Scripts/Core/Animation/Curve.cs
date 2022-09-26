@@ -486,7 +486,7 @@ namespace VRtist
         /// Adds a keyframe at start and at end. Remove all keyframes in between.
         /// Used when starting to drag a curve to modify tangents.
         /// </summary>
-        public void AddTangentKey(AnimationKey key, int start, int end)
+        public void AddTangentKey(int start, int end)
         {
             if (keys.Count == 0) return;
 
@@ -501,11 +501,11 @@ namespace VRtist
 
             if (keys[firstKeyIndex].frame != startFrame && hasPrevValue)
             {
-                AddKey(new AnimationKey(startFrame, prevValue, Interpolation.Bezier), false);
+                AddKey(new AnimationKey(startFrame, prevValue, Interpolation.Bezier), true);
             }
             if (keys[lastKeyIndex].frame != endFrame && hasNextValue)
             {
-                AddKey(new AnimationKey(endFrame, nextValue, Interpolation.Bezier), false);
+                AddKey(new AnimationKey(endFrame, nextValue, Interpolation.Bezier), true);
             }
             List<AnimationKey> toRemove = keys.FindAll(x => x.frame > startFrame && x.frame < endFrame);
             toRemove.ForEach(x => RemoveKey(x.frame));
@@ -587,7 +587,7 @@ namespace VRtist
                 value = float.NaN;
                 return false;
             }
-
+            if (frame < 0 || frame > cachedValues.Length - 1) Debug.Log(frame);
             value = cachedValues[frame - GlobalState.Animation.StartFrame];
             return value != float.NaN;
         }

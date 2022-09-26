@@ -25,7 +25,7 @@
 
 using System;
 using System.Collections.Generic;
-
+using Unity.Collections;
 using UnityEngine;
 
 namespace VRtist
@@ -45,7 +45,10 @@ namespace VRtist
         private float currentCurveOffset;
 
         private readonly Dictionary<GameObject, GameObject> curves = new Dictionary<GameObject, GameObject>();
-        private Dictionary<RigController, List<GameObject>> goalCurves = new Dictionary<RigController, List<GameObject>>();
+        private Dictionary<RigController, Dictionary<JointController, GameObject>> jointCurves = new Dictionary<RigController, Dictionary<JointController, GameObject>>();
+
+        private Texture2D selectionTexture;
+        private Color objectColor = new Color(1, 0.7f, 0.3f);
 
         void Start()
         {
@@ -60,7 +63,7 @@ namespace VRtist
 
         private void OnObjectMoved(GameObject gObject)
         {
-            if (gObject.TryGetComponent(out RigController rigController) && goalCurves.ContainsKey(rigController)) UpdateFromSelection();
+            if (gObject.TryGetComponent(out RigController rigController) && jointCurves.ContainsKey(rigController)) UpdateFromSelection();
         }
 
         void Update()
@@ -81,6 +84,7 @@ namespace VRtist
             UpdateCurvesWidth();
         }
 
+
         void UpdateCurvesWidth()
         {
             foreach (GameObject curve in curves.Values)
@@ -90,12 +94,12 @@ namespace VRtist
                 line.endWidth = line.startWidth;
             }
         }
-
         void OnSelectionChanged(HashSet<GameObject> previousSelectedObjects, HashSet<GameObject> selectedObjects)
         {
             if (GlobalState.Settings.Display3DCurves)
                 UpdateFromSelection();
         }
+
 
         void UpdateFromSelection()
         {
@@ -103,35 +107,37 @@ namespace VRtist
             foreach (GameObject gObject in Selection.SelectedObjects)
             {
                 AddCurve(gObject);
-                if (gObject.TryGetComponent(out RigController skinController))
-                {
-                    if ((ToolsManager.CurrentToolName() == "Animation")) AddHumanCurve(gObject, skinController);
-                    else
-                    {
-                        //Only display curve for Rig's root
-                        RigGoalController goalController = skinController.RootObject.GetComponent<RigGoalController>();
-                        AddGoalCurve(goalController, skinController);
-                    }
-                }
+                //if (gObject.TryGetComponent(out RigController skinController))
+                //{
+                //    JointController jointController = skinController.RootObject.GetComponent<JointController>();
+                //    AddJointCurve(jointController, skinController);
+                //}
             }
         }
 
         void OnCurveChanged(GameObject gObject, AnimatableProperty property)
         {
-            RigGoalController[] controllers = gObject.GetComponentsInChildren<RigGoalController>();
-            if (controllers.Length > 0)
+            if (gObject.TryGetComponent(out RigController rigController))
             {
-                if ((ToolsManager.CurrentToolName() == "Animation"))
+                if (jointCurves.TryGetValue(rigController, out Dictionary<JointController, GameObject> curves))
                 {
-                    //update all goals' curves
-                    UpdateGoalCurve(controllers);
-                }
-                else
-                {
-                    //only update rig's root curve
-                    UpdateGoalCurve(new RigGoalController[] { controllers[0] });
+                    foreach (KeyValuePair<JointController, GameObject> pair in curves)
+                    {
+                        UpdateJointCurve(pair.Key, pair.Value);
+                    }
                 }
             }
+            else if (gObject.TryGetComponent(out JointController jointController))
+            {
+                if (jointCurves.TryGetValue(jointController.RootController, out Dictionary<JointController, GameObject> curves))
+                {
+                    foreach (KeyValuePair<JointController, GameObject> pair in curves)
+                    {
+                        UpdateJointCurve(pair.Key, pair.Value);
+                    }
+                }
+            }
+
             if (property != AnimatableProperty.PositionX && property != AnimatableProperty.PositionY && property != AnimatableProperty.PositionZ)
                 return;
 
@@ -154,7 +160,7 @@ namespace VRtist
             if (gObject.TryGetComponent<RigController>(out RigController controller))
             {
                 RecursiveDeleteCurve(gObject.transform);
-                if (goalCurves.ContainsKey(controller)) goalCurves.Remove(controller);
+                if (jointCurves.ContainsKey(controller)) jointCurves.Remove(controller);
             }
             else
             {
@@ -171,7 +177,7 @@ namespace VRtist
             }
             if (!switchToAnim && isAnimationTool)
             {
-                DeleteGoalCurves();
+                DeleteAllJointCurves();
             }
             isAnimationTool = switchToAnim;
         }
@@ -181,7 +187,7 @@ namespace VRtist
             foreach (GameObject curve in curves.Values)
                 Destroy(curve);
             curves.Clear();
-            goalCurves.Clear();
+            jointCurves.Clear();
         }
 
         void DeleteCurve(GameObject gObject)
@@ -202,18 +208,18 @@ namespace VRtist
             }
         }
 
-        void DeleteGoalCurves()
+        void DeleteAllJointCurves()
         {
             List<GameObject> removedCurves = new List<GameObject>();
             foreach (KeyValuePair<GameObject, GameObject> curve in curves)
             {
-                if (curve.Key.TryGetComponent<RigGoalController>(out RigGoalController controller) && controller.PathToRoot[0] != controller.transform)
+                if (curve.Key.TryGetComponent(out JointController controller) && controller.PathToRoot[0] != controller.transform)
                 {
                     Destroy(curve.Value);
                     removedCurves.Add(curve.Key);
                 }
             }
-            goalCurves.Clear();
+            jointCurves.Clear();
             removedCurves.ForEach(x => curves.Remove(x));
         }
 
@@ -222,14 +228,9 @@ namespace VRtist
             AddCurve(gObject);
         }
 
-        private void UpdateGoalCurve(RigGoalController[] controllers)
+        private void UpdateJointCurve(JointController joint, GameObject curve)
         {
-            if (goalCurves.ContainsKey(controllers[0].RootController)) goalCurves.Remove(controllers[0].RootController);
-            for (int i = 0; i < controllers.Length; i++)
-            {
-                DeleteCurve(controllers[i].gameObject);
-                AddGoalCurve(controllers[i], controllers[i].RootController);
-            }
+            GenerateCurve(joint, joint.RootController, curve);
         }
 
 
@@ -291,45 +292,50 @@ namespace VRtist
             curves[gObject] = curve3D;
         }
 
-        private void AddHumanCurve(GameObject gObject, RigController controller)
+        private void AddJointCurve(JointController jointController, RigController skinController)
         {
-            RigGoalController goalController = controller.RootObject.GetComponent<RigGoalController>();
-            RigGoalController[] controllers = goalController.GetComponentsInChildren<RigGoalController>();
-            foreach (RigGoalController ctrl in controllers)
+            AnimationSet jointAnimation = GlobalState.Animation.GetObjectAnimation(jointController.gameObject);
+            if (null == jointAnimation) return;
+            if (jointController.Animation != jointAnimation) jointController.Animation = jointAnimation;
+            if (jointAnimation.GetCurve(AnimatableProperty.RotationX).keys.Count < 2) return;
+
+            GameObject curve3D = curves.TryGetValue(jointController.gameObject, out GameObject current) ? current : Instantiate(curvePrefab, curvesParent);
+            curves[jointController.gameObject] = curve3D;
+            GenerateCurve(jointController, skinController, curve3D);
+
+            if (jointCurves.ContainsKey(skinController))
             {
-                AddGoalCurve(ctrl, controller);
+                if (jointCurves[skinController].TryGetValue(jointController, out GameObject oldCurve) && oldCurve != null) DeleteCurve(oldCurve);
+                jointCurves[skinController][jointController] = curve3D;
+            }
+            else
+            {
+                jointCurves[skinController] = new Dictionary<JointController, GameObject>();
+                jointCurves[skinController][jointController] = curve3D;
             }
         }
 
-        private void AddGoalCurve(RigGoalController goalController, RigController skinController)
+        private void GenerateCurve(JointController jointController, RigController skinController, GameObject curve3D)
         {
-            if (!goalController.ShowCurve) return;
-
-            AnimationSet goalAnimation = GlobalState.Animation.GetObjectAnimation(goalController.gameObject);
-            if (null == goalAnimation) return;
-
-            Curve rotationX = goalAnimation.GetCurve(AnimatableProperty.RotationX);
-            if (rotationX.keys.Count == 0) return;
-
+            Curve rotationX = jointController.Animation.GetCurve(AnimatableProperty.RotationX);
+            if (rotationX == null) return;
+            if (rotationX.keys.Count < 2) return;
+            List<Vector3> positions = new List<Vector3>();
             int frameStart = Mathf.Clamp(rotationX.keys[0].frame, GlobalState.Animation.StartFrame, GlobalState.Animation.EndFrame);
             int frameEnd = Mathf.Clamp(rotationX.keys[rotationX.keys.Count - 1].frame, GlobalState.Animation.StartFrame, GlobalState.Animation.EndFrame);
-
-            List<Vector3> positions = new List<Vector3>();
-            GameObject curve3D = curves.TryGetValue(goalController.gameObject, out GameObject current) ? current : Instantiate(curvePrefab, curvesParent);
-
             Vector3 forwardOffset = (skinController.transform.forward * skinController.transform.localScale.x) * currentCurveOffset;
 
-            goalController.CheckAnimations();
+            jointController.CheckAnimations();
             for (int i = frameStart; i <= frameEnd; i++)
             {
-                Vector3 position = curve3D.transform.InverseTransformDirection(goalController.FramePosition(i) - (forwardOffset * i));
+                Vector3 position = curve3D.transform.InverseTransformDirection(jointController.FramePosition(i) - (forwardOffset * i));
                 positions.Add(position);
             }
             LineRenderer line = curve3D.GetComponent<LineRenderer>();
             line.positionCount = positions.Count;
             line.SetPositions(positions.ToArray());
 
-            line.material.color = goalController.color;
+            line.material.color = jointController.color;
 
             line.startWidth = lineWidth / GlobalState.WorldScale;
             line.endWidth = line.startWidth;
@@ -340,16 +346,6 @@ namespace VRtist
             Mesh lineMesh = new Mesh();
             line.BakeMesh(lineMesh);
             collider.sharedMesh = lineMesh;
-            curves[goalController.gameObject] = curve3D;
-            if (goalCurves.ContainsKey(skinController))
-            {
-                goalCurves[skinController].Add(curve3D);
-            }
-            else
-            {
-                goalCurves[skinController] = new List<GameObject>();
-                goalCurves[skinController].Add(curve3D);
-            }
         }
 
         public GameObject GetObjectFromCurve(GameObject curve)
@@ -373,23 +369,147 @@ namespace VRtist
 
         private void UpdateOffsetValue()
         {
-            foreach (KeyValuePair<RigController, List<GameObject>> curves in goalCurves)
+            foreach (KeyValuePair<RigController, Dictionary<JointController, GameObject>> curves in jointCurves)
             {
-                RigGoalController[] controllers = curves.Key.GetComponentsInChildren<RigGoalController>();
-                UpdateGoalCurve(controllers);
+                foreach (KeyValuePair<JointController, GameObject> pair in curves.Value)
+                {
+                    DeleteCurve(pair.Value);
+                    AddJointCurve(pair.Key, pair.Key.RootController);
+                }
             }
         }
 
         private void UpdateOffset(int frame)
         {
-            foreach (KeyValuePair<RigController, List<GameObject>> curves in goalCurves)
+            foreach (KeyValuePair<RigController, Dictionary<JointController, GameObject>> curves in jointCurves)
             {
                 Vector3 forwardVector = (curves.Key.transform.forward * curves.Key.transform.localScale.x) * currentCurveOffset;
-                curves.Value.ForEach(x =>
+                foreach (KeyValuePair<JointController, GameObject> pair in curves.Value)
                 {
-                    x.transform.position = forwardVector * frame;
-                });
+                    pair.Value.transform.position = forwardVector * frame;
+                }
             }
         }
+
+        public void SelectJoint(JointController joint)
+        {
+            AddJointCurve(joint, joint.RootController);
+        }
+        public void UnSelectJoint(JointController joint)
+        {
+            if (jointCurves.TryGetValue(joint.RootController, out Dictionary<JointController, GameObject> jointCurve))
+            {
+                if (jointCurve.TryGetValue(joint, out GameObject curve))
+                {
+                    DeleteCurve(joint.gameObject);
+                    jointCurve.Remove(joint);
+                }
+                if (jointCurves[joint.RootController].Count == 0) jointCurves.Remove(joint.RootController);
+            }
+        }
+
+        internal void HoverCurve(GameObject gameObject, Transform mouthpiece)
+        {
+            if (gameObject.TryGetComponent(out LineRenderer line))
+            {
+                line.material.color = Color.red;
+            }
+        }
+
+        internal void UpdateHoverCurve(GameObject gameObject, Transform transform)
+        {
+        }
+
+        internal void StopHover(GameObject curve)
+        {
+            if (curve == null) return;
+            if (curve.TryGetComponent(out LineRenderer line))
+            {
+                GameObject target = GetObjectFromCurve(curve);
+                if (target.TryGetComponent(out JointController joint))
+                {
+                    line.material.color = joint.color;
+                }
+                else
+                {
+                    line.material.color = objectColor;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Reset unselected zone color when curve is not hovered anymore
+        /// </summary>
+        internal void SelectionStopHover(GameObject curve, int start, int end)
+        {
+            Color outColor = objectColor;
+            GameObject target = GetObjectFromCurve(curve);
+            if (target.TryGetComponent(out JointController joint))
+            {
+                outColor = joint.color;
+            }
+            DrawLineZone(start, end, outColor);
+        }
+
+        public void StartSelection(GameObject curve)
+        {
+            LineRenderer line = curve.GetComponent<LineRenderer>();
+            selectionTexture = (Texture2D)line.material.mainTexture;
+            if (null == selectionTexture)
+            {
+                selectionTexture = new Texture2D(line.positionCount, 1, TextureFormat.RGBA32, false);
+                line.material.mainTexture = selectionTexture;
+            }
+            line.material.color = Color.white;
+        }
+
+        public void DrawLineZone(int start, int end, Color outColor)
+        {
+            NativeArray<Color32> pixels = selectionTexture.GetRawTextureData<Color32>();
+            for (int i = 0; i < pixels.Length; i++)
+            {
+                if (i < start || i > end) pixels[i] = outColor;
+                else pixels[i] = Color.black;
+            }
+            selectionTexture.Apply();
+        }
+
+        public void RemoveSelection(GameObject curve)
+        {
+            LineRenderer line = curve.GetComponent<LineRenderer>();
+            if (GetObjectFromCurve(curve).TryGetComponent(out JointController joint))
+            {
+                line.material.color = joint.color;
+            }
+            else
+            {
+                line.material.color = objectColor;
+            }
+            line.material.mainTexture = null;
+        }
+
+        internal int GetFrameFromPoint(GameObject gameObject, Vector3 pointPosition)
+        {
+            if (!TryGetLine(gameObject, out LineRenderer line)) return -1;
+            AnimationSet anim = GlobalState.Animation.GetObjectAnimation(gameObject);
+            Vector3 localPointPosition = line.transform.InverseTransformPoint(pointPosition);
+            Vector3[] positions = new Vector3[line.positionCount];
+            line.GetPositions(positions);
+            int closestPoint = 0;
+            float closestDistance = Vector3.Distance(positions[0], localPointPosition);
+            for (int i = 1; i < line.positionCount; i++)
+            {
+                float dist = Vector3.Distance(positions[i], localPointPosition);
+                if (dist < closestDistance)
+                {
+                    closestDistance = dist;
+                    closestPoint = i;
+                }
+            }
+
+            int firstAnimFrame = anim.GetCurve(AnimatableProperty.RotationX).keys[0].frame + GlobalState.Animation.StartFrame - 1;
+            return closestPoint + firstAnimFrame;
+        }
+
     }
 }

@@ -125,6 +125,8 @@ namespace VRtist
 
         private string currentToolName;
         private string currentTabName;
+        public string CurrentTool { get { return currentToolName; } }
+
 
         private GameObject colorPanel = null;
 

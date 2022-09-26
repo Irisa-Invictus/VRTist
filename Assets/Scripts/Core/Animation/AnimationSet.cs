@@ -32,14 +32,18 @@ namespace VRtist
     /// <summary>
     /// A set of animations for a given Transform. An animation is a curve on specific properties (position, rotation...).
     /// </summary>
+    [System.Serializable]
     public class AnimationSet
     {
         public Transform transform;
-        public readonly Dictionary<AnimatableProperty, Curve> curves = new Dictionary<AnimatableProperty, Curve>();
+        public Dictionary<AnimatableProperty, Curve> curves = new Dictionary<AnimatableProperty, Curve>();
+        public string debugString;
 
         public AnimationSet(GameObject gobject)
         {
+            if (gobject.name.Contains("Gizmo")) Debug.Log("created anim en gizmo ");
             transform = gobject.transform;
+            if (transform == null) Debug.Log("created empty object " + gobject, gobject);
             LightController lightController = gobject.GetComponent<LightController>();
             CameraController cameraController = gobject.GetComponent<CameraController>();
             if (null != lightController) { CreateLightCurves(); }
@@ -50,6 +54,8 @@ namespace VRtist
         public AnimationSet(AnimationSet set)
         {
             transform = set.transform;
+            if (transform.name.Contains("Gizmo")) Debug.Log("created anim en gizmo ");
+            if (transform == null) Debug.Log("ccopy empty object " + set.debugString, set.transform);
             foreach (KeyValuePair<AnimatableProperty, Curve> curve in set.curves)
             {
                 curves.Add(curve.Key, new Curve(curve.Key));
@@ -60,6 +66,7 @@ namespace VRtist
 
         public void EvaluateAnimation(int currentFrame)
         {
+            if (transform != null) debugString = transform.name;
             Vector3 position = transform.localPosition;
             Vector3 rotation = transform.localEulerAngles;
             Vector3 scale = transform.localScale;
@@ -159,6 +166,12 @@ namespace VRtist
 
         public Curve GetCurve(AnimatableProperty property)
         {
+            //this shouldn't happen?
+            if (curves == null)
+            {
+                curves = new Dictionary<AnimatableProperty, Curve>();
+                CreateTransformCurves();
+            }
             curves.TryGetValue(property, out Curve result);
             return result;
         }

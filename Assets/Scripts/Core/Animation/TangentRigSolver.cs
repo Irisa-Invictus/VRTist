@@ -35,7 +35,7 @@ namespace VRtist
         private Quaternion targetRotation;
 
         private List<AnimationSet> animationList;
-        private List<RigGoalController> controllers;
+        private List<JointController> controllers;
         private AnimationSet objectAnimation;
         private int animationCount;
         private IEnumerator Execution;
@@ -100,7 +100,7 @@ namespace VRtist
             this.targetPosition = targetPosition;
             this.targetRotation = targetRotation;
             animationList = new List<AnimationSet>();
-            controllers = new List<RigGoalController>();
+            controllers = new List<JointController>();
             curves = new List<Curve>();
             GetCurves(objectAnim, animation);
             objectAnimation = objectAnim;
@@ -111,6 +111,8 @@ namespace VRtist
             lastFrame = endFrame;
         }
 
+
+
         private void GetCurves(AnimationSet objectAnim, List<AnimationSet> animation)
         {
             //Rotation curves for each animated element in hierarchy
@@ -119,7 +121,7 @@ namespace VRtist
                 if (null != anim)
                 {
                     animationList.Add(anim);
-                    controllers.Add(anim.transform.GetComponent<RigGoalController>());
+                    controllers.Add(anim.transform.GetComponent<JointController>());
 
                     curves.Add(anim.GetCurve(AnimatableProperty.RotationX));
                     curves.Add(anim.GetCurve(AnimatableProperty.RotationY));
@@ -128,7 +130,7 @@ namespace VRtist
             });
 
             animationList.Add(objectAnim);
-            controllers.Add(objectAnim.transform.GetComponent<RigGoalController>());
+            controllers.Add(objectAnim.transform.GetComponent<JointController>());
             //Object rotation curves
             curves.Add(objectAnim.GetCurve(AnimatableProperty.RotationX));
             curves.Add(objectAnim.GetCurve(AnimatableProperty.RotationY));
@@ -184,34 +186,34 @@ namespace VRtist
             delta_theta_0 = new double[paramCount];
 
             //Hierarchy rotation curves
-            for (int animIndex = 0; animIndex < animationCount; animIndex++)
-            {
-                for (int curve = 0; curve < 3; curve++)
-                {
-                    int curveIndex = animIndex * 3 + curve;
-                    AnimationKey previous1Key = curves[curveIndex].keys[firstIndex];
-                    AnimationKey previous2Key = firstIndex > 0 ? curves[curveIndex].keys[firstIndex - 1] : new AnimationKey(previous1Key.frame, previous1Key.value, inTangent: Vector2.zero, outTangent: Vector2.zero);
-                    AnimationKey next1Key = curves[curveIndex].keys[lastIndex];
-                    AnimationKey next2key = lastIndex < curves[curveIndex].keys.Count - 1 ? curves[curveIndex].keys[lastIndex + 1] : new AnimationKey(next1Key.frame, next1Key.value, inTangent: Vector2.zero, outTangent: Vector2.zero);
-                    GetTangents(curveIndex * 8, previous1Key, next1Key);
-                    curvesMinMax[curveIndex, 0] = GetMinMax(previous2Key, previous1Key);
-                    curvesMinMax[curveIndex, 1] = GetMinMax(next1Key, next2key);
+            //for (int animIndex = 0; animIndex < animationCount; animIndex++)
+            //{
+            //    for (int curve = 0; curve < 3; curve++)
+            //    {
+            //        int curveIndex = animIndex * 3 + curve;
+            //        AnimationKey previous1Key = curves[curveIndex].keys[firstIndex];
+            //        AnimationKey previous2Key = firstIndex > 0 ? curves[curveIndex].keys[firstIndex - 1] : new AnimationKey(previous1Key.frame, previous1Key.value, inTangent: Vector2.zero, outTangent: Vector2.zero);
+            //        AnimationKey next1Key = curves[curveIndex].keys[lastIndex];
+            //        AnimationKey next2key = lastIndex < curves[curveIndex].keys.Count - 1 ? curves[curveIndex].keys[lastIndex + 1] : new AnimationKey(next1Key.frame, next1Key.value, inTangent: Vector2.zero, outTangent: Vector2.zero);
+            //        GetTangents(curveIndex * 8, previous1Key, next1Key);
+            //        curvesMinMax[curveIndex, 0] = GetMinMax(previous2Key, previous1Key);
+            //        curvesMinMax[curveIndex, 1] = GetMinMax(next1Key, next2key);
 
-                    float Min = controllers[animIndex].LowerAngleBound[curve];
-                    float Max = controllers[animIndex].UpperAngleBound[curve];
-                    FillLowerBounds(curveIndex, previous1Key, next1Key, Min, Max);
-                    FillUpperBounds(curveIndex, previous1Key, next1Key, previous2Key, next2key, Min, Max);
-                    GetContinuity(curveIndex * 8, Min, Max);
-                    //k- in x, k- in y, k- out x, k- out y, k+ in x, k+ in y, k+ out x, k+ out y
-                    for (int tan = 0; tan < 8; tan++)
-                    {
-                        int tanIndice = curveIndex * 8 + tan;
-                        Stiffnes_D[tanIndice, tanIndice] = animIndex == animationCount - 1 ? 0 : controllers[animIndex].stiffness;
-                        scale[tanIndice] = 1d;
-                        delta_theta_0[tanIndice] = 0;
-                    }
-                }
-            }
+            //        //float Min = controllers[animIndex].LowerAngleBound[curve];
+            //        //float Max = controllers[animIndex].UpperAngleBound[curve];
+            //        FillLowerBounds(curveIndex, previous1Key, next1Key, Min, Max);
+            //        FillUpperBounds(curveIndex, previous1Key, next1Key, previous2Key, next2key, Min, Max);
+            //        GetContinuity(curveIndex * 8, Min, Max);
+            //        //k- in x, k- in y, k- out x, k- out y, k+ in x, k+ in y, k+ out x, k+ out y
+            //        for (int tan = 0; tan < 8; tan++)
+            //        {
+            //            int tanIndice = curveIndex * 8 + tan;
+            //            Stiffnes_D[tanIndice, tanIndice] = animIndex == animationCount - 1 ? 0 : controllers[animIndex].stiffness;
+            //            scale[tanIndice] = 1d;
+            //            delta_theta_0[tanIndice] = 0;
+            //        }
+            //    }
+            //}
 
             //Root position curves
             int aIndex = animationCount;
@@ -226,15 +228,15 @@ namespace VRtist
                 curvesMinMax[curveIndex, 0] = GetMinMax(previous2Key, previous1Key);
                 curvesMinMax[curveIndex, 1] = GetMinMax(next1Key, next2Key);
                 GetContinuity(curveIndex * 8);
-                for (int tan = 0; tan < 8; tan++)
-                {
-                    int tanIndice = curveIndex * 8 + tan;
-                    Stiffnes_D[tanIndice, tanIndice] = controllers[0].stiffness;
-                    lowerBound[tanIndice] = -10;
-                    upperBound[tanIndice] = 10;
-                    scale[tanIndice] = 1d;
-                    delta_theta_0[tanIndice] = 0;
-                }
+                //for (int tan = 0; tan < 8; tan++)
+                //{
+                //    int tanIndice = curveIndex * 8 + tan;
+                //    Stiffnes_D[tanIndice, tanIndice] = controllers[0].stiffness;
+                //    lowerBound[tanIndice] = -10;
+                //    upperBound[tanIndice] = 10;
+                //    scale[tanIndice] = 1d;
+                //    delta_theta_0[tanIndice] = 0;
+                //}
 
             }
             currentState = GetCurrentState(currentFrame);
