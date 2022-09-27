@@ -33,678 +33,238 @@ namespace VRtist
 
     public class AnimationTool : ToolBase
     {
-        public Transform controlPanel;
-        public Transform displayPanel;
-
-        [SerializeField] private NavigationOptions navigation;
 
         public Anim3DCurveManager CurveManager;
-        public Material GhostMaterial;
-        private GameObject ghost;
-        private float deadzone = 0.3f;
-
-        private float scaleIndice;
-
-        private Transform ControlPanelButton;
-        private Transform DisplayPanelButton;
-        private Transform AddKeyModeButton;
-        private Transform ZoneModeButton;
-        private Transform SegmentModeButton;
-        private Transform TangentModeButton;
-        private Transform ZoneSlider;
-        private Transform CurveModeButton;
-        private Transform PoseModeButton;
-        private Transform FKModeButton;
-        private Transform IKModeButton;
-        private Transform ContSlider;
-        private Transform SkeletonDisplay;
-        private Transform OffsetLabel;
-
-        private int zoneSize;
-        private float tanCont;
-
-        private LineRenderer lastLine;
-        private Texture2D lastTexture;
-
-        public Color DefaultColor;
-        public Color ZoneColor;
-
-        private CurveManipulation curveManip;
-        private PoseManipulation poseManip;
-
-        public AnimGhostManager ghostManager;
-
-        public GoalGizmo goalGizmo;
-        public RigGoalController selectedGoal;
 
         public enum Vector3Axis { X, Y, Z, None }
         private Vector3Axis curveDisplayAxe = Vector3Axis.None;
-        public enum GizmoTool { Rotation, Position }
-        private GizmoTool currentGizmo = GizmoTool.Rotation;
-        public GizmoTool CurrentGizmo
+
+        public enum PoseEditMode { FK, IK }
+        private PoseEditMode poseMode;
+        public PoseEditMode PoseMode { get; set; }
+
+        public class DragObjectData
         {
-            get { return currentGizmo; }
-            set
-            {
-                currentGizmo = value;
-                if (null != goalGizmo) goalGizmo.ChangeGizmo(currentGizmo);
-            }
+            public GameObject target;
+            public Matrix4x4 initialMouthpieceWorldToLocal, initialParentMatrixLocalToWorld, initialParentMatrixWorldToLocal;
+            public Vector3 initialPosition, initialScale;
+            public Quaternion initialRotation;
+        }
+        private DragObjectData draggedObject;
+
+        private RigObjectController grabbedController;
+
+        public class SelectedCurveData
+        {
+            public GameObject target;
+            public bool hasSelection;
+            public int StartSelection;
+            public int EndSelection;
+            public CurveManipulation manipulation;
         }
 
-        internal void HoverGizmo(GameObject target)
+        private SelectedCurveData selectedCurve;
+
+        protected override void DoUpdate()
         {
             throw new NotImplementedException();
         }
 
-        public void NextGizmo()
+        internal void SelectEmpty()
         {
-            if (CurrentGizmo == GizmoTool.Position) CurrentGizmo = GizmoTool.Rotation;
+
+        }
+
+        #region Gizmo/Actuator
+        internal void NextGizmo()
+        {
+        }
+        internal void HoverActuator(GameObject gameObject)
+        {
+        }
+
+        internal void StopHoverActuator(GameObject gameObject)
+        {
+        }
+        internal void GrabActuator(GameObject gameObject, Transform transform)
+        {
+        }
+        internal void DragActuator(Transform transform)
+        {
+        }
+        internal void ReleaseActuator()
+        {
+        }
+        internal void SelectActuator(GameObject gameObject)
+        {
+        }
+        #endregion
+
+        #region curve
+        internal void HoverCurve(GameObject gameObject, Transform mouthpiece)
+        {
+            CurveManager.HoverCurve(gameObject, mouthpiece);
+        }
+
+        internal void UpdateHoverCurve(GameObject gameObject, Transform transform)
+        {
+            CurveManager.UpdateHoverCurve(gameObject, transform);
+        }
+
+        internal void StopHoverCurve(GameObject gameObject)
+        {
+            CurveManager.StopHover(gameObject);
+        }
+
+        internal void GrabCurve(GameObject gameObject, Transform transform)
+        {
+            GameObject target = CurveManager.GetObjectFromCurve(gameObject);
+            int frame = CurveManager.GetFrameFromPoint(target, transform.position);
+            if (selectedCurve == null)
+            {
+                selectedCurve = new SelectedCurveData()
+                {
+                    target = target,
+                    hasSelection = false,
+                    manipulation = new CurveManipulation(target, frame, mouthpiece, PoseMode)
+                };
+            }
             else
             {
-                CurrentGizmo++;
+                if (selectedCurve.hasSelection)
+                {
+                    selectedCurve.manipulation = new CurveManipulation(target, frame, selectedCurve.StartSelection, selectedCurve.EndSelection, mouthpiece, PoseMode);
+
+                }
+                else
+                {
+                    selectedCurve.manipulation = new CurveManipulation(target, frame, mouthpiece, PoseMode);
+                }
             }
         }
-
-        internal void HoverObject(GameObject target)
+        internal void DragCurve(Transform mouthpiece)
         {
-            throw new NotImplementedException();
+            if (selectedCurve == null || selectedCurve.manipulation == null) return;
+            selectedCurve.manipulation.DragCurve(mouthpiece);
         }
-
-        public enum EditMode { Curve, Pose }
-        private EditMode editMode = EditMode.Pose;
-        public EditMode Mode
+        internal void ReleaseCurve()
         {
-            get { return editMode; }
-            set
+            if (selectedCurve == null || selectedCurve.manipulation == null) return;
+            selectedCurve.manipulation.ReleaseCurve();
+        }
+        internal void SelectCurve(GameObject gameObject, Transform transform)
+        {
+            if (selectedCurve != null) UnSelectCurve();
+            GameObject target = CurveManager.GetObjectFromCurve(gameObject);
+            int selectedFrame = CurveManager.GetFrameFromPoint(target, transform.position);
+            selectedCurve = new SelectedCurveData()
             {
-                GetModeButton(editMode).Checked = false;
-                editMode = value;
-                GetModeButton(editMode).Checked = true;
-            }
+                target = target,
+                hasSelection = false,
+                StartSelection = selectedFrame,
+                EndSelection = selectedFrame
+            };
+        }
+        internal void SelectingCurve(Transform transform)
+        {
+            if (selectedCurve == null) return;
+            int currentFrame = CurveManager.GetFrameFromPoint(selectedCurve.target, transform.position);
+            selectedCurve.StartSelection = Mathf.Min(selectedCurve.StartSelection, currentFrame);
+            selectedCurve.EndSelection = Mathf.Max(selectedCurve.EndSelection, currentFrame);
         }
 
-        internal void StopHoverLine(GameObject gameObject)
+        internal void EndSelectionCurve()
         {
-            throw new NotImplementedException();
+            if (selectedCurve == null) return;
+            if (selectedCurve.EndSelection - selectedCurve.StartSelection > 3) selectedCurve.hasSelection = true;
+        }
+
+        internal void UnSelectCurve()
+        {
+
+        }
+        #endregion
+
+        #region object
+        internal void HoverObject(GameObject gameObject)
+        {
+            Selection.HoveredObject = gameObject;
         }
 
         internal void StopHoverObject(GameObject gameObject)
         {
-            throw new NotImplementedException();
+            Selection.HoveredObject = null;
         }
 
-        internal void StopHoverGizmo(GameObject gameObject)
+        internal void GrabObject(GameObject gameObject, Transform mouthpiece)
         {
-            throw new NotImplementedException();
-        }
-
-        public enum CurveEditMode { AddKeyframe, Zone, Segment, Tangents }
-        private CurveEditMode curveMode;
-        public CurveEditMode CurveMode
-        {
-            set
+            draggedObject = new DragObjectData()
             {
-                GetCurveModeButton(curveMode).Checked = false;
-                curveMode = value;
-                GetCurveModeButton(curveMode).Checked = true;
-            }
-            get { return curveMode; }
+                initialMouthpieceWorldToLocal = mouthpiece.worldToLocalMatrix,
+                initialParentMatrixLocalToWorld = gameObject.transform.parent.localToWorldMatrix,
+                initialParentMatrixWorldToLocal = gameObject.transform.parent.worldToLocalMatrix,
+                initialPosition = gameObject.transform.localPosition,
+                initialRotation = gameObject.transform.localRotation,
+                initialScale = gameObject.transform.localScale,
+                target = gameObject
+            };
+        }
+        internal void DragObject(Transform transform)
+        {
+            if (draggedObject == null) return;
+            Matrix4x4 transformation = mouthpiece.localToWorldMatrix * draggedObject.initialMouthpieceWorldToLocal;
+            Matrix4x4 transformed = draggedObject.initialParentMatrixWorldToLocal * transformation * draggedObject.initialParentMatrixLocalToWorld * Matrix4x4.TRS(draggedObject.initialPosition, draggedObject.initialRotation, draggedObject.initialScale);
+            Maths.DecomposeMatrix(transformed, out Vector3 localPosition, out Quaternion localRotation, out Vector3 localScale);
+            draggedObject.target.transform.localPosition = localPosition;
+            draggedObject.target.transform.localRotation = localRotation;
+            draggedObject.target.transform.localScale = localScale;
+        }
+        internal void ReleaseObject()
+        {
+            if (draggedObject == null) return;
+            List<Vector3> lastPosition = new List<Vector3>() { draggedObject.target.transform.localPosition };
+            List<Quaternion> lastRotation = new List<Quaternion>() { draggedObject.target.transform.localRotation };
+            List<Vector3> lastScale = new List<Vector3>() { draggedObject.target.transform.localScale };
+
+            if (GlobalState.Animation.autoKeyEnabled) new CommandAddKeyframes(draggedObject.target).Submit();
+
+            new CommandMoveObjects(new List<GameObject>() { draggedObject.target }, new List<Vector3>() { draggedObject.initialPosition }, new List<Quaternion>() { draggedObject.initialRotation }, new List<Vector3>() { draggedObject.initialScale },
+                lastPosition, lastRotation, lastScale).Submit();
+            draggedObject = null;
         }
 
-        public enum PoseEditMode { FK, IK, GizmoRot, GizmoPosFK, GizmoPosIK }
-        private PoseEditMode poseMode;
 
-        public PoseEditMode PoseMode
+
+        internal void SelectObject(GameObject gameObject)
         {
-            get { return poseMode; }
-            set
-            {
-                GetPoseModeButton(poseMode).Checked = false;
-                poseMode = value;
-                GetPoseModeButton(poseMode).Checked = true;
-            }
-        }
-
-        private float offsetValue;
-        public float Offsetvalue
-        {
-            get { return offsetValue; }
-            set
-            {
-                offsetValue = value;
-                GlobalState.Settings.curveForwardOffset = offsetValue;
-                OffsetLabel.GetComponent<UILabel>().Text = "Offset : " + offsetValue;
-            }
-        }
-
-        #region ButtonEvents
-        public void OpenControlPanel()
-        {
-            ChangeControlPanelState(true);
-        }
-
-        public void OpenDisplayPanel()
-        {
-            ChangeControlPanelState(false);
-        }
-        private void ChangeControlPanelState(bool state)
-        {
-            controlPanel.gameObject.SetActive(state);
-            displayPanel.gameObject.SetActive(!state);
-            ControlPanelButton.GetComponent<UIButton>().Checked = state;
-            DisplayPanelButton.GetComponent<UIButton>().Checked = !state;
-        }
-
-        public void AddOffset()
-        {
-            Offsetvalue += 0.5f;
-        }
-        public void RemoveOffset()
-        {
-            Offsetvalue -= 0.5f;
-        }
-
-        public void SetCurveMode()
-        {
-            Mode = EditMode.Curve;
-        }
-        public void SetPoseMode()
-        {
-            Mode = EditMode.Pose;
-        }
-
-        public void SetAddKeyMode()
-        {
-            CurveMode = CurveEditMode.AddKeyframe;
-        }
-        public void SetZoneMode()
-        {
-            CurveMode = CurveEditMode.Zone;
-        }
-
-        public void SetSegmentMode()
-        {
-            CurveMode = CurveEditMode.Segment;
-        }
-
-        public void SetTangentMode()
-        {
-            CurveMode = CurveEditMode.Tangents;
-        }
-
-        public void SetFKMode()
-        {
-            PoseMode = PoseEditMode.FK;
-        }
-
-        public void SetIKMode()
-        {
-            PoseMode = PoseEditMode.IK;
-        }
-
-        public void SetZoneSize(float value)
-        {
-            zoneSize = Mathf.RoundToInt(value);
-            ZoneSlider.GetComponent<UISlider>().Value = zoneSize;
-        }
-
-        public void SetTanCont(float value)
-        {
-            tanCont = value;
-            ContSlider.GetComponent<UISlider>().Value = tanCont;
-        }
-
-        public void SetSkeleton(bool value)
-        {
-            GlobalState.Settings.DisplaySkeletons = value;
-        }
-        #endregion
-
-        #region Messages
-
-        protected override void Awake()
-        {
-            base.Awake();
-
-            ControlPanelButton = panel.Find("ControlButton");
-            DisplayPanelButton = panel.Find("DisplayButton");
-            AddKeyModeButton = controlPanel.Find("AddKey");
-            ZoneModeButton = controlPanel.Find("Zone");
-            SegmentModeButton = controlPanel.Find("Segment");
-            TangentModeButton = controlPanel.Find("Tangent");
-            ZoneSlider = controlPanel.Find("ZoneSize");
-            CurveModeButton = controlPanel.Find("Curve");
-            PoseModeButton = controlPanel.Find("Pose");
-            FKModeButton = controlPanel.Find("FK");
-            IKModeButton = controlPanel.Find("IK");
-            ContSlider = controlPanel.Find("Tangents");
-            SkeletonDisplay = displayPanel.Find("Skeleton");
-            OffsetLabel = displayPanel.Find("OffsetValue");
-
-            CurveMode = CurveEditMode.AddKeyframe;
-            Mode = EditMode.Pose;
-            PoseMode = PoseEditMode.FK;
-            zoneSize = Mathf.RoundToInt(ZoneSlider.GetComponent<UISlider>().Value);
-            Offsetvalue = GlobalState.Settings.CurveForwardOffset;
-            SkeletonDisplay.GetComponent<UICheckbox>().Checked = GlobalState.Settings.DisplaySkeletons;
-            CurrentGizmo = GizmoTool.Rotation;
-
-            SetTangentMode();
-            OpenControlPanel();
-        }
-
-        protected override void OnEnable()
-        {
-            base.OnEnable();
-            foreach (GameObject select in Selection.SelectedObjects)
-            {
-                if (select.TryGetComponent<RigController>(out RigController controller))
-                {
-                    RigGoalController[] GoalController = controller.GetComponentsInChildren<RigGoalController>();
-                    for (int i = 0; i < GoalController.Length; i++)
-                    {
-                        GoalController[i].UseGoal(true);
-                    }
-                }
-            }
-            GlobalState.Instance.onGripWorldEvent.AddListener(OnGripWorld);
-            UnHideActuator();
-        }
-
-        protected override void OnDisable()
-        {
-            base.OnDisable();
-            foreach (GameObject select in Selection.SelectedObjects)
-            {
-                if (select.TryGetComponent<RigController>(out RigController controller))
-                {
-                    RigGoalController[] GoalController = controller.GetComponentsInChildren<RigGoalController>();
-                    for (int i = 0; i < GoalController.Length; i++)
-                    {
-                        GoalController[i].UseGoal(false);
-                    }
-                }
-            }
-            HideActuator();
-        }
-
-        protected override void DoUpdate()
-        {
-            if (navigation.CanUseControls(NavigationMode.UsedControls.RIGHT_JOYSTICK))
-            {
-                Vector2 AxisValue = VRInput.GetValue(VRInput.primaryController, CommonUsages.primary2DAxis);
-                if (AxisValue != Vector2.zero)
-                {
-                    float scaleFactor = 1f + GlobalState.Settings.scaleSpeed / 1000f;
-                    if (null == curveManip)
-                    {
-                        float selectorRadius = mouthpiece.localScale.x;
-                        if (AxisValue.y > deadzone) selectorRadius *= scaleFactor;
-                        if (AxisValue.y < deadzone) selectorRadius /= scaleFactor;
-                        selectorRadius = Mathf.Clamp(selectorRadius, 0.001f, 0.5f);
-                        mouthpiece.localScale = Vector3.one * selectorRadius;
-                    }
-                    else
-                    {
-                        if (AxisValue.y > deadzone) scaleIndice *= scaleFactor;
-                        if (AxisValue.y < deadzone) scaleIndice /= scaleFactor;
-                        scaleIndice = Mathf.Clamp(scaleIndice, 0.001f, 100f);
-                    }
-                }
-            }
-        }
-        public void OnGripWorld(bool state)
-        {
-            if (state && null != poseManip) EndPose();
-            if (state && null != curveManip) ReleaseCurve();
-            if (state && movedObjects.Count > 0) EndDragObject();
-        }
-        #endregion
-
-        #region GetButtons
-        private UIButton GetCurveModeButton(CurveEditMode mode)
-        {
-            switch (mode)
-            {
-                case CurveEditMode.AddKeyframe: return AddKeyModeButton.GetComponent<UIButton>();
-                case CurveEditMode.Zone: return ZoneModeButton.GetComponent<UIButton>();
-                case CurveEditMode.Segment: return SegmentModeButton.GetComponent<UIButton>();
-                case CurveEditMode.Tangents: return TangentModeButton.GetComponent<UIButton>();
-                default: return null;
-            }
-        }
-
-        private UIButton GetModeButton(EditMode mode)
-        {
-            switch (mode)
-            {
-                case EditMode.Curve: return CurveModeButton.GetComponent<UIButton>();
-                case EditMode.Pose: return PoseModeButton.GetComponent<UIButton>();
-                default: return null;
-            }
-        }
-
-        private UIButton GetPoseModeButton(PoseEditMode mode)
-        {
-            switch (mode)
-            {
-                case PoseEditMode.FK: return FKModeButton.GetComponent<UIButton>();
-                case PoseEditMode.IK: return IKModeButton.GetComponent<UIButton>();
-                default: return null;
-            }
-        }
-        #endregion
-
-        #region Ghost&Curve
-        public void HoverLine(GameObject curveObject, Vector3 point)
-        {
-            LineRenderer line = curveObject.GetComponent<LineRenderer>();
-            GameObject gobject = CurveManager.GetObjectFromCurve(curveObject);
-            AnimationSet animationSet = GlobalState.Animation.GetObjectAnimation(gobject);
-
-            int frame = GetFrameFromPoint(line, point, animationSet);
-            DrawCurveGhost(gobject, frame);
-            if (CurveMode == CurveEditMode.Zone || CurveMode == CurveEditMode.Segment) DrawZone(line, frame - zoneSize, frame + zoneSize);
-            if (CurveMode == CurveEditMode.Tangents)
-            {
-                Curve curve = animationSet.GetCurve(AnimatableProperty.PositionX);
-                int prev = curve.GetPreviousKeyFrame(frame);
-                int next = curve.GetNextKeyFrame(frame);
-                DrawZone(line, prev, next);
-
-            }
-        }
-
-        private void DrawCurveGhost(GameObject gobject, int frame)
-        {
-            if (gobject == null) return;
-            if (gobject.TryGetComponent<RigGoalController>(out RigGoalController goalController))
-            {
-                ghostManager.CreateHoverGhost(goalController.RootController, frame);
-                return;
-            }
-            if (gobject.TryGetComponent<MeshFilter>(out MeshFilter objectMesh))
-            {
-                if (null == ghost) CreateGhost();
-                ShowGhost(true);
-                MeshFilter ghostFilter = ghost.GetComponent<MeshFilter>();
-                ghostFilter.mesh = objectMesh.mesh;
-                AnimationSet animationSet = GlobalState.Animation.GetObjectAnimation(gobject);
-                animationSet.EvaluateTransform(frame, ghost.transform);
-            }
-        }
-
-        private void DrawCurveGhost()
-        {
-            DrawCurveGhost(curveManip.Target, curveManip.Frame);
-            if (CurveMode == CurveEditMode.Zone || CurveMode == CurveEditMode.Segment || CurveMode == CurveEditMode.Tangents) DrawZoneDrag();
-        }
-        private void ShowGhost(bool state)
-        {
-            if (null == ghost) return;
-            ghost.SetActive(state);
-            foreach (Transform child in mouthpiece)
-            {
-                child.gameObject.SetActive(!state);
-            }
-        }
-
-        public void StopHovering()
-        {
-            ShowGhost(false);
-            ghostManager.HideGhost();
-            ResetColor();
-        }
-
-        private void CreateGhost()
-        {
-            ghost = new GameObject();
-            ghost.name = "AnimationGhost";
-            ghost.transform.parent = CurveManager.curvesParent;
-            ghost.AddComponent<MeshRenderer>();
-            ghost.AddComponent<MeshFilter>();
-
-            ghost.GetComponent<MeshRenderer>().material = GhostMaterial;
-        }
-
-        public void DrawZone(LineRenderer line, int start, int end)
-        {
-            lastTexture = (Texture2D)line.material.mainTexture;
-            Color lineColor = line.material.color;
-            if (null == lastTexture)
-            {
-                lastTexture = new Texture2D(line.positionCount, 1, TextureFormat.RGBA32, false);
-                line.material.mainTexture = lastTexture;
-            }
-
-            ApplyTexture(start, end, lineColor);
-            lastLine = line;
-        }
-        public void DrawZoneDrag()
-        {
-            if (CurveManager.TryGetLine(curveManip.Target, out LineRenderer line))
-            {
-                line.material.mainTexture = lastTexture;
-            }
-        }
-
-        private void ApplyTexture(int start, int end, Color lineColor)
-        {
-            NativeArray<Color32> colors = lastTexture.GetRawTextureData<Color32>();
-            for (int i = 0; i < colors.Length; i++)
-            {
-                if (i < start || i > end)
-                {
-                    colors[i] = lineColor;
-                }
-                else
-                {
-                    colors[i] = ZoneColor;
-                }
-            }
-            lastTexture.Apply();
-        }
-
-        public void ResetColor()
-        {
-            if (null == lastLine) return;
-            lastLine.material.mainTexture = null;
-        }
-        #endregion
-
-        #region PoseMode
-
-        public void StartPose(RigGoalController controller, Transform mouthpiece)
-        {
-            //poseManip = new PoseManipulation(controller, mouthpiece, PoseMode);
-        }
-        public bool DragPose(Transform mouthpiece)
-        {
-            if (null == poseManip) return false;
-            poseManip.SetDestination(mouthpiece);
-            poseManip.TrySolver();
-            if (null != goalGizmo && goalGizmo.gameObject.activeSelf) goalGizmo.ResetPosition(selectedGoal.gameObject);
-            return true;
-        }
-
-        public void EndPose()
-        {
-            poseManip.GetCommand().Submit();
-            //if (GlobalState.Animation.autoKeyEnabled) new CommandAddKeyframes(poseManip.MeshController.gameObject, false).Submit();
-            poseManip = null;
+            ///TODO: Allow multiple object dragging?
         }
 
         #endregion
 
-        #region CurveMode
-        public void StartDrag(GameObject gameObject, Transform mouthpiece)
+        #region controller
+        internal void GrabController(RigObjectController controller, Transform mouthpiece)
         {
-            LineRenderer line = gameObject.GetComponent<LineRenderer>();
-            GameObject target = CurveManager.GetObjectFromCurve(gameObject);
-            AnimationSet anim = GlobalState.Animation.GetObjectAnimation(target);
-            int frame = GetFrameFromPoint(line, mouthpiece.position, anim);
-
-            if (target.TryGetComponent<RigGoalController>(out RigGoalController controller))
-            {
-                //temporary solution for hips joint
-                if (target.name.Contains("Hips")) curveManip = new CurveManipulation(target, frame, mouthpiece, CurveMode, zoneSize, (double)tanCont);
-                else curveManip = new CurveManipulation(target, controller, frame, mouthpiece, CurveMode, zoneSize, (double)tanCont);
-            }
-            else
-            {
-                curveManip = new CurveManipulation(target, frame, mouthpiece, CurveMode, zoneSize, (double)tanCont);
-            }
+            grabbedController = controller;
+            grabbedController.OnGrab(mouthpiece, PoseMode == PoseEditMode.FK);
         }
-
-        internal bool DragCurve(Transform mouthpiece)
+        internal void DragController(Transform mouthpiece)
         {
-            if (null == curveManip) return false;
-            scaleIndice = 1f;
-            curveManip.DragCurve(mouthpiece, scaleIndice);
-            DrawCurveGhost();
-            return true;
+            if (null == grabbedController) return;
+            grabbedController.OnDrag(mouthpiece);
         }
-
-        public void ReleaseCurve()
+        internal void ReleaseController()
         {
-            curveManip.ReleaseCurve();
-            curveManip = null;
+            if (null == grabbedController) return;
+            grabbedController.OnRelease();
+            grabbedController = null;
         }
-
-
-
-        private int GetFrameFromPoint(LineRenderer line, Vector3 pointPosition, AnimationSet anim)
+        internal void SelectController(RigObjectController hoveredController)
         {
-            Vector3 localPointPosition = line.transform.InverseTransformPoint(pointPosition);
-            Vector3[] positions = new Vector3[line.positionCount];
-            line.GetPositions(positions);
-            int closestPoint = 0;
-            float closestDistance = Vector3.Distance(positions[0], localPointPosition);
-            for (int i = 1; i < line.positionCount; i++)
-            {
-                float dist = Vector3.Distance(positions[i], localPointPosition);
-                if (dist < closestDistance)
-                {
-                    closestDistance = dist;
-                    closestPoint = i;
-                }
-            }
-
-            int firstAnimFrame = anim.GetCurve(AnimatableProperty.PositionX).keys[0].frame + GlobalState.Animation.StartFrame - 1;
-            return closestPoint + firstAnimFrame;
-        }
-
-
-        #endregion
-
-        #region DragObject
-
-        Matrix4x4 initMouthPieceWorldToLocal;
-        List<GameObject> movedObjects = new List<GameObject>();
-        Dictionary<GameObject, Matrix4x4> initialParentMatrixLtW = new Dictionary<GameObject, Matrix4x4>();
-        Dictionary<GameObject, Matrix4x4> initialParentMatrixWtL = new Dictionary<GameObject, Matrix4x4>();
-        Dictionary<GameObject, Vector3> initialPositions = new Dictionary<GameObject, Vector3>();
-        Dictionary<GameObject, Quaternion> initialRotation = new Dictionary<GameObject, Quaternion>();
-        Dictionary<GameObject, Vector3> initialScale = new Dictionary<GameObject, Vector3>();
-
-        public void StartDragObject(GameObject gobject, Transform mouthpiece)
-        {
-            initMouthPieceWorldToLocal = mouthpiece.worldToLocalMatrix;
-
-            initialParentMatrixLtW[gobject] = gobject.transform.parent.localToWorldMatrix;
-            initialParentMatrixWtL[gobject] = gobject.transform.parent.worldToLocalMatrix;
-            initialPositions[gobject] = gobject.transform.localPosition;
-            initialRotation[gobject] = gobject.transform.localRotation;
-            initialScale[gobject] = gobject.transform.localScale;
-            movedObjects.Add(gobject);
-        }
-
-        public void DragObject(Transform mouthpiece)
-        {
-            Matrix4x4 transformation = mouthpiece.localToWorldMatrix * initMouthPieceWorldToLocal;
-            movedObjects.ForEach(x =>
-            {
-                Matrix4x4 transformed = initialParentMatrixWtL[x] * transformation * initialParentMatrixLtW[x] * Matrix4x4.TRS(initialPositions[x], initialRotation[x], initialScale[x]);
-                Maths.DecomposeMatrix(transformed, out Vector3 pos, out Quaternion rot, out Vector3 scale);
-                x.transform.localPosition = pos;
-                x.transform.localRotation = rot;
-                x.transform.localScale = scale;
-            });
-        }
-
-        public void EndDragObject()
-        {
-
-            List<Vector3> beginPositions = new List<Vector3>();
-            List<Vector3> endPositions = new List<Vector3>();
-            List<Quaternion> beginRotations = new List<Quaternion>();
-            List<Quaternion> endRotations = new List<Quaternion>();
-            List<Vector3> beginScales = new List<Vector3>();
-            List<Vector3> endScales = new List<Vector3>();
-
-            foreach (GameObject gObject in movedObjects)
-            {
-                beginPositions.Add(initialPositions[gObject]);
-                beginRotations.Add(initialRotation[gObject]);
-                beginScales.Add(initialScale[gObject]);
-                endPositions.Add(gObject.transform.localPosition);
-                endRotations.Add(gObject.transform.localRotation);
-                endScales.Add(gObject.transform.localScale);
-                if (GlobalState.Animation.autoKeyEnabled) new CommandAddKeyframes(gObject, false).Submit();
-
-                initialParentMatrixLtW.Remove(gObject);
-                initialParentMatrixWtL.Remove(gObject);
-                initialPositions.Remove(gObject);
-                initialRotation.Remove(gObject);
-                initialScale.Remove(gObject);
-            }
-
-            new CommandMoveObjects(movedObjects, beginPositions, beginRotations, beginScales, endPositions, endRotations, endScales).Submit();
-            movedObjects.Clear();
-        }
-        #endregion
-
-        #region GoalSelection
-
-
-        public void HideActuator()
-        {
-            if (null != goalGizmo) goalGizmo.gameObject.SetActive(false);
-        }
-        public void UnHideActuator()
-        {
-            if (null != selectedGoal) goalGizmo.gameObject.SetActive(true);
-        }
-
-        public void SelectGoal(RigGoalController controller)
-        {
-            if (selectedGoal != null) UnSelectGoal(selectedGoal);
-            goalGizmo.gameObject.SetActive(true);
-            selectedGoal = controller;
-            controller.gameObject.layer = 20;
-            goalGizmo.Init(controller);
-        }
-
-        public void SelectEmpty()
-        {
-            if (null != selectedGoal) UnSelectGoal(selectedGoal);
-        }
-
-        private void UnSelectGoal(RigGoalController controller)
-        {
-            HideActuator();
-            controller.gameObject.layer = 21;
-            selectedGoal = null;
-        }
-
-        public void StartAcutator(GameObject actuator, Transform mouthpiece)
-        {
-            //PoseManipulation.AcutatorAxis axis = goalGizmo.GetAcutatorAxis(actuator);
-            //poseManip = new PoseManipulation(goalGizmo.Controller, mouthpiece, PoseMode, currentGizmo, axis);
+            //TODO: show controller gizmo
         }
 
         #endregion
-
     }
 
 }

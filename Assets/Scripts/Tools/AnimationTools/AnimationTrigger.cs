@@ -32,8 +32,11 @@ namespace VRtist
     public class AnimationTrigger : MonoBehaviour
     {
         [SerializeField] private AnimationTool animationTool;
-        public enum HoverType { none, Acutator, Controller, Curve, Object };
-        public List<HoverType> hoveredTypes;
+        public enum TargetType { none, Actuator, Controller, Curve, Object };
+        public List<TargetType> HoveredTypes;
+        public TargetType CurrentDragged = TargetType.none;
+        public TargetType CurrentSelection = TargetType.none;
+
 
         private List<GameObject> hoveredTargets;
         private RigObjectController hoveredController;
@@ -47,22 +50,22 @@ namespace VRtist
             if (other.gameObject.tag == "Controller")
             {
                 if (hoveredTargets.Count > 0) StopHovering();
-                StartHovering(other.gameObject, HoverType.Controller);
+                StartHovering(other.gameObject, TargetType.Controller);
             }
             if (other.gameObject.tag == "Curve")
             {
                 if (hoveredTargets.Count > 0) StopHovering();
-                StartHovering(other.gameObject, HoverType.Curve);
+                StartHovering(other.gameObject, TargetType.Curve);
             }
             if (other.gameObject.tag == "Actuator")
             {
                 if (hoveredTargets.Count > 0) StopHovering();
-                StartHovering(other.gameObject, HoverType.Acutator);
+                StartHovering(other.gameObject, TargetType.Actuator);
             }
             if (Selection.SelectedObjects.Contains(other.gameObject) && !other.TryGetComponent(out RigController skin))
             {
                 if (hoveredTargets.Count > 0) StopHovering();
-                StartHovering(other.gameObject, HoverType.Object);
+                StartHovering(other.gameObject, TargetType.Object);
             }
         }
         public void OnTriggerExit(Collider other)
@@ -84,47 +87,44 @@ namespace VRtist
                 RemoveFromHovered(other.gameObject);
             }
         }
-        private void StartHovering(GameObject target, HoverType type)
+        /// <summary>
+        /// Add target to hovered targets, and set as hovered
+        /// </summary>
+        private void StartHovering(GameObject target, TargetType type)
         {
             if (hoveredTargets.Count > 0) StopHovering();
             hoveredTargets.Add(target);
-            hoveredTypes.Add(type);
-            switch (type)
-            {
-                case HoverType.Controller:
-                    hoveredController = target.GetComponent<RigObjectController>();
-                    hoveredController.StartHover();
-                    break;
-                case HoverType.Acutator:
-                    animationTool.HoverGizmo(target);
-                    break;
-                case HoverType.Curve:
-                    animationTool.HoverLine(target, transform.position);
-                    break;
-                case HoverType.Object:
-                    animationTool.HoverObject(target);
-                    break;
-            }
+            HoveredTypes.Add(type);
+            if (CurrentDragged != TargetType.none || CurrentSelection != TargetType.none) return;
+            ReplaceHover();
         }
+        /// <summary>
+        /// Set hoveredObject 0 as not hovered
+        /// </summary>
         private void StopHovering()
         {
-            switch (hoveredTypes[0])
+            if (CurrentDragged != TargetType.none || CurrentSelection != TargetType.none) return;
+            switch (HoveredTypes[0])
             {
-                case HoverType.Controller:
+                case TargetType.Controller:
                     hoveredController.EndHover();
                     hoveredController = null;
                     break;
-                case HoverType.Acutator:
-                    animationTool.StopHoverGizmo(hoveredTargets[0]);
+                case TargetType.Actuator:
+                    animationTool.StopHoverActuator(hoveredTargets[0]);
                     break;
-                case HoverType.Curve:
-                    animationTool.StopHoverLine(hoveredTargets[0]);
+                case TargetType.Curve:
+                    animationTool.StopHoverCurve(hoveredTargets[0]);
                     break;
-                case HoverType.Object:
+                case TargetType.Object:
                     animationTool.StopHoverObject(hoveredTargets[0]);
                     break;
             }
         }
+
+        /// <summary>
+        /// Remove target from hovered objects
+        /// </summary>
         private void RemoveFromHovered(GameObject target)
         {
             int index = hoveredTargets.IndexOf(target);
@@ -132,262 +132,170 @@ namespace VRtist
             if (index == 0) StopHovering();
 
             hoveredTargets.RemoveAt(index);
-            hoveredTypes.RemoveAt(index);
+            HoveredTypes.RemoveAt(index);
 
             if (index == 0) ReplaceHover();
         }
+        /// <summary>
+        /// Set hoveredObject 0 as hovered
+        /// </summary>
         private void ReplaceHover()
         {
             if (hoveredTargets.Count > 0)
             {
-                switch (hoveredTypes[0])
+                switch (HoveredTypes[0])
                 {
-                    case HoverType.Controller:
+                    case TargetType.Controller:
                         hoveredController = hoveredTargets[0].GetComponent<RigObjectController>();
                         hoveredController.StartHover();
                         break;
-                    case HoverType.Acutator:
-                        animationTool.HoverGizmo(hoveredTargets[0]);
+                    case TargetType.Actuator:
+                        animationTool.HoverActuator(hoveredTargets[0]);
                         break;
-                    case HoverType.Curve:
-                        animationTool.HoverLine(hoveredTargets[0], transform.position);
+                    case TargetType.Curve:
+                        animationTool.HoverCurve(hoveredTargets[0], transform);
                         break;
-                    case HoverType.Object:
+                    case TargetType.Object:
                         animationTool.HoverObject(hoveredTargets[0]);
                         break;
                 }
             }
         }
         #endregion
+
         public void Update()
         {
             VRInput.ButtonEvent(VRInput.primaryController, CommonUsages.grip, OnGripPressed, OnGripRelease);
             if (gripPressed) Gripped();
             VRInput.ButtonEvent(VRInput.primaryController, CommonUsages.triggerButton, OnTriggerPressed, OnTriggerRelease);
             if (triggerPressed) Triggered();
+            VRInput.ButtonEvent(VRInput.primaryController, CommonUsages.primaryButton, () => animationTool.NextGizmo());
+            if (HoveredTypes.Count > 0 && HoveredTypes[0] == TargetType.Curve) animationTool.UpdateHoverCurve(hoveredTargets[0], transform);
         }
+
+        #region Grip
         public void OnGripPressed()
         {
             gripPressed = true;
             if (hoveredTargets.Count > 0)
             {
-                switch (hoveredTypes[0])
+                switch (HoveredTypes[0])
                 {
-                    case HoverType.Controller:
+                    case TargetType.Controller:
+                        animationTool.GrabController(hoveredController, transform);
+                        CurrentDragged = TargetType.Controller;
                         break;
-                    case HoverType.Acutator:
+                    case TargetType.Actuator:
+                        animationTool.GrabActuator(hoveredTargets[0], transform);
+                        CurrentDragged = TargetType.Actuator;
                         break;
-                    case HoverType.Curve:
+                    case TargetType.Curve:
+                        animationTool.GrabCurve(hoveredTargets[0], transform);
+                        CurrentDragged = TargetType.Curve;
                         break;
-                    case HoverType.Object:
+                    case TargetType.Object:
+                        animationTool.GrabObject(hoveredTargets[0], transform);
+                        CurrentDragged = TargetType.Object;
                         break;
                 }
             }
         }
         public void Gripped()
         {
-
+            switch (CurrentDragged)
+            {
+                case TargetType.none: return;
+                case TargetType.Controller:
+                    animationTool.DragController(transform);
+                    break;
+                case TargetType.Actuator:
+                    animationTool.DragActuator(transform);
+                    break;
+                case TargetType.Curve:
+                    animationTool.DragCurve(transform);
+                    break;
+                case TargetType.Object:
+                    animationTool.DragObject(transform);
+                    break;
+            }
         }
         public void OnGripRelease()
         {
             gripPressed = false;
+            switch (CurrentDragged)
+            {
+                case TargetType.none: return;
+                case TargetType.Controller:
+                    animationTool.ReleaseController();
+                    break;
+                case TargetType.Actuator:
+                    animationTool.ReleaseActuator();
+                    break;
+                case TargetType.Curve:
+                    animationTool.ReleaseCurve();
+                    break;
+                case TargetType.Object:
+                    animationTool.ReleaseObject();
+                    break;
+            }
+            CurrentDragged = TargetType.none;
+            StopHovering();
+            ReplaceHover();
         }
+        #endregion
+
+        #region Trigger
         public void OnTriggerPressed()
         {
             triggerPressed = true;
+            switch (HoveredTypes[0])
+            {
+                case TargetType.none:
+                    animationTool.SelectEmpty();
+                    break;
+                case TargetType.Controller:
+                    animationTool.SelectController(hoveredController);
+                    CurrentSelection = TargetType.Controller;
+                    break;
+                case TargetType.Actuator:
+                    animationTool.SelectActuator(hoveredTargets[0]);
+                    CurrentSelection = TargetType.Actuator;
+                    break;
+                case TargetType.Curve:
+                    animationTool.SelectCurve(hoveredTargets[0], transform);
+                    CurrentSelection = TargetType.Curve;
+                    break;
+                case TargetType.Object:
+                    animationTool.SelectObject(hoveredTargets[0]);
+                    CurrentSelection = TargetType.Object;
+                    break;
+            }
         }
         public void Triggered()
         {
-
+            switch (CurrentSelection)
+            {
+                case TargetType.Curve:
+                    animationTool.SelectingCurve(transform);
+                    break;
+                default: return;
+            }
         }
         public void OnTriggerRelease()
         {
             triggerPressed = false;
+            switch (CurrentSelection)
+            {
+                case TargetType.Curve:
+                    animationTool.EndSelectionCurve();
+                    break;
+                default: break;
+            }
+            CurrentSelection = TargetType.none;
+            StopHovering();
+            ReplaceHover();
         }
-
-
-
-        //private bool isGrip;
-        //private bool isHovering;
-
-        //private List<GameObject> hoveredCurves = new List<GameObject>();
-        //private List<GameObject> hoveredActuators = new List<GameObject>();
-        //private List<GameObject> hoveredObjects = new List<GameObject>();
-        //private List<RigGoalController> hoveredGoals = new List<RigGoalController>();
-
-        //private List<GameObject> dragedObject = new List<GameObject>();
-
-        //#region GoalLayers
-        //private void AddHoveredGoal(RigGoalController controller)
-        //{
-        //    hoveredGoals.Add(controller);
-        //    if (hoveredGoals.Count == 1 && controller.gameObject.layer == 21)
-        //    {
-        //        controller.gameObject.layer = 22;
-        //    }
-        //}
-        //private void RemoveHoverGoal(RigGoalController controller)
-        //{
-        //    if (controller.gameObject.layer == 22) controller.gameObject.layer = 21;
-        //    hoveredGoals.Remove(controller);
-        //    if (hoveredGoals.Count > 0 && hoveredGoals[0].gameObject.layer == 21) hoveredGoals[0].gameObject.layer = 22;
-        //}
-        //private void RemoveHoverGoal(int index)
-        //{
-        //    if (hoveredGoals[index].gameObject.layer == 22) hoveredGoals[index].gameObject.layer = 21;
-        //    hoveredGoals.RemoveAt(index);
-        //    if (hoveredGoals.Count > 0 && hoveredGoals[0].gameObject.layer == 21) hoveredGoals[0].gameObject.layer = 22;
-        //}
-
-        //private void ClearHoverGoals()
-        //{
-        //    if (hoveredGoals.Count > 0 && hoveredGoals[0].gameObject.layer == 22) hoveredGoals[0].gameObject.layer = 21;
-        //    hoveredGoals.Clear();
-        //}
-        //#endregion
-
-        //public void OnTriggerEnter(Collider other)
-        //{
-        //    if (other.tag == "Curve" && !hoveredCurves.Contains(other.gameObject)) hoveredCurves.Add(other.gameObject);
-        //    else if (other.tag == "Goal" && other.TryGetComponent<RigGoalController>(out RigGoalController controller) && !hoveredGoals.Contains(controller)) AddHoveredGoal(controller);
-        //    else if (other.tag == "Actuator" && !hoveredActuators.Contains(other.gameObject)) hoveredActuators.Add(other.gameObject);
-        //    else if (Selection.SelectedObjects.Contains(other.gameObject) && !hoveredObjects.Contains(other.gameObject) && !other.TryGetComponent<RigController>(out RigController skin)) hoveredObjects.Add(other.gameObject);
-        //}
-
-        //public void OnTriggerExit(Collider other)
-        //{
-        //    if (isGrip) return;
-        //    if (other.tag == "Curve" && hoveredCurves.Contains(other.gameObject))
-        //    {
-        //        hoveredCurves.Remove(other.gameObject);
-        //    }
-        //    else if (other.tag == "Goal" && other.TryGetComponent<RigGoalController>(out RigGoalController controller) && hoveredGoals.Contains(controller))
-        //    {
-        //        RemoveHoverGoal(controller);
-        //    }
-        //    else if (other.tag == "Actuator" && hoveredActuators.Contains(other.gameObject))
-        //    {
-        //        hoveredActuators.Remove(other.gameObject);
-        //    }
-        //    else if (hoveredObjects.Contains(other.gameObject)) hoveredObjects.Remove(other.gameObject);
-        //}
-
-        //public void Update()
-        //{
-        //    switch (animationTool.Mode)
-        //    {
-        //        case AnimationTool.EditMode.Curve:
-        //            CurveMode();
-        //            break;
-        //        case AnimationTool.EditMode.Pose:
-        //            PoseMode();
-        //            break;
-        //    }
-
-        //    VRInput.ButtonEvent(VRInput.primaryController, CommonUsages.primaryButton, () => animationTool.NextGizmo());
-        //}
-
-        //public void PoseMode()
-        //{
-        //    VRInput.ButtonEvent(VRInput.primaryController, CommonUsages.grip,
-        //        () =>
-        //        {
-        //            if (hoveredGoals.Count > 0)
-        //            {
-        //                animationTool.StartPose(hoveredGoals[0], transform);
-        //                isGrip = true;
-        //            }
-        //            if (hoveredActuators.Count > 0)
-        //            {
-        //                animationTool.StartAcutator(hoveredActuators[0], transform);
-        //                isGrip = true;
-        //            }
-        //            if (hoveredObjects.Count > 0)
-        //            {
-        //                foreach (GameObject gobject in hoveredObjects)
-        //                {
-        //                    animationTool.StartDragObject(gobject, transform);
-        //                    dragedObject.Add(gobject);
-        //                }
-        //            }
-        //        },
-        //        () =>
-        //        {
-        //            if (isGrip)
-        //            {
-        //                animationTool.EndPose();
-        //                ClearHoverGoals();
-        //                hoveredActuators.Clear();
-        //                isGrip = false;
-        //            }
-        //            if (dragedObject.Count > 0)
-        //            {
-        //                animationTool.EndDragObject();
-        //                dragedObject.Clear();
-        //                hoveredObjects.Clear();
-        //            }
-        //        });
-        //    if (isGrip) isGrip = animationTool.DragPose(transform);
-        //    if (dragedObject.Count > 0 && !isGrip)
-        //    {
-        //        dragedObject.ForEach(x => animationTool.DragObject(transform));
-        //    }
-        //    if (hoveredGoals.Count > 0 && hoveredGoals[0] == null) RemoveHoverGoal(0);
-        //    SelectGoal();
-        //}
-
-        //public void CurveMode()
-        //{
-        //    VRInput.ButtonEvent(VRInput.primaryController, CommonUsages.grip,
-        //        () =>
-        //        {
-        //            if (hoveredCurves.Count > 0)
-        //            {
-        //                animationTool.StartDrag(hoveredCurves[0], transform);
-        //                isGrip = true;
-        //                isHovering = true;
-        //            }
-        //        },
-        //        () =>
-        //        {
-        //            if (isGrip)
-        //            {
-        //                animationTool.ReleaseCurve();
-        //                isGrip = false;
-        //            }
-        //        });
-        //    if (isGrip) isGrip = animationTool.DragCurve(transform);
-        //    else
-        //    {
-        //        if (hoveredCurves.Count > 0)
-        //        {
-        //            if (hoveredCurves[0] == null)
-        //            {
-        //                hoveredCurves.RemoveAt(0);
-        //            }
-        //            else
-        //            {
-        //                animationTool.HoverLine(hoveredCurves[0], transform.position);
-        //                isHovering = true;
-        //            }
-        //        }
-        //        else if (isHovering)
-        //        {
-        //            animationTool.StopHovering();
-        //        }
-        //    }
-        //}
-
-        //public void SelectGoal()
-        //{
-        //    VRInput.ButtonEvent(VRInput.primaryController, CommonUsages.triggerButton,
-        //        onPress: () =>
-        //    {
-        //        if (hoveredGoals.Count > 0) animationTool.SelectGoal(hoveredGoals[0]);
-        //        else animationTool.SelectEmpty();
-        //    });
-        //}
-
+        #endregion
     }
 
 }

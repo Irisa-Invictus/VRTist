@@ -305,6 +305,22 @@ namespace VRtist
 
             return result;
         }
+
+        public static Vector3 ReduceAngles(Quaternion qrotation)
+        {
+            Vector3 rotation = qrotation.eulerAngles;
+            rotation = new Vector3(Mathf.DeltaAngle(0, rotation.x), Mathf.DeltaAngle(0, rotation.y), Mathf.DeltaAngle(0, rotation.z));
+            Vector3 addedRotation = new Vector3(-(rotation.x - 180), rotation.y + 180, rotation.z + 180);
+            Vector3 minusRotation = new Vector3(-(rotation.x + 180), rotation.y - 180, rotation.z - 180);
+
+            if (addedRotation.magnitude < rotation.magnitude)
+                rotation = addedRotation;
+
+            if (minusRotation.magnitude < rotation.magnitude)
+                rotation = minusRotation;
+
+            return rotation;
+        }
     }
 
     public class Bezier

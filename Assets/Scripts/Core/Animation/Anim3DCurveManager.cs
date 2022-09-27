@@ -81,6 +81,11 @@ namespace VRtist
             UpdateCurvesWidth();
         }
 
+        internal void HoverCurve(GameObject gameObject, Transform mouthpiece)
+        {
+            throw new NotImplementedException();
+        }
+
         void UpdateCurvesWidth()
         {
             foreach (GameObject curve in curves.Values)
@@ -89,6 +94,21 @@ namespace VRtist
                 line.startWidth = lineWidth / GlobalState.WorldScale;
                 line.endWidth = line.startWidth;
             }
+        }
+
+        internal void UpdateHoverCurve(GameObject gameObject, Transform transform)
+        {
+            throw new NotImplementedException();
+        }
+
+        internal int GetFrameFromPoint(GameObject gameObject, Vector3 position)
+        {
+            throw new NotImplementedException();
+        }
+
+        internal void StopHover(GameObject gameObject)
+        {
+            throw new NotImplementedException();
         }
 
         void OnSelectionChanged(HashSet<GameObject> previousSelectedObjects, HashSet<GameObject> selectedObjects)
@@ -109,8 +129,8 @@ namespace VRtist
                     else
                     {
                         //Only display curve for Rig's root
-                        RigGoalController goalController = skinController.RootObject.GetComponent<RigGoalController>();
-                        AddGoalCurve(goalController, skinController);
+                        JointController jointController = skinController.RootObject.GetComponent<JointController>();
+                        AddGoalCurve(jointController, skinController);
                     }
                 }
             }
@@ -118,7 +138,7 @@ namespace VRtist
 
         void OnCurveChanged(GameObject gObject, AnimatableProperty property)
         {
-            RigGoalController[] controllers = gObject.GetComponentsInChildren<RigGoalController>();
+            JointController[] controllers = gObject.GetComponentsInChildren<JointController>();
             if (controllers.Length > 0)
             {
                 if ((ToolsManager.CurrentToolName() == "Animation"))
@@ -129,7 +149,7 @@ namespace VRtist
                 else
                 {
                     //only update rig's root curve
-                    UpdateGoalCurve(new RigGoalController[] { controllers[0] });
+                    UpdateGoalCurve(new JointController[] { controllers[0] });
                 }
             }
             if (property != AnimatableProperty.PositionX && property != AnimatableProperty.PositionY && property != AnimatableProperty.PositionZ)
@@ -207,7 +227,7 @@ namespace VRtist
             List<GameObject> removedCurves = new List<GameObject>();
             foreach (KeyValuePair<GameObject, GameObject> curve in curves)
             {
-                if (curve.Key.TryGetComponent<RigGoalController>(out RigGoalController controller) && controller.PathToRoot[0] != controller.transform)
+                if (curve.Key.TryGetComponent<JointController>(out JointController controller) && controller.PathToRoot[0] != controller.transform)
                 {
                     Destroy(curve.Value);
                     removedCurves.Add(curve.Key);
@@ -222,7 +242,7 @@ namespace VRtist
             AddCurve(gObject);
         }
 
-        private void UpdateGoalCurve(RigGoalController[] controllers)
+        private void UpdateGoalCurve(JointController[] controllers)
         {
             if (goalCurves.ContainsKey(controllers[0].RootController)) goalCurves.Remove(controllers[0].RootController);
             for (int i = 0; i < controllers.Length; i++)
@@ -293,19 +313,19 @@ namespace VRtist
 
         private void AddHumanCurve(GameObject gObject, RigController controller)
         {
-            RigGoalController goalController = controller.RootObject.GetComponent<RigGoalController>();
-            RigGoalController[] controllers = goalController.GetComponentsInChildren<RigGoalController>();
-            foreach (RigGoalController ctrl in controllers)
+            JointController goalController = controller.RootObject.GetComponent<JointController>();
+            JointController[] controllers = goalController.GetComponentsInChildren<JointController>();
+            foreach (JointController ctrl in controllers)
             {
                 AddGoalCurve(ctrl, controller);
             }
         }
 
-        private void AddGoalCurve(RigGoalController goalController, RigController skinController)
+        private void AddGoalCurve(JointController jointController, RigController skinController)
         {
-            if (!goalController.ShowCurve) return;
+            if (!jointController.ShowCurve) return;
 
-            AnimationSet goalAnimation = GlobalState.Animation.GetObjectAnimation(goalController.gameObject);
+            AnimationSet goalAnimation = GlobalState.Animation.GetObjectAnimation(jointController.gameObject);
             if (null == goalAnimation) return;
 
             Curve rotationX = goalAnimation.GetCurve(AnimatableProperty.RotationX);
@@ -315,21 +335,21 @@ namespace VRtist
             int frameEnd = Mathf.Clamp(rotationX.keys[rotationX.keys.Count - 1].frame, GlobalState.Animation.StartFrame, GlobalState.Animation.EndFrame);
 
             List<Vector3> positions = new List<Vector3>();
-            GameObject curve3D = curves.TryGetValue(goalController.gameObject, out GameObject current) ? current : Instantiate(curvePrefab, curvesParent);
+            GameObject curve3D = curves.TryGetValue(jointController.gameObject, out GameObject current) ? current : Instantiate(curvePrefab, curvesParent);
 
             Vector3 forwardOffset = (skinController.transform.forward * skinController.transform.localScale.x) * currentCurveOffset;
 
-            goalController.CheckAnimations();
+            jointController.CheckAnimations();
             for (int i = frameStart; i <= frameEnd; i++)
             {
-                Vector3 position = curve3D.transform.InverseTransformDirection(goalController.FramePosition(i) - (forwardOffset * i));
+                Vector3 position = curve3D.transform.InverseTransformDirection(jointController.FramePosition(i) - (forwardOffset * i));
                 positions.Add(position);
             }
             LineRenderer line = curve3D.GetComponent<LineRenderer>();
             line.positionCount = positions.Count;
             line.SetPositions(positions.ToArray());
 
-            line.material.color = goalController.color;
+            line.material.color = jointController.color;
 
             line.startWidth = lineWidth / GlobalState.WorldScale;
             line.endWidth = line.startWidth;
@@ -340,7 +360,7 @@ namespace VRtist
             Mesh lineMesh = new Mesh();
             line.BakeMesh(lineMesh);
             collider.sharedMesh = lineMesh;
-            curves[goalController.gameObject] = curve3D;
+            curves[jointController.gameObject] = curve3D;
             if (goalCurves.ContainsKey(skinController))
             {
                 goalCurves[skinController].Add(curve3D);
@@ -375,7 +395,7 @@ namespace VRtist
         {
             foreach (KeyValuePair<RigController, List<GameObject>> curves in goalCurves)
             {
-                RigGoalController[] controllers = curves.Key.GetComponentsInChildren<RigGoalController>();
+                JointController[] controllers = curves.Key.GetComponentsInChildren<JointController>();
                 UpdateGoalCurve(controllers);
             }
         }

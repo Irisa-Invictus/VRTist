@@ -221,7 +221,7 @@ namespace VRtist
             delayedMesh = new Dictionary<Assimp.Node, GameObject>();
             meshCenter = Vector3.zero;
             meshSize = Vector3.zero;
-
+            rootBone = null;
             //textures = new Dictionary<string, Texture2D>();   
         }
 
@@ -599,6 +599,13 @@ namespace VRtist
                 });
                 bw.AddRange(VertexBonesWeights[i]);
             }
+            Transform root = null;
+            for (int i = 0; i < bonesArrayFlat.Count; i++)
+            {
+                if (bonesArrayFlat.Contains(bonesArrayFlat[i].parent)) continue;
+                root = bonesArrayFlat[i];
+                break;
+            }
 
             meshRenderer.bones = bonesArrayFlat.ToArray();
             meshRenderer.sharedMesh = new Mesh();
@@ -607,7 +614,7 @@ namespace VRtist
             meshRenderer.sharedMesh.SetBoneWeights(new NativeArray<byte>(bonesPerVertes, Allocator.Temp), new NativeArray<BoneWeight1>(bw.ToArray(), Allocator.Temp));
             meshRenderer.sharedMesh.name = meshes[node.MeshIndices[0]].name;
             meshRenderer.sharedMaterials = mats;
-            meshRenderer.rootBone = rootBone;
+            meshRenderer.rootBone = root;
             if (meshRenderer.sharedMesh.bounds.size.magnitude > meshSize.magnitude)
             {
                 meshCenter = meshRenderer.bounds.center;
@@ -650,22 +657,13 @@ namespace VRtist
 
             if (node.Name.Contains("$AssimpFbx$") && node.HasChildren)
             {
-                if (node.Name.Contains("Translation"))
-                {
-                    nodePosition = cumulRotation * nodePosition;
-                }
-                else
+                if (!node.Name.Contains("Translation"))
                 {
                     nodePosition += cumulPosition;
                 }
                 if (node.Name.Contains("PreRotation"))
                 {
                     preRotation = nodeRotation;
-                    nodeRotation = cumulRotation * nodeRotation;
-                }
-                else
-                {
-                    nodeRotation = cumulRotation;
                 }
                 cumulMatrix = Matrix4x4.TRS(nodePosition, nodeRotation, nodeScale);
                 if (blocking)
@@ -675,14 +673,14 @@ namespace VRtist
             }
             else
             {
-                nodePosition = (cumulRotation * nodePosition) + cumulPosition;
+                nodePosition = nodePosition + cumulPosition;
                 node.Transform.Decompose(out Assimp.Vector3D scale1, out Assimp.Quaternion rot, out Assimp.Vector3D trans);
                 AssignMeshes(node, go);
 
                 if (node.Parent != null)
                 {
                     go.transform.localPosition = nodePosition;
-                    go.transform.localRotation = nodeRotation;
+                    go.transform.localRotation = preRotation * nodeRotation;
                     go.transform.localScale = nodeScale;
                     go.name = isHuman ? node.Name : Utils.CreateUniqueName(node.Name);
                     if (isHuman)
@@ -691,21 +689,22 @@ namespace VRtist
                         {
                             bones[node.Name] = go.transform;
                         }
-                        if (node.Name.Contains("Hips")) rootBone = go.transform;
+                        if (node.Name.Contains("Root")) rootBone = go.transform;
+                        if (rootBone == null && node.Name.Contains("Hips")) rootBone = go.transform;
                     }
                 }
 
-
                 if (scene.HasAnimations)
                 {
-                    ImportAnimation(node, go, cumulRotation);
+                    ImportAnimation(node, go, preRotation);
                 }
 
-                nodeMatrix = Matrix4x4.TRS(Vector3.zero, cumulRotation * nodeRotation, nodeScale);
+                nodeMatrix = Matrix4x4.TRS(Vector3.zero, Quaternion.identity, nodeScale);
                 importCount++;
                 foreach (Assimp.Node assimpChild in node.Children)
                 {
                     GameObject child = new GameObject();
+                    child.gameObject.tag = "PhysicObject";
                     if (blocking)
                         ImportHierarchy(assimpChild, go.transform, child, nodeMatrix, Quaternion.identity).MoveNext();
                     else
@@ -789,38 +788,42 @@ namespace VRtist
                     foreach (Assimp.VectorKey vectorKey in nodeChannel.PositionKeys)
                     {
                         int frame = Mathf.CeilToInt((float)vectorKey.Time * GlobalState.Animation.fps / (float)animation.TicksPerSecond) + 1;
-                        animationSet.curves[AnimatableProperty.PositionX].AddKey(new AnimationKey(frame, vectorKey.Value.X, Interpolation.Bezier));
-                        animationSet.curves[AnimatableProperty.PositionY].AddKey(new AnimationKey(frame, vectorKey.Value.Y, Interpolation.Bezier));
-                        animationSet.curves[AnimatableProperty.PositionZ].AddKey(new AnimationKey(frame, vectorKey.Value.Z, Interpolation.Bezier));
+                        animationSet.curves[AnimatableProperty.PositionX].AppendKey(new AnimationKey(frame, vectorKey.Value.X, Interpolation.Bezier));
+                        animationSet.curves[AnimatableProperty.PositionY].AppendKey(new AnimationKey(frame, vectorKey.Value.Y, Interpolation.Bezier));
+                        animationSet.curves[AnimatableProperty.PositionZ].AppendKey(new AnimationKey(frame, vectorKey.Value.Z, Interpolation.Bezier));
                     }
+                    animationSet.curves[AnimatableProperty.PositionX].ComputeCache();
+                    animationSet.curves[AnimatableProperty.PositionY].ComputeCache();
+                    animationSet.curves[AnimatableProperty.PositionZ].ComputeCache();
                 }
                 foreach (Assimp.VectorKey vectorKey in nodeChannel.ScalingKeys)
                 {
                     int frame = Mathf.CeilToInt((float)vectorKey.Time * GlobalState.Animation.fps / (float)animation.TicksPerSecond) + 1;
-                    animationSet.curves[AnimatableProperty.ScaleX].AddKey(new AnimationKey(frame, vectorKey.Value.X, Interpolation.Bezier));
-                    animationSet.curves[AnimatableProperty.ScaleY].AddKey(new AnimationKey(frame, vectorKey.Value.Y, Interpolation.Bezier));
-                    animationSet.curves[AnimatableProperty.ScaleZ].AddKey(new AnimationKey(frame, vectorKey.Value.Z, Interpolation.Bezier));
+                    animationSet.curves[AnimatableProperty.ScaleX].AppendKey(new AnimationKey(frame, vectorKey.Value.X, Interpolation.Bezier));
+                    animationSet.curves[AnimatableProperty.ScaleY].AppendKey(new AnimationKey(frame, vectorKey.Value.Y, Interpolation.Bezier));
+                    animationSet.curves[AnimatableProperty.ScaleZ].AppendKey(new AnimationKey(frame, vectorKey.Value.Z, Interpolation.Bezier));
                 }
-                Vector3 previousRotation = Vector3.zero;
+                animationSet.curves[AnimatableProperty.ScaleX].ComputeCache();
+                animationSet.curves[AnimatableProperty.ScaleY].ComputeCache();
+                animationSet.curves[AnimatableProperty.ScaleZ].ComputeCache();
                 foreach (Assimp.QuaternionKey quaternionKey in nodeChannel.RotationKeys)
                 {
                     int frame = Mathf.RoundToInt((float)quaternionKey.Time * GlobalState.Animation.fps / (float)animation.TicksPerSecond) + 1;
                     Quaternion uQuaternion = new Quaternion(quaternionKey.Value.X, quaternionKey.Value.Y, quaternionKey.Value.Z, quaternionKey.Value.W);
-                    uQuaternion = cumulRotation * uQuaternion * Quaternion.Inverse(cumulRotation);
+                    uQuaternion = cumulRotation * uQuaternion /** Quaternion.Inverse(cumulRotation)*/;
 
-                    Vector3 eulerValue = uQuaternion.eulerAngles;
-                    eulerValue.x = previousRotation.x + Mathf.DeltaAngle(previousRotation.x, eulerValue.x);
-                    eulerValue.y = previousRotation.y + Mathf.DeltaAngle(previousRotation.y, eulerValue.y);
-                    eulerValue.z = previousRotation.z + Mathf.DeltaAngle(previousRotation.z, eulerValue.z);
-                    animationSet.curves[AnimatableProperty.RotationX].AddKey(new AnimationKey(frame, eulerValue.x, Interpolation.Bezier));
-                    animationSet.curves[AnimatableProperty.RotationY].AddKey(new AnimationKey(frame, eulerValue.y, Interpolation.Bezier));
-                    animationSet.curves[AnimatableProperty.RotationZ].AddKey(new AnimationKey(frame, eulerValue.z, Interpolation.Bezier));
-                    previousRotation = eulerValue;
+                    Vector3 eulerValue = Maths.ReduceAngles(uQuaternion);
+                    animationSet.curves[AnimatableProperty.RotationX].AppendKey(new AnimationKey(frame, eulerValue.x, Interpolation.Bezier));
+                    animationSet.curves[AnimatableProperty.RotationY].AppendKey(new AnimationKey(frame, eulerValue.y, Interpolation.Bezier));
+                    animationSet.curves[AnimatableProperty.RotationZ].AppendKey(new AnimationKey(frame, eulerValue.z, Interpolation.Bezier));
                 }
+                animationSet.curves[AnimatableProperty.RotationX].ComputeCache();
+                animationSet.curves[AnimatableProperty.RotationY].ComputeCache();
+                animationSet.curves[AnimatableProperty.RotationZ].ComputeCache();
                 GlobalState.Animation.SetObjectAnimations(go, animationSet);
+
             }
         }
-
 
         private IEnumerator ImportScene(string fileName, Transform root = null)
         {
@@ -836,12 +839,15 @@ namespace VRtist
                 yield return StartCoroutine(ImportMeshes());
 
             GameObject objectRoot = root.gameObject;
-
-            objectRoot = new GameObject();
-            // Right handed to Left Handed
-            objectRoot.name = Utils.CreateUniqueName(Path.GetFileNameWithoutExtension(fileName));
-            objectRoot.transform.parent = root;
-            objectRoot.transform.localPosition = Vector3.zero;
+            if (isHuman)
+            {
+                objectRoot = new GameObject();
+                // Right handed to Left Handed
+                objectRoot.name = Utils.CreateUniqueName(Path.GetFileNameWithoutExtension(fileName));
+                objectRoot.transform.parent = root;
+                objectRoot.transform.localPosition = Vector3.zero;
+                objectRoot.transform.localScale = new Vector3(-1, 1, 1);
+            }
             if (!isHuman)
             {
                 objectRoot.transform.localScale = new Vector3(-1, 1, 1);
@@ -885,8 +891,9 @@ namespace VRtist
                 skinMesh.Collider = objectCollider;
                 skinMesh.RootObject = rootBone;
 
-                GenerateSkeleton(rootBone, skinMesh);
+                //GenerateSkeleton(rootBone, skinMesh, objectRoot.transform);
             }
+            isHuman = false;
 
         }
 

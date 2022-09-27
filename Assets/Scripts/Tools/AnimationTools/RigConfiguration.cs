@@ -49,47 +49,47 @@ namespace VRtist
 
         public void GenerateGoalController(RigController rootController, Transform transform, List<Transform> path)
         {
-            string boneName = transform.name;
-            if (boneName.Contains("mixamorig:")) boneName = boneName.Split(':')[1];
-            Joint joint = JointsList.Find(x => x.Name == boneName);
-            if (null != joint)
-            {
-                SphereCollider collider = transform.gameObject.AddComponent<SphereCollider>();
-                collider.isTrigger = true;
-                RigGoalController controller = transform.gameObject.AddComponent<RigGoalController>();
-                controller.SetPathToRoot(rootController, path);
-                controller.IsGoal = joint.isGoal;
-                controller.stiffness = joint.stiffness;
-                controller.ShowCurve = joint.showCurve;
-                controller.LowerAngleBound = joint.LowerAngleBound;
-                controller.UpperAngleBound = joint.UpperAngleBound;
-                controller.color = joint.color;
+            //string boneName = transform.name;
+            //if (boneName.Contains("mixamorig:")) boneName = boneName.Split(':')[1];
+            //Joint joint = JointsList.Find(x => x.Name == boneName);
+            //if (null != joint)
+            //{
+            //    SphereCollider collider = transform.gameObject.AddComponent<SphereCollider>();
+            //    collider.isTrigger = true;
+            //    RigGoalController controller = transform.gameObject.AddComponent<RigGoalController>();
+            //    controller.SetPathToRoot(rootController, path);
+            //    controller.IsGoal = joint.isGoal;
+            //    controller.stiffness = joint.stiffness;
+            //    controller.ShowCurve = joint.showCurve;
+            //    controller.LowerAngleBound = joint.LowerAngleBound;
+            //    controller.UpperAngleBound = joint.UpperAngleBound;
+            //    controller.color = joint.color;
 
-                if (joint.isGoal)
-                {
-                    controller.gameObject.layer = 21;
-                    controller.goalCollider = collider;
-                    controller.tag = "Goal";
-                    if (!transform.TryGetComponent<MeshFilter>(out MeshFilter filter))
-                    {
-                        filter = transform.gameObject.AddComponent<MeshFilter>();
-                    }
-                    filter.mesh = mesh;
-                    if (!transform.TryGetComponent(out MeshRenderer renderer))
-                    {
-                        renderer = transform.gameObject.AddComponent<MeshRenderer>();
-                    }
-                    renderer.material = new Material(material);
-                    controller.MeshRenderer = renderer;
+            //    if (joint.isGoal)
+            //    {
+            //        controller.gameObject.layer = 21;
+            //        controller.goalCollider = collider;
+            //        controller.tag = "Goal";
+            //        if (!transform.TryGetComponent<MeshFilter>(out MeshFilter filter))
+            //        {
+            //            filter = transform.gameObject.AddComponent<MeshFilter>();
+            //        }
+            //        filter.mesh = mesh;
+            //        if (!transform.TryGetComponent(out MeshRenderer renderer))
+            //        {
+            //            renderer = transform.gameObject.AddComponent<MeshRenderer>();
+            //        }
+            //        renderer.material = new Material(material);
+            //        controller.MeshRenderer = renderer;
 
-                    controller.UseGoal(false);
-                }
-            }
-            path.Add(transform);
-            foreach (Transform child in transform)
-            {
-                GenerateGoalController(rootController, child, new List<Transform>(path));
-            }
+            //        controller.UseGoal(false);
+            //    }
+            //}
+            //path.Add(transform);
+            //foreach (Transform child in transform)
+            //{
+            //    GenerateGoalController(rootController, child, new List<Transform>(path));
+            //}
         }
 
     }

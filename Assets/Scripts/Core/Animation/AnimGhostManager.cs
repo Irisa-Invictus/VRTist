@@ -61,7 +61,7 @@ namespace VRtist
                 Matrix4x4 objectMatrix = parentMatrix * ObjectAnimation.GetTRSMatrix(frame);
                 Maths.DecomposeMatrix(objectMatrix, out worldPosition, out Quaternion objectRotation, out Vector3 objectScale);
 
-                if (Target.TryGetComponent<RigGoalController>(out RigGoalController controller) && controller.IsGoal)
+                if (Target.TryGetComponent<JointController>(out JointController controller))
                 {
                     Sphere = GameObject.CreatePrimitive(PrimitiveType.Sphere);
                     Sphere.GetComponent<MeshRenderer>().material.color = controller.color;

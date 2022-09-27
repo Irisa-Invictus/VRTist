@@ -7,6 +7,8 @@ namespace VRtist
     public class GoalGizmo : MonoBehaviour
     {
 
+        public enum GizmoTool { Rotation, Position }
+
         public GameObject xRotation;
         public GameObject yRotation;
         public GameObject zRotation;
@@ -15,11 +17,11 @@ namespace VRtist
         public GameObject yPosition;
         public GameObject zPosition;
 
-        public RigGoalController Controller;
+        public RigObjectController Controller;
 
         private bool isListening;
 
-        public void Init(RigGoalController controller)
+        public void Init(RigObjectController controller)
         {
             Controller = controller;
 
@@ -60,15 +62,15 @@ namespace VRtist
         //    return PoseManipulation.AcutatorAxis.X;
         //}
 
-        public void ChangeGizmo(AnimationTool.GizmoTool newTool)
+        public void ChangeGizmo(GizmoTool newTool)
         {
             switch (newTool)
             {
-                case AnimationTool.GizmoTool.Position:
+                case GizmoTool.Position:
                     SetRotationGizmo(false);
                     SetPositionGizmo(true);
                     break;
-                case AnimationTool.GizmoTool.Rotation:
+                case GizmoTool.Rotation:
                     SetRotationGizmo(true);
                     SetPositionGizmo(false);
                     break;
