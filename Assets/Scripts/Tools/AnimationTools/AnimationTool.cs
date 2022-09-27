@@ -91,6 +91,11 @@ namespace VRtist
             }
         }
 
+        internal void HoverGizmo(GameObject target)
+        {
+            throw new NotImplementedException();
+        }
+
         public void NextGizmo()
         {
             if (CurrentGizmo == GizmoTool.Position) CurrentGizmo = GizmoTool.Rotation;
@@ -98,6 +103,11 @@ namespace VRtist
             {
                 CurrentGizmo++;
             }
+        }
+
+        internal void HoverObject(GameObject target)
+        {
+            throw new NotImplementedException();
         }
 
         public enum EditMode { Curve, Pose }
@@ -111,6 +121,21 @@ namespace VRtist
                 editMode = value;
                 GetModeButton(editMode).Checked = true;
             }
+        }
+
+        internal void StopHoverLine(GameObject gameObject)
+        {
+            throw new NotImplementedException();
+        }
+
+        internal void StopHoverObject(GameObject gameObject)
+        {
+            throw new NotImplementedException();
+        }
+
+        internal void StopHoverGizmo(GameObject gameObject)
+        {
+            throw new NotImplementedException();
         }
 
         public enum CurveEditMode { AddKeyframe, Zone, Segment, Tangents }
