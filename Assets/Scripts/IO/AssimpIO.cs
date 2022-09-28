@@ -886,12 +886,12 @@ namespace VRtist
                 objectCollider.size = meshSize;
                 bodyMesh.updateWhenOffscreen = true;
 
-                RigController skinMesh = objectRoot.AddComponent<RigController>();
-                skinMesh.SkinMesh = bodyMesh;
-                skinMesh.Collider = objectCollider;
-                skinMesh.RootObject = rootBone;
+                RigController rigController = objectRoot.AddComponent<RigController>();
+                rigController.SkinMesh = bodyMesh;
+                rigController.Collider = objectCollider;
+                rigController.RootObject = rootBone;
 
-                //GenerateSkeleton(rootBone, skinMesh, objectRoot.transform);
+                GenerateSkeleton(rootBone, rigController);
             }
             isHuman = false;
 
@@ -899,7 +899,7 @@ namespace VRtist
 
         public void GenerateSkeleton(Transform root, RigController rootController)
         {
-            rigConfiguration.GenerateGoalController(rootController, root, new List<Transform>());
+            rigConfiguration.GenerateJoints(rootController, root, bones);
         }
 
 

@@ -26,71 +26,74 @@ using System.Collections.Generic;
 using UnityEngine;
 namespace VRtist
 {
-    [CreateAssetMenu(menuName = "VRtist/RigConfiguration", fileName = "RigConfig")]
+    [CreateAssetMenu(menuName = "VRtist/JsonReader", fileName = "JsonReader")]
     public class RigConfiguration : ScriptableObject
     {
         public Mesh mesh;
         public Material material;
 
-        [System.Serializable]
-        public class Joint
+        private Dictionary<string, JointController> joints = new Dictionary<string, JointController>();
+        private Dictionary<string, Transform> bones = new Dictionary<string, Transform>();
+
+        public void GenerateJoints(RigController rootController, Transform objectRoot, Dictionary<string, Transform> bones)
         {
-            public string Name;
-            public float stiffness;
-            public bool isGoal;
-            public bool showCurve;
-            public Vector3 LowerAngleBound;
-            public Vector3 UpperAngleBound;
-            public Color color;
+            joints = new Dictionary<string, JointController>();
+            this.bones = bones;
+            List<Transform> path = new List<Transform>();
+            ParseObject(rootController, objectRoot, false, ref path);
         }
 
-        public List<Joint> JointsList;
-
-
-        public void GenerateGoalController(RigController rootController, Transform transform, List<Transform> path)
+        public void ParseObject(RigController rootController, Transform current, bool inRig, ref List<Transform> path)
         {
-            //string boneName = transform.name;
-            //if (boneName.Contains("mixamorig:")) boneName = boneName.Split(':')[1];
-            //Joint joint = JointsList.Find(x => x.Name == boneName);
-            //if (null != joint)
-            //{
-            //    SphereCollider collider = transform.gameObject.AddComponent<SphereCollider>();
-            //    collider.isTrigger = true;
-            //    RigGoalController controller = transform.gameObject.AddComponent<RigGoalController>();
-            //    controller.SetPathToRoot(rootController, path);
-            //    controller.IsGoal = joint.isGoal;
-            //    controller.stiffness = joint.stiffness;
-            //    controller.ShowCurve = joint.showCurve;
-            //    controller.LowerAngleBound = joint.LowerAngleBound;
-            //    controller.UpperAngleBound = joint.UpperAngleBound;
-            //    controller.color = joint.color;
+            if (current == rootController.RootObject) inRig = true;
+            if (!bones.TryGetValue(current.name, out Transform tr) && current.childCount == 0) inRig = false;
+            if (inRig)
+            {
+                JointController joint = current.gameObject.AddComponent<JointController>();
+                joint.SetPathToRoot(rootController, path);
+                joints.Add(current.name, joint);
+                path.Add(current);
 
-            //    if (joint.isGoal)
-            //    {
-            //        controller.gameObject.layer = 21;
-            //        controller.goalCollider = collider;
-            //        controller.tag = "Goal";
-            //        if (!transform.TryGetComponent<MeshFilter>(out MeshFilter filter))
-            //        {
-            //            filter = transform.gameObject.AddComponent<MeshFilter>();
-            //        }
-            //        filter.mesh = mesh;
-            //        if (!transform.TryGetComponent(out MeshRenderer renderer))
-            //        {
-            //            renderer = transform.gameObject.AddComponent<MeshRenderer>();
-            //        }
-            //        renderer.material = new Material(material);
-            //        controller.MeshRenderer = renderer;
+                joint.color = current.name.Contains("Left") ? Color.blue : current.name.Contains("Right") ? Color.green : Color.yellow;
 
-            //        controller.UseGoal(false);
-            //    }
-            //}
-            //path.Add(transform);
-            //foreach (Transform child in transform)
-            //{
-            //    GenerateGoalController(rootController, child, new List<Transform>(path));
-            //}
+                AddDirectController(current, joint);
+
+            }
+            foreach (Transform child in current)
+            {
+                ParseObject(rootController, child, inRig, ref path);
+            }
+            if (inRig) path.Remove(current);
         }
 
+        private void AddDirectController(Transform current, JointController joint)
+        {
+            DirectController directController = current.gameObject.AddComponent<DirectController>();
+            directController.target = joint;
+            directController.stiffness = 1;
+            directController.ShowCurve = false;
+            directController.LowerAngleBound = -Vector3.one * 360; ;
+            directController.UpperAngleBound = Vector3.one * 360;
+            directController.FreePosition = false;
+            MeshCollider collider = current.gameObject.AddComponent<MeshCollider>();
+            collider.convex = true;
+            directController.gameObject.layer = 21;
+            directController.goalCollider = collider;
+            directController.tag = "Controller";
+            if (!current.TryGetComponent<MeshFilter>(out MeshFilter filter))
+            {
+                filter = current.gameObject.AddComponent<MeshFilter>();
+            }
+            if (!current.TryGetComponent(out MeshRenderer renderer))
+            {
+                renderer = current.gameObject.AddComponent<MeshRenderer>();
+            }
+            renderer.material = new Material(material);
+            directController.MeshRenderer = renderer;
+            directController.UseController(false);
+            filter.mesh = mesh;
+            collider.sharedMesh = mesh;
+            collider.isTrigger = true;
+        }
     }
 }

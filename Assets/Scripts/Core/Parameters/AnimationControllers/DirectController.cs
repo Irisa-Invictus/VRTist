@@ -14,7 +14,6 @@ namespace VRtist
         public bool ShowCurve;
         public Vector3 LowerAngleBound;
         public Vector3 UpperAngleBound;
-        public Color color;
         public bool FreePosition;
         public Vector3 LowerPositionBound;
         public Vector3 UpperPositionBound;
@@ -128,19 +127,25 @@ namespace VRtist
 
         public override void StartHover()
         {
-            if (!isHovered && !isSelected)
+            if (!isHovered)
             {
-                gameObject.layer = 22;
                 isHovered = true;
+                if (!isSelected)
+                {
+                    gameObject.layer = 22;
+                }
             }
         }
 
         public override void EndHover()
         {
-            if (isHovered && !isSelected)
+            if (isHovered)
             {
-                gameObject.layer = startLayer;
                 isHovered = false;
+                if (!isSelected)
+                {
+                    gameObject.layer = startLayer;
+                }
             }
         }
 

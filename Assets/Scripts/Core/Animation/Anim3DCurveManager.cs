@@ -104,11 +104,11 @@ namespace VRtist
             foreach (GameObject gObject in Selection.SelectedObjects)
             {
                 AddCurve(gObject);
-                if (gObject.TryGetComponent(out RigController skinController))
-                {
-                    JointController jointController = skinController.RootObject.GetComponent<JointController>();
-                    AddJointCurve(jointController, skinController);
-                }
+                //if (gObject.TryGetComponent(out RigController skinController))
+                //{
+                //    JointController jointController = skinController.RootObject.GetComponent<JointController>();
+                //    AddJointCurve(jointController, skinController);
+                //}
             }
         }
 
@@ -282,8 +282,6 @@ namespace VRtist
 
         private void AddJointCurve(JointController jointController, RigController skinController)
         {
-            if (!jointController.ShowCurve) return;
-
             AnimationSet jointAnimation = GlobalState.Animation.GetObjectAnimation(jointController.gameObject);
             if (null == jointAnimation) return;
 
@@ -386,7 +384,7 @@ namespace VRtist
             {
                 if (jointCurve.TryGetValue(joint, out GameObject curve))
                 {
-                    DeleteCurve(curve);
+                    DeleteCurve(joint.gameObject);
                     jointCurve.Remove(joint);
                 }
                 if (jointCurves[joint.RootController].Count == 0) jointCurves.Remove(joint.RootController);
@@ -395,20 +393,53 @@ namespace VRtist
 
         internal void HoverCurve(GameObject gameObject, Transform mouthpiece)
         {
+            if (gameObject.TryGetComponent(out LineRenderer line))
+            {
+                line.material.color = Color.red;
+            }
         }
 
         internal void UpdateHoverCurve(GameObject gameObject, Transform transform)
         {
         }
 
-        internal void StopHover(GameObject gameObject)
+        internal void StopHover(GameObject curve)
         {
+            if (curve.TryGetComponent(out LineRenderer line))
+            {
+                GameObject target = GetObjectFromCurve(curve);
+                if (target.TryGetComponent(out JointController joint))
+                {
+                    line.material.color = joint.color;
+                }
+                else
+                {
+                    line.material.color = new Color(1, 0.7f, 0.3f);
+                }
+            }
         }
 
-        internal int GetFrameFromPoint(GameObject gameObject, Vector3 position)
+        internal int GetFrameFromPoint(GameObject gameObject, Vector3 pointPosition)
         {
-            //TODO: copy from old animationTool
-            return -1;
+            if (!TryGetLine(gameObject, out LineRenderer line)) return -1;
+            AnimationSet anim = GlobalState.Animation.GetObjectAnimation(gameObject);
+            Vector3 localPointPosition = line.transform.InverseTransformPoint(pointPosition);
+            Vector3[] positions = new Vector3[line.positionCount];
+            line.GetPositions(positions);
+            int closestPoint = 0;
+            float closestDistance = Vector3.Distance(positions[0], localPointPosition);
+            for (int i = 1; i < line.positionCount; i++)
+            {
+                float dist = Vector3.Distance(positions[i], localPointPosition);
+                if (dist < closestDistance)
+                {
+                    closestDistance = dist;
+                    closestPoint = i;
+                }
+            }
+
+            int firstAnimFrame = anim.GetCurve(AnimatableProperty.RotationX).keys[0].frame + GlobalState.Animation.StartFrame - 1;
+            return closestPoint + firstAnimFrame;
         }
 
     }

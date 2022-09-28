@@ -9,7 +9,6 @@ namespace VRtist
         internal MeshRenderer meshRenderer;
         internal bool isHovered;
         internal bool isSelected;
-        internal Color startColor;
         internal int startLayer;
 
         public void Start()

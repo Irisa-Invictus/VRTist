@@ -33,15 +33,32 @@ namespace VRtist
 
     public class AnimationTool : ToolBase
     {
-
+        [SerializeField] private NavigationOptions navigation;
         public Anim3DCurveManager CurveManager;
+        public Transform controlPanel;
+        public Transform displayPanel;
+
+        private Transform ControlPanelButton;
+        private Transform DisplayPanelButton;
+        private Transform FKModeButton;
+        private Transform IKModeButton;
+
+        private float deadzone = 0.3f;
 
         public enum Vector3Axis { X, Y, Z, None }
-        private Vector3Axis curveDisplayAxe = Vector3Axis.None;
 
         public enum PoseEditMode { FK, IK }
         private PoseEditMode poseMode;
-        public PoseEditMode PoseMode { get; set; }
+        public PoseEditMode PoseMode
+        {
+            get { return poseMode; }
+            set
+            {
+                GetPoseModeButton(poseMode).Checked = false;
+                poseMode = value;
+                GetPoseModeButton(poseMode).Checked = true;
+            }
+        }
 
         public class DragObjectData
         {
@@ -66,8 +83,107 @@ namespace VRtist
 
         private SelectedCurveData selectedCurve;
 
+        private UIButton GetPoseModeButton(PoseEditMode mode)
+        {
+            switch (mode)
+            {
+                case PoseEditMode.FK: return FKModeButton.GetComponent<UIButton>();
+                case PoseEditMode.IK: return IKModeButton.GetComponent<UIButton>();
+                default: return null;
+            }
+        }
+        public void SetFKMode()
+        {
+            PoseMode = PoseEditMode.FK;
+        }
+
+        public void SetIKMode()
+        {
+            PoseMode = PoseEditMode.IK;
+        }
+        public void OpenControlPanel()
+        {
+            ChangeControlPanelState(true);
+        }
+
+        private void ChangeControlPanelState(bool state)
+        {
+            controlPanel.gameObject.SetActive(state);
+            displayPanel.gameObject.SetActive(!state);
+            ControlPanelButton.GetComponent<UIButton>().Checked = state;
+            DisplayPanelButton.GetComponent<UIButton>().Checked = !state;
+        }
+
+        protected override void Awake()
+        {
+            base.Awake();
+
+            ControlPanelButton = panel.Find("ControlButton");
+            DisplayPanelButton = panel.Find("DisplayButton");
+            FKModeButton = controlPanel.Find("FK");
+            IKModeButton = controlPanel.Find("IK");
+
+            PoseMode = PoseEditMode.FK;
+            OpenControlPanel();
+        }
+        protected override void OnEnable()
+        {
+            base.OnEnable();
+            foreach (GameObject select in Selection.SelectedObjects)
+            {
+                if (select.TryGetComponent<RigController>(out RigController controller))
+                {
+                    DirectController[] directController = controller.GetComponentsInChildren<DirectController>();
+                    for (int i = 0; i < directController.Length; i++)
+                    {
+                        directController[i].UseController(true);
+                    }
+                }
+            }
+            GlobalState.Instance.onGripWorldEvent.AddListener(OnGripWorld);
+        }
+        protected override void OnDisable()
+        {
+            base.OnDisable();
+            UnSelectControllers();
+            foreach (GameObject select in Selection.SelectedObjects)
+            {
+                if (select == null) continue;
+                if (select.TryGetComponent<RigController>(out RigController controller))
+                {
+                    DirectController[] directController = controller.GetComponentsInChildren<DirectController>();
+                    for (int i = 0; i < directController.Length; i++)
+                    {
+                        directController[i].UseController(false);
+                    }
+                }
+            }
+        }
+
+        public void OnGripWorld(bool state)
+        {
+            if (state && null != grabbedController) ReleaseController();
+            //if (state && null != selectedCurve) ReleaseCurve();
+            if (state && null != draggedObject) ReleaseObject();
+        }
+
         protected override void DoUpdate()
         {
+            if (navigation.CanUseControls(NavigationMode.UsedControls.RIGHT_JOYSTICK))
+            {
+                Vector2 AxisValue = VRInput.GetValue(VRInput.primaryController, CommonUsages.primary2DAxis);
+                if (AxisValue != Vector2.zero)
+                {
+                    float scaleFactor = 1f + GlobalState.Settings.scaleSpeed / 1000f;
+
+                    float selectorRadius = mouthpiece.localScale.x;
+                    if (AxisValue.y > deadzone) selectorRadius *= scaleFactor;
+                    if (AxisValue.y < deadzone) selectorRadius /= scaleFactor;
+                    selectorRadius = Mathf.Clamp(selectorRadius, 0.001f, 0.5f);
+                    mouthpiece.localScale = Vector3.one * selectorRadius;
+
+                }
+            }
         }
 
         internal void SelectEmpty()
@@ -261,14 +377,27 @@ namespace VRtist
         }
         internal void SelectController(RigObjectController hoveredController)
         {
-            hoveredController.GetTargets().ForEach(x => CurveManager.SelectJoint(x));
+            if (SelectedControllers.Contains(hoveredController))
+            {
+                hoveredController.GetTargets().ForEach(x => CurveManager.UnSelectJoint(x));
+                hoveredController.OnDeselect();
+                SelectedControllers.Remove(hoveredController);
+            }
+            else
+            {
+                hoveredController.OnSelect();
+                SelectedControllers.Add(hoveredController);
+                hoveredController.GetTargets().ForEach(x => CurveManager.SelectJoint(x));
+            }
         }
         private void UnSelectControllers()
         {
             foreach (RigObjectController controller in SelectedControllers)
             {
                 controller.GetTargets().ForEach(x => CurveManager.UnSelectJoint(x));
+                controller.OnDeselect();
             }
+            SelectedControllers.Clear();
         }
         #endregion
     }

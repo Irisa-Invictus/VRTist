@@ -62,7 +62,7 @@ namespace VRtist
 
             startScales = new List<Vector3>();
             endScales = new List<Vector3>();
-
+            fromRotation = Quaternion.FromToRotation(Vector3.forward, oTransform.localPosition) * Vector3.forward;
             if (hierarchySize > 2)
             {
                 initialRotation = fullHierarchy[hierarchySize - 2].localRotation;

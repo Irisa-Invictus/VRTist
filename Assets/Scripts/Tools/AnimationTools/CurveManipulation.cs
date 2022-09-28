@@ -93,12 +93,10 @@ namespace VRtist
 
         internal void DragCurve(Transform mouthpiece)
         {
-            throw new NotImplementedException();
         }
 
         internal void ReleaseCurve()
         {
-            throw new NotImplementedException();
         }
 
         //private AnimationTool.CurveEditMode manipulationMode;

@@ -35,10 +35,11 @@ namespace VRtist
         public enum TargetType { none, Actuator, Controller, Curve, Object };
         public List<TargetType> HoveredTypes;
         public TargetType CurrentDragged = TargetType.none;
+        private GameObject currentDraggedObject;
         public TargetType CurrentSelection = TargetType.none;
 
 
-        private List<GameObject> hoveredTargets;
+        private List<GameObject> hoveredTargets = new List<GameObject>();
         private RigObjectController hoveredController;
 
         private bool gripPressed;
@@ -49,23 +50,19 @@ namespace VRtist
         {
             if (other.gameObject.tag == "Controller")
             {
-                if (hoveredTargets.Count > 0) StopHovering();
-                StartHovering(other.gameObject, TargetType.Controller);
+                AddToHovered(other.gameObject, TargetType.Controller);
             }
             if (other.gameObject.tag == "Curve")
             {
-                if (hoveredTargets.Count > 0) StopHovering();
-                StartHovering(other.gameObject, TargetType.Curve);
+                AddToHovered(other.gameObject, TargetType.Curve);
             }
             if (other.gameObject.tag == "Actuator")
             {
-                if (hoveredTargets.Count > 0) StopHovering();
-                StartHovering(other.gameObject, TargetType.Actuator);
+                AddToHovered(other.gameObject, TargetType.Actuator);
             }
             if (Selection.SelectedObjects.Contains(other.gameObject) && !other.TryGetComponent(out RigController skin))
             {
-                if (hoveredTargets.Count > 0) StopHovering();
-                StartHovering(other.gameObject, TargetType.Object);
+                AddToHovered(other.gameObject, TargetType.Object);
             }
         }
         public void OnTriggerExit(Collider other)
@@ -87,38 +84,18 @@ namespace VRtist
                 RemoveFromHovered(other.gameObject);
             }
         }
-        /// <summary>
-        /// Add target to hovered targets, and set as hovered
-        /// </summary>
-        private void StartHovering(GameObject target, TargetType type)
+
+        private void AddToHovered(GameObject target, TargetType type)
         {
-            if (hoveredTargets.Count > 0) StopHovering();
-            hoveredTargets.Add(target);
-            HoveredTypes.Add(type);
-            if (CurrentDragged != TargetType.none || CurrentSelection != TargetType.none) return;
-            ReplaceHover();
-        }
-        /// <summary>
-        /// Set hoveredObject 0 as not hovered
-        /// </summary>
-        private void StopHovering()
-        {
-            if (CurrentDragged != TargetType.none || CurrentSelection != TargetType.none) return;
-            switch (HoveredTypes[0])
+            if (CurrentDragged == TargetType.none && HoveredTypes.Count > 0)
             {
-                case TargetType.Controller:
-                    hoveredController.EndHover();
-                    hoveredController = null;
-                    break;
-                case TargetType.Actuator:
-                    animationTool.StopHoverActuator(hoveredTargets[0]);
-                    break;
-                case TargetType.Curve:
-                    animationTool.StopHoverCurve(hoveredTargets[0]);
-                    break;
-                case TargetType.Object:
-                    animationTool.StopHoverObject(hoveredTargets[0]);
-                    break;
+                EndHover(hoveredTargets[0], HoveredTypes[0]);
+            }
+            hoveredTargets.Insert(0, target);
+            HoveredTypes.Insert(0, type);
+            if (CurrentDragged == TargetType.none)
+            {
+                StartHover(target, type);
             }
         }
 
@@ -129,38 +106,58 @@ namespace VRtist
         {
             int index = hoveredTargets.IndexOf(target);
             if (index == -1) return;
-            if (index == 0) StopHovering();
-
+            if (index == 0 && target != currentDraggedObject)
+            {
+                EndHover(hoveredTargets[0], HoveredTypes[0]);
+            }
             hoveredTargets.RemoveAt(index);
             HoveredTypes.RemoveAt(index);
-
-            if (index == 0) ReplaceHover();
-        }
-        /// <summary>
-        /// Set hoveredObject 0 as hovered
-        /// </summary>
-        private void ReplaceHover()
-        {
-            if (hoveredTargets.Count > 0)
+            if (index == 0 && HoveredTypes.Count > 0 && CurrentDragged == TargetType.none)
             {
-                switch (HoveredTypes[0])
-                {
-                    case TargetType.Controller:
-                        hoveredController = hoveredTargets[0].GetComponent<RigObjectController>();
-                        hoveredController.StartHover();
-                        break;
-                    case TargetType.Actuator:
-                        animationTool.HoverActuator(hoveredTargets[0]);
-                        break;
-                    case TargetType.Curve:
-                        animationTool.HoverCurve(hoveredTargets[0], transform);
-                        break;
-                    case TargetType.Object:
-                        animationTool.HoverObject(hoveredTargets[0]);
-                        break;
-                }
+                StartHover(hoveredTargets[0], HoveredTypes[0]);
             }
         }
+
+        private void StartHover(GameObject target, TargetType type)
+        {
+            switch (type)
+            {
+                case TargetType.Controller:
+                    hoveredController = target.GetComponent<RigObjectController>();
+                    hoveredController.StartHover();
+                    break;
+                case TargetType.Actuator:
+                    animationTool.HoverActuator(hoveredTargets[0]);
+                    break;
+                case TargetType.Curve:
+                    animationTool.HoverCurve(hoveredTargets[0], transform);
+                    break;
+                case TargetType.Object:
+                    animationTool.HoverObject(hoveredTargets[0]);
+                    break;
+            }
+        }
+        private void EndHover(GameObject target, TargetType type)
+        {
+            switch (type)
+            {
+                case TargetType.Controller:
+                    target.GetComponent<RigObjectController>().EndHover();
+                    hoveredController = null;
+                    break;
+                case TargetType.Actuator:
+                    animationTool.StopHoverActuator(target);
+                    break;
+                case TargetType.Curve:
+                    animationTool.StopHoverCurve(target);
+                    break;
+                case TargetType.Object:
+                    animationTool.StopHoverObject(target);
+                    break;
+            }
+        }
+
+
         #endregion
 
         public void Update()
@@ -177,6 +174,7 @@ namespace VRtist
         public void OnGripPressed()
         {
             gripPressed = true;
+            CheckForNull();
             if (hoveredTargets.Count > 0)
             {
                 switch (HoveredTypes[0])
@@ -198,8 +196,20 @@ namespace VRtist
                         CurrentDragged = TargetType.Object;
                         break;
                 }
+                currentDraggedObject = hoveredTargets[0];
             }
         }
+
+        private void CheckForNull()
+        {
+            if (hoveredTargets.Count > 0 && hoveredTargets[0] == null)
+            {
+                hoveredTargets.RemoveAt(0);
+                HoveredTypes.RemoveAt(0);
+                CheckForNull();
+            }
+        }
+
         public void Gripped()
         {
             switch (CurrentDragged)
@@ -238,9 +248,10 @@ namespace VRtist
                     animationTool.ReleaseObject();
                     break;
             }
+            EndHover(currentDraggedObject, CurrentDragged);
             CurrentDragged = TargetType.none;
-            StopHovering();
-            ReplaceHover();
+            currentDraggedObject = null;
+            if (hoveredTargets.Count > 0) StartHover(hoveredTargets[0], HoveredTypes[0]);
         }
         #endregion
 
@@ -248,12 +259,16 @@ namespace VRtist
         public void OnTriggerPressed()
         {
             triggerPressed = true;
+            CheckForNull();
+            if (HoveredTypes.Count == 0)
+            {
+                animationTool.SelectEmpty();
+                return;
+            }
             switch (HoveredTypes[0])
             {
-                case TargetType.none:
-                    animationTool.SelectEmpty();
-                    break;
                 case TargetType.Controller:
+                    Debug.Log(hoveredController);
                     animationTool.SelectController(hoveredController);
                     CurrentSelection = TargetType.Controller;
                     break;
@@ -292,8 +307,6 @@ namespace VRtist
                 default: break;
             }
             CurrentSelection = TargetType.none;
-            StopHovering();
-            ReplaceHover();
         }
         #endregion
     }
