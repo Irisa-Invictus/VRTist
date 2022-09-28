@@ -53,6 +53,7 @@ namespace VRtist
         private DragObjectData draggedObject;
 
         private RigObjectController grabbedController;
+        private List<RigObjectController> SelectedControllers = new List<RigObjectController>();
 
         public class SelectedCurveData
         {
@@ -67,12 +68,11 @@ namespace VRtist
 
         protected override void DoUpdate()
         {
-            throw new NotImplementedException();
         }
 
         internal void SelectEmpty()
         {
-
+            UnSelectControllers();
         }
 
         #region Gizmo/Actuator
@@ -261,9 +261,15 @@ namespace VRtist
         }
         internal void SelectController(RigObjectController hoveredController)
         {
-            //TODO: show controller gizmo
+            hoveredController.GetTargets().ForEach(x => CurveManager.SelectJoint(x));
         }
-
+        private void UnSelectControllers()
+        {
+            foreach (RigObjectController controller in SelectedControllers)
+            {
+                controller.GetTargets().ForEach(x => CurveManager.UnSelectJoint(x));
+            }
+        }
         #endregion
     }
 

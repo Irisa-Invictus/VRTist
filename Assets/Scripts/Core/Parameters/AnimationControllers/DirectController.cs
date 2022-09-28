@@ -143,6 +143,11 @@ namespace VRtist
                 isHovered = false;
             }
         }
+
+        public override List<JointController> GetTargets()
+        {
+            return new List<JointController>() { target };
+        }
     }
 
 }

@@ -45,7 +45,7 @@ namespace VRtist
         private float currentCurveOffset;
 
         private readonly Dictionary<GameObject, GameObject> curves = new Dictionary<GameObject, GameObject>();
-        private Dictionary<RigController, List<GameObject>> goalCurves = new Dictionary<RigController, List<GameObject>>();
+        private Dictionary<RigController, Dictionary<JointController, GameObject>> jointCurves = new Dictionary<RigController, Dictionary<JointController, GameObject>>();
 
         void Start()
         {
@@ -60,7 +60,7 @@ namespace VRtist
 
         private void OnObjectMoved(GameObject gObject)
         {
-            if (gObject.TryGetComponent(out RigController rigController) && goalCurves.ContainsKey(rigController)) UpdateFromSelection();
+            if (gObject.TryGetComponent(out RigController rigController) && jointCurves.ContainsKey(rigController)) UpdateFromSelection();
         }
 
         void Update()
@@ -81,10 +81,6 @@ namespace VRtist
             UpdateCurvesWidth();
         }
 
-        internal void HoverCurve(GameObject gameObject, Transform mouthpiece)
-        {
-            throw new NotImplementedException();
-        }
 
         void UpdateCurvesWidth()
         {
@@ -95,27 +91,12 @@ namespace VRtist
                 line.endWidth = line.startWidth;
             }
         }
-
-        internal void UpdateHoverCurve(GameObject gameObject, Transform transform)
-        {
-            throw new NotImplementedException();
-        }
-
-        internal int GetFrameFromPoint(GameObject gameObject, Vector3 position)
-        {
-            throw new NotImplementedException();
-        }
-
-        internal void StopHover(GameObject gameObject)
-        {
-            throw new NotImplementedException();
-        }
-
         void OnSelectionChanged(HashSet<GameObject> previousSelectedObjects, HashSet<GameObject> selectedObjects)
         {
             if (GlobalState.Settings.Display3DCurves)
                 UpdateFromSelection();
         }
+
 
         void UpdateFromSelection()
         {
@@ -125,33 +106,25 @@ namespace VRtist
                 AddCurve(gObject);
                 if (gObject.TryGetComponent(out RigController skinController))
                 {
-                    if ((ToolsManager.CurrentToolName() == "Animation")) AddHumanCurve(gObject, skinController);
-                    else
-                    {
-                        //Only display curve for Rig's root
-                        JointController jointController = skinController.RootObject.GetComponent<JointController>();
-                        AddGoalCurve(jointController, skinController);
-                    }
+                    JointController jointController = skinController.RootObject.GetComponent<JointController>();
+                    AddJointCurve(jointController, skinController);
                 }
             }
         }
 
         void OnCurveChanged(GameObject gObject, AnimatableProperty property)
         {
-            JointController[] controllers = gObject.GetComponentsInChildren<JointController>();
-            if (controllers.Length > 0)
+            if (gObject.TryGetComponent(out RigController rigController))
             {
-                if ((ToolsManager.CurrentToolName() == "Animation"))
+                if (jointCurves.TryGetValue(rigController, out Dictionary<JointController, GameObject> curves))
                 {
-                    //update all goals' curves
-                    UpdateGoalCurve(controllers);
-                }
-                else
-                {
-                    //only update rig's root curve
-                    UpdateGoalCurve(new JointController[] { controllers[0] });
+                    foreach (KeyValuePair<JointController, GameObject> pair in curves)
+                    {
+                        UpdateJointCurve(pair.Key, pair.Value);
+                    }
                 }
             }
+
             if (property != AnimatableProperty.PositionX && property != AnimatableProperty.PositionY && property != AnimatableProperty.PositionZ)
                 return;
 
@@ -174,7 +147,7 @@ namespace VRtist
             if (gObject.TryGetComponent<RigController>(out RigController controller))
             {
                 RecursiveDeleteCurve(gObject.transform);
-                if (goalCurves.ContainsKey(controller)) goalCurves.Remove(controller);
+                if (jointCurves.ContainsKey(controller)) jointCurves.Remove(controller);
             }
             else
             {
@@ -191,7 +164,7 @@ namespace VRtist
             }
             if (!switchToAnim && isAnimationTool)
             {
-                DeleteGoalCurves();
+                DeleteAllJointCurves();
             }
             isAnimationTool = switchToAnim;
         }
@@ -201,7 +174,7 @@ namespace VRtist
             foreach (GameObject curve in curves.Values)
                 Destroy(curve);
             curves.Clear();
-            goalCurves.Clear();
+            jointCurves.Clear();
         }
 
         void DeleteCurve(GameObject gObject)
@@ -222,18 +195,18 @@ namespace VRtist
             }
         }
 
-        void DeleteGoalCurves()
+        void DeleteAllJointCurves()
         {
             List<GameObject> removedCurves = new List<GameObject>();
             foreach (KeyValuePair<GameObject, GameObject> curve in curves)
             {
-                if (curve.Key.TryGetComponent<JointController>(out JointController controller) && controller.PathToRoot[0] != controller.transform)
+                if (curve.Key.TryGetComponent(out JointController controller) && controller.PathToRoot[0] != controller.transform)
                 {
                     Destroy(curve.Value);
                     removedCurves.Add(curve.Key);
                 }
             }
-            goalCurves.Clear();
+            jointCurves.Clear();
             removedCurves.ForEach(x => curves.Remove(x));
         }
 
@@ -242,14 +215,10 @@ namespace VRtist
             AddCurve(gObject);
         }
 
-        private void UpdateGoalCurve(JointController[] controllers)
+        private void UpdateJointCurve(JointController joint, GameObject curve)
         {
-            if (goalCurves.ContainsKey(controllers[0].RootController)) goalCurves.Remove(controllers[0].RootController);
-            for (int i = 0; i < controllers.Length; i++)
-            {
-                DeleteCurve(controllers[i].gameObject);
-                AddGoalCurve(controllers[i], controllers[i].RootController);
-            }
+            DeleteCurve(curve);
+            AddJointCurve(joint, joint.RootController);
         }
 
 
@@ -311,24 +280,14 @@ namespace VRtist
             curves[gObject] = curve3D;
         }
 
-        private void AddHumanCurve(GameObject gObject, RigController controller)
-        {
-            JointController goalController = controller.RootObject.GetComponent<JointController>();
-            JointController[] controllers = goalController.GetComponentsInChildren<JointController>();
-            foreach (JointController ctrl in controllers)
-            {
-                AddGoalCurve(ctrl, controller);
-            }
-        }
-
-        private void AddGoalCurve(JointController jointController, RigController skinController)
+        private void AddJointCurve(JointController jointController, RigController skinController)
         {
             if (!jointController.ShowCurve) return;
 
-            AnimationSet goalAnimation = GlobalState.Animation.GetObjectAnimation(jointController.gameObject);
-            if (null == goalAnimation) return;
+            AnimationSet jointAnimation = GlobalState.Animation.GetObjectAnimation(jointController.gameObject);
+            if (null == jointAnimation) return;
 
-            Curve rotationX = goalAnimation.GetCurve(AnimatableProperty.RotationX);
+            Curve rotationX = jointAnimation.GetCurve(AnimatableProperty.RotationX);
             if (rotationX.keys.Count == 0) return;
 
             int frameStart = Mathf.Clamp(rotationX.keys[0].frame, GlobalState.Animation.StartFrame, GlobalState.Animation.EndFrame);
@@ -361,14 +320,16 @@ namespace VRtist
             line.BakeMesh(lineMesh);
             collider.sharedMesh = lineMesh;
             curves[jointController.gameObject] = curve3D;
-            if (goalCurves.ContainsKey(skinController))
+
+            if (jointCurves.ContainsKey(skinController))
             {
-                goalCurves[skinController].Add(curve3D);
+                if (jointCurves[skinController].TryGetValue(jointController, out GameObject oldCurve) && oldCurve != null) DeleteCurve(oldCurve);
+                jointCurves[skinController][jointController] = curve3D;
             }
             else
             {
-                goalCurves[skinController] = new List<GameObject>();
-                goalCurves[skinController].Add(curve3D);
+                jointCurves[skinController] = new Dictionary<JointController, GameObject>();
+                jointCurves[skinController][jointController] = curve3D;
             }
         }
 
@@ -393,23 +354,62 @@ namespace VRtist
 
         private void UpdateOffsetValue()
         {
-            foreach (KeyValuePair<RigController, List<GameObject>> curves in goalCurves)
+            foreach (KeyValuePair<RigController, Dictionary<JointController, GameObject>> curves in jointCurves)
             {
-                JointController[] controllers = curves.Key.GetComponentsInChildren<JointController>();
-                UpdateGoalCurve(controllers);
+                foreach (KeyValuePair<JointController, GameObject> pair in curves.Value)
+                {
+                    DeleteCurve(pair.Value);
+                    AddJointCurve(pair.Key, pair.Key.RootController);
+                }
             }
         }
 
         private void UpdateOffset(int frame)
         {
-            foreach (KeyValuePair<RigController, List<GameObject>> curves in goalCurves)
+            foreach (KeyValuePair<RigController, Dictionary<JointController, GameObject>> curves in jointCurves)
             {
                 Vector3 forwardVector = (curves.Key.transform.forward * curves.Key.transform.localScale.x) * currentCurveOffset;
-                curves.Value.ForEach(x =>
+                foreach (KeyValuePair<JointController, GameObject> pair in curves.Value)
                 {
-                    x.transform.position = forwardVector * frame;
-                });
+                    pair.Value.transform.position = forwardVector * frame;
+                }
             }
         }
+
+        public void SelectJoint(JointController joint)
+        {
+            AddJointCurve(joint, joint.RootController);
+        }
+        public void UnSelectJoint(JointController joint)
+        {
+            if (jointCurves.TryGetValue(joint.RootController, out Dictionary<JointController, GameObject> jointCurve))
+            {
+                if (jointCurve.TryGetValue(joint, out GameObject curve))
+                {
+                    DeleteCurve(curve);
+                    jointCurve.Remove(joint);
+                }
+                if (jointCurves[joint.RootController].Count == 0) jointCurves.Remove(joint.RootController);
+            }
+        }
+
+        internal void HoverCurve(GameObject gameObject, Transform mouthpiece)
+        {
+        }
+
+        internal void UpdateHoverCurve(GameObject gameObject, Transform transform)
+        {
+        }
+
+        internal void StopHover(GameObject gameObject)
+        {
+        }
+
+        internal int GetFrameFromPoint(GameObject gameObject, Vector3 position)
+        {
+            //TODO: copy from old animationTool
+            return -1;
+        }
+
     }
 }

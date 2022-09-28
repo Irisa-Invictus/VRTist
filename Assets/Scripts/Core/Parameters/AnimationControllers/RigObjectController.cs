@@ -32,5 +32,7 @@ namespace VRtist
 
         public abstract void StartHover();
         public abstract void EndHover();
+
+        public abstract List<JointController> GetTargets();
     }
 }
