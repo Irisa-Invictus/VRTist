@@ -9,8 +9,8 @@ TagManager:
   - UICollider
   - WindowAnchor
   - Curve
-  - Goal
   - Actuator
+  - Controller
   layers:
   - Default
   - TransparentFX
