@@ -43,6 +43,7 @@ namespace VRtist
         private Transform FKModeButton;
         private Transform IKModeButton;
 
+        private bool worldGrip;
         private float deadzone = 0.3f;
 
         public enum Vector3Axis { X, Y, Z, None }
@@ -60,6 +61,8 @@ namespace VRtist
             }
         }
 
+        public GameObject interactingObject;
+
         public class DragObjectData
         {
             public GameObject target;
@@ -72,16 +75,20 @@ namespace VRtist
         private RigObjectController grabbedController;
         private List<RigObjectController> SelectedControllers = new List<RigObjectController>();
 
-        public class SelectedCurveData
+        public class CurveData
         {
             public GameObject target;
+            public GameObject curve;
             public bool hasSelection;
             public int StartSelection;
             public int EndSelection;
             public CurveManipulation manipulation;
         }
 
-        private SelectedCurveData selectedCurve;
+        private CurveData selectedCurve;
+        private CurveData draggedCurve;
+        private bool isSelectingCurve;
+        private GameObject hoveredCurve;
 
         private UIButton GetPoseModeButton(PoseEditMode mode)
         {
@@ -126,6 +133,9 @@ namespace VRtist
             PoseMode = PoseEditMode.FK;
             OpenControlPanel();
         }
+
+
+
         protected override void OnEnable()
         {
             base.OnEnable();
@@ -145,7 +155,8 @@ namespace VRtist
         protected override void OnDisable()
         {
             base.OnDisable();
-            UnSelectControllers();
+
+            if (!worldGrip) UnSelectControllers();
             foreach (GameObject select in Selection.SelectedObjects)
             {
                 if (select == null) continue;
@@ -162,6 +173,7 @@ namespace VRtist
 
         public void OnGripWorld(bool state)
         {
+            worldGrip = state;
             if (state && null != grabbedController) ReleaseController();
             //if (state && null != selectedCurve) ReleaseCurve();
             if (state && null != draggedObject) ReleaseObject();
@@ -219,7 +231,13 @@ namespace VRtist
         #region curve
         internal void HoverCurve(GameObject gameObject, Transform mouthpiece)
         {
-            CurveManager.HoverCurve(gameObject, mouthpiece);
+            if (interactingObject != null && interactingObject != gameObject) return;
+            if (selectedCurve != null && selectedCurve.curve == gameObject)
+            {
+                CurveManager.DrawLineZone(selectedCurve.StartSelection, selectedCurve.EndSelection, Color.red);
+            }
+            else CurveManager.HoverCurve(gameObject, mouthpiece);
+            hoveredCurve = gameObject;
         }
 
         internal void UpdateHoverCurve(GameObject gameObject, Transform transform)
@@ -229,75 +247,92 @@ namespace VRtist
 
         internal void StopHoverCurve(GameObject gameObject)
         {
-            CurveManager.StopHover(gameObject);
+            if (interactingObject != null && interactingObject != gameObject) return;
+            hoveredCurve = null;
+            if (isSelectingCurve || (selectedCurve != null && gameObject == selectedCurve.curve && selectedCurve.hasSelection)) CurveManager.SelectionStopHover(selectedCurve.curve, selectedCurve.StartSelection, selectedCurve.EndSelection);
+            else CurveManager.StopHover(gameObject);
         }
-
         internal void GrabCurve(GameObject gameObject, Transform transform)
         {
             GameObject target = CurveManager.GetObjectFromCurve(gameObject);
             int frame = CurveManager.GetFrameFromPoint(target, transform.position);
-            if (selectedCurve == null)
+            if (selectedCurve == null || gameObject != selectedCurve.curve)
             {
-                selectedCurve = new SelectedCurveData()
+                draggedCurve = new CurveData()
                 {
                     target = target,
+                    curve = gameObject,
                     hasSelection = false,
                     manipulation = new CurveManipulation(target, frame, mouthpiece, PoseMode)
                 };
             }
             else
             {
-                if (selectedCurve.hasSelection)
+                draggedCurve = selectedCurve;
+                if (selectedCurve.hasSelection && frame > selectedCurve.StartSelection && frame < selectedCurve.EndSelection)
                 {
-                    selectedCurve.manipulation = new CurveManipulation(target, frame, selectedCurve.StartSelection, selectedCurve.EndSelection, mouthpiece, PoseMode);
+                    draggedCurve.manipulation = new CurveManipulation(target, frame, selectedCurve.StartSelection, selectedCurve.EndSelection, mouthpiece, PoseMode);
 
                 }
                 else
                 {
-                    selectedCurve.manipulation = new CurveManipulation(target, frame, mouthpiece, PoseMode);
+                    draggedCurve.manipulation = new CurveManipulation(target, frame, mouthpiece, PoseMode);
                 }
             }
+            interactingObject = gameObject;
         }
         internal void DragCurve(Transform mouthpiece)
         {
-            if (selectedCurve == null || selectedCurve.manipulation == null) return;
-            selectedCurve.manipulation.DragCurve(mouthpiece);
+            if (draggedCurve == null || draggedCurve.manipulation == null) return;
+            draggedCurve.manipulation.DragCurve(mouthpiece);
         }
         internal void ReleaseCurve()
         {
             if (selectedCurve == null || selectedCurve.manipulation == null) return;
             selectedCurve.manipulation.ReleaseCurve();
+            interactingObject = null;
         }
         internal void SelectCurve(GameObject gameObject, Transform transform)
         {
             if (selectedCurve != null) UnSelectCurve();
             GameObject target = CurveManager.GetObjectFromCurve(gameObject);
             int selectedFrame = CurveManager.GetFrameFromPoint(target, transform.position);
-            selectedCurve = new SelectedCurveData()
+            selectedCurve = new CurveData()
             {
                 target = target,
+                curve = gameObject,
                 hasSelection = false,
                 StartSelection = selectedFrame,
                 EndSelection = selectedFrame
             };
+            CurveManager.StartSelection(gameObject);
+            isSelectingCurve = true;
+            interactingObject = gameObject;
         }
         internal void SelectingCurve(Transform transform)
         {
             if (selectedCurve == null) return;
+            if (hoveredCurve == null || hoveredCurve != selectedCurve.curve) return;
             int currentFrame = CurveManager.GetFrameFromPoint(selectedCurve.target, transform.position);
             selectedCurve.StartSelection = Mathf.Min(selectedCurve.StartSelection, currentFrame);
             selectedCurve.EndSelection = Mathf.Max(selectedCurve.EndSelection, currentFrame);
+            CurveManager.DrawLineZone(selectedCurve.StartSelection, selectedCurve.EndSelection, Color.red);
+
         }
 
         internal void EndSelectionCurve()
         {
+            isSelectingCurve = false;
+            //TODO: freeze selection if not on curve anymore
             if (selectedCurve == null) return;
             if (selectedCurve.EndSelection - selectedCurve.StartSelection > 3) selectedCurve.hasSelection = true;
+            if (!selectedCurve.hasSelection) UnSelectCurve();
+            interactingObject = null;
         }
 
         internal void UnSelectCurve()
         {
-
+            CurveManager.RemoveSelection(selectedCurve.curve);
         }
         #endregion
 
@@ -359,10 +394,23 @@ namespace VRtist
         #endregion
 
         #region controller
-        internal void GrabController(RigObjectController controller, Transform mouthpiece)
+        internal void HoverController(GameObject gameObject)
         {
-            grabbedController = controller;
+            if (interactingObject != null) return;
+            RigObjectController hoveredController = gameObject.GetComponent<RigObjectController>();
+            hoveredController.StartHover();
+        }
+        internal void StopHoverController(GameObject gameObject)
+        {
+            if (interactingObject != null) return;
+            RigObjectController controller = gameObject.GetComponent<RigObjectController>();
+            controller.EndHover();
+        }
+        internal void GrabController(GameObject controller, Transform mouthpiece)
+        {
+            grabbedController = controller.GetComponent<RigObjectController>();
             grabbedController.OnGrab(mouthpiece, PoseMode == PoseEditMode.FK);
+            interactingObject = controller;
         }
         internal void DragController(Transform mouthpiece)
         {
@@ -374,9 +422,11 @@ namespace VRtist
             if (null == grabbedController) return;
             grabbedController.OnRelease();
             grabbedController = null;
+            interactingObject = null;
         }
-        internal void SelectController(RigObjectController hoveredController)
+        internal void SelectController(GameObject gameObject)
         {
+            RigObjectController hoveredController = gameObject.GetComponent<RigObjectController>();
             if (SelectedControllers.Contains(hoveredController))
             {
                 hoveredController.GetTargets().ForEach(x => CurveManager.UnSelectJoint(x));
@@ -392,6 +442,8 @@ namespace VRtist
         }
         private void UnSelectControllers()
         {
+            Debug.Log("unselect controller");
+            selectedCurve = null;
             foreach (RigObjectController controller in SelectedControllers)
             {
                 controller.GetTargets().ForEach(x => CurveManager.UnSelectJoint(x));

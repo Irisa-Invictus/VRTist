@@ -25,7 +25,7 @@
 
 using System;
 using System.Collections.Generic;
-
+using Unity.Collections;
 using UnityEngine;
 
 namespace VRtist
@@ -46,6 +46,9 @@ namespace VRtist
 
         private readonly Dictionary<GameObject, GameObject> curves = new Dictionary<GameObject, GameObject>();
         private Dictionary<RigController, Dictionary<JointController, GameObject>> jointCurves = new Dictionary<RigController, Dictionary<JointController, GameObject>>();
+
+        private Texture2D selectionTexture;
+        private Color objectColor = new Color(1, 0.7f, 0.3f);
 
         void Start()
         {
@@ -414,9 +417,60 @@ namespace VRtist
                 }
                 else
                 {
-                    line.material.color = new Color(1, 0.7f, 0.3f);
+                    line.material.color = objectColor;
                 }
             }
+        }
+
+        /// <summary>
+        /// Reset unselected zone color when curve is not hovered anymore
+        /// </summary>
+        internal void SelectionStopHover(GameObject curve, int start, int end)
+        {
+            Color outColor = objectColor;
+            GameObject target = GetObjectFromCurve(curve);
+            if (target.TryGetComponent(out JointController joint))
+            {
+                outColor = joint.color;
+            }
+            DrawLineZone(start, end, outColor);
+        }
+
+        public void StartSelection(GameObject curve)
+        {
+            LineRenderer line = curve.GetComponent<LineRenderer>();
+            selectionTexture = (Texture2D)line.material.mainTexture;
+            if (null == selectionTexture)
+            {
+                selectionTexture = new Texture2D(line.positionCount, 1, TextureFormat.RGBA32, false);
+                line.material.mainTexture = selectionTexture;
+            }
+            line.material.color = Color.white;
+        }
+
+        public void DrawLineZone(int start, int end, Color outColor)
+        {
+            NativeArray<Color32> pixels = selectionTexture.GetRawTextureData<Color32>();
+            for (int i = 0; i < pixels.Length; i++)
+            {
+                if (i < start || i > end) pixels[i] = outColor;
+                else pixels[i] = Color.black;
+            }
+            selectionTexture.Apply();
+        }
+
+        public void RemoveSelection(GameObject curve)
+        {
+            LineRenderer line = curve.GetComponent<LineRenderer>();
+            if (GetObjectFromCurve(curve).TryGetComponent(out JointController joint))
+            {
+                line.material.color = joint.color;
+            }
+            else
+            {
+                line.material.color = objectColor;
+            }
+            line.material.mainTexture = null;
         }
 
         internal int GetFrameFromPoint(GameObject gameObject, Vector3 pointPosition)
