@@ -288,8 +288,8 @@ namespace VRtist
         }
         internal void ReleaseCurve()
         {
-            if (selectedCurve == null || selectedCurve.manipulation == null) return;
-            selectedCurve.manipulation.ReleaseCurve();
+            if (draggedCurve == null || draggedCurve.manipulation == null) return;
+            draggedCurve.manipulation.ReleaseCurve();
             interactingObject = null;
         }
         internal void SelectCurve(GameObject gameObject, Transform transform)
@@ -317,7 +317,6 @@ namespace VRtist
             selectedCurve.StartSelection = Mathf.Min(selectedCurve.StartSelection, currentFrame);
             selectedCurve.EndSelection = Mathf.Max(selectedCurve.EndSelection, currentFrame);
             CurveManager.DrawLineZone(selectedCurve.StartSelection, selectedCurve.EndSelection, Color.red);
-
         }
 
         internal void EndSelectionCurve()

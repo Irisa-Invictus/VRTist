@@ -111,6 +111,8 @@ namespace VRtist
             lastFrame = endFrame;
         }
 
+
+
         private void GetCurves(AnimationSet objectAnim, List<AnimationSet> animation)
         {
             //Rotation curves for each animated element in hierarchy

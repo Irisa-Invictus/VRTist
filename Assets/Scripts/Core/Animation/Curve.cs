@@ -242,6 +242,7 @@ namespace VRtist
 
         public void AddKey(AnimationKey key, bool lockTangents = false)
         {
+            Debug.Log("lock tangents " + lockTangents);
             if (GetKeyIndex(key.frame, out int index))
             {
                 keys[index] = key;
@@ -501,11 +502,11 @@ namespace VRtist
 
             if (keys[firstKeyIndex].frame != startFrame && hasPrevValue)
             {
-                AddKey(new AnimationKey(startFrame, prevValue, Interpolation.Bezier), false);
+                AddKey(new AnimationKey(startFrame, prevValue, Interpolation.Bezier), true);
             }
             if (keys[lastKeyIndex].frame != endFrame && hasNextValue)
             {
-                AddKey(new AnimationKey(endFrame, nextValue, Interpolation.Bezier), false);
+                AddKey(new AnimationKey(endFrame, nextValue, Interpolation.Bezier), true);
             }
             List<AnimationKey> toRemove = keys.FindAll(x => x.frame > startFrame && x.frame < endFrame);
             toRemove.ForEach(x => RemoveKey(x.frame));

@@ -85,6 +85,7 @@ namespace VRtist
 
         private void AddToHovered(GameObject target, TargetType type)
         {
+            if (hoveredTargets.Contains(target)) return;
             if (HoveredTypes.Count > 0)
             {
                 EndHover(hoveredTargets[0], HoveredTypes[0]);
