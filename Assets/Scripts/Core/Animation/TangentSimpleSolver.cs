@@ -242,7 +242,7 @@ namespace VRtist
                 Vector2 nextKeyIn = new Vector2(nextKeys[0].inTangent.x, nextKeys[0].inTangent.y);
 
                 float currentValue = Bezier.EvaluateBezier(prevK, prevK + previousKeyOut, nextK - nextKeyIn, nextK, frame);
-                //property k-1 out.x
+                //prop i affected by property k-1 out.x
                 Vector2 B1 = prevK + (previousKeyOut + new Vector2(dtheta, 0));
                 Vector2 C1 = nextK - nextKeyIn;
                 Js2[i, (i * 8) + 2] = (Bezier.EvaluateBezier(prevK, B1, C1, nextK, frame) - currentValue) / (double)dtheta;
