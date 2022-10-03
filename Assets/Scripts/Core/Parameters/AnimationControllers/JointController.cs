@@ -125,11 +125,18 @@ namespace VRtist
             return AnimToRoot[AnimToRoot.Count - 1];
         }
 
-        public JointController GetParentJoint()
+        public bool TryGetParentJoint(out JointController parent)
         {
-            JointController parentGoal = this;
-            if (PathToRoot.Count == 0) return null;
-            else return PathToRoot[PathToRoot.Count - 1].GetComponent<JointController>();
+            if (PathToRoot.Count == 0)
+            {
+                parent = null;
+                return false;
+            }
+            else
+            {
+                parent = PathToRoot[PathToRoot.Count - 1].GetComponent<JointController>();
+                return true;
+            }
         }
 
         public JointController GetIKOrigin()

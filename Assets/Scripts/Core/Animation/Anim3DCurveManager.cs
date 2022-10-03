@@ -220,8 +220,8 @@ namespace VRtist
 
         private void UpdateJointCurve(JointController joint, GameObject curve)
         {
-            DeleteCurve(curve);
-            AddJointCurve(joint, joint.RootController);
+            //DeleteCurve(curve);
+            GenerateCurve(joint, joint.RootController, curve);
         }
 
 
@@ -287,16 +287,32 @@ namespace VRtist
         {
             AnimationSet jointAnimation = GlobalState.Animation.GetObjectAnimation(jointController.gameObject);
             if (null == jointAnimation) return;
+            if (jointController.Animation != jointAnimation) jointController.Animation = jointAnimation;
 
-            Curve rotationX = jointAnimation.GetCurve(AnimatableProperty.RotationX);
-            if (rotationX.keys.Count == 0) return;
+            GameObject curve3D = curves.TryGetValue(jointController.gameObject, out GameObject current) ? current : Instantiate(curvePrefab, curvesParent);
+            curves[jointController.gameObject] = curve3D;
+            GenerateCurve(jointController, skinController, curve3D);
 
-            int frameStart = Mathf.Clamp(rotationX.keys[0].frame, GlobalState.Animation.StartFrame, GlobalState.Animation.EndFrame);
-            int frameEnd = Mathf.Clamp(rotationX.keys[rotationX.keys.Count - 1].frame, GlobalState.Animation.StartFrame, GlobalState.Animation.EndFrame);
+            if (jointCurves.ContainsKey(skinController))
+            {
+                if (jointCurves[skinController].TryGetValue(jointController, out GameObject oldCurve) && oldCurve != null) DeleteCurve(oldCurve);
+                jointCurves[skinController][jointController] = curve3D;
+            }
+            else
+            {
+                jointCurves[skinController] = new Dictionary<JointController, GameObject>();
+                jointCurves[skinController][jointController] = curve3D;
+            }
+        }
+
+        private void GenerateCurve(JointController jointController, RigController skinController, GameObject curve3D)
+        {
+            Curve rotationX = jointController.Animation.GetCurve(AnimatableProperty.RotationX);
+            if (rotationX == null) return;
 
             List<Vector3> positions = new List<Vector3>();
-            GameObject curve3D = curves.TryGetValue(jointController.gameObject, out GameObject current) ? current : Instantiate(curvePrefab, curvesParent);
-
+            int frameStart = Mathf.Clamp(rotationX.keys[0].frame, GlobalState.Animation.StartFrame, GlobalState.Animation.EndFrame);
+            int frameEnd = Mathf.Clamp(rotationX.keys[rotationX.keys.Count - 1].frame, GlobalState.Animation.StartFrame, GlobalState.Animation.EndFrame);
             Vector3 forwardOffset = (skinController.transform.forward * skinController.transform.localScale.x) * currentCurveOffset;
 
             jointController.CheckAnimations();
@@ -320,18 +336,6 @@ namespace VRtist
             Mesh lineMesh = new Mesh();
             line.BakeMesh(lineMesh);
             collider.sharedMesh = lineMesh;
-            curves[jointController.gameObject] = curve3D;
-
-            if (jointCurves.ContainsKey(skinController))
-            {
-                if (jointCurves[skinController].TryGetValue(jointController, out GameObject oldCurve) && oldCurve != null) DeleteCurve(oldCurve);
-                jointCurves[skinController][jointController] = curve3D;
-            }
-            else
-            {
-                jointCurves[skinController] = new Dictionary<JointController, GameObject>();
-                jointCurves[skinController][jointController] = curve3D;
-            }
         }
 
         public GameObject GetObjectFromCurve(GameObject curve)

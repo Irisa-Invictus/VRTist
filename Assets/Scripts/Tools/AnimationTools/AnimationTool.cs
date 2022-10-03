@@ -441,7 +441,6 @@ namespace VRtist
         }
         private void UnSelectControllers()
         {
-            Debug.Log("unselect controller");
             selectedCurve = null;
             foreach (RigObjectController controller in SelectedControllers)
             {

@@ -242,7 +242,6 @@ namespace VRtist
 
         public void AddKey(AnimationKey key, bool lockTangents = false)
         {
-            Debug.Log("lock tangents " + lockTangents);
             if (GetKeyIndex(key.frame, out int index))
             {
                 keys[index] = key;

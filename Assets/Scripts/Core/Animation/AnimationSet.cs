@@ -32,6 +32,7 @@ namespace VRtist
     /// <summary>
     /// A set of animations for a given Transform. An animation is a curve on specific properties (position, rotation...).
     /// </summary>
+    [System.Serializable]
     public class AnimationSet
     {
         public Transform transform;

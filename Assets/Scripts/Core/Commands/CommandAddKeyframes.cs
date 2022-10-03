@@ -167,7 +167,8 @@ namespace VRtist
                 for (int i = 0; i < 6; i++)
                 {
                     AnimatableProperty property = (AnimatableProperty)i;
-                    new CommandAddKeyframeTangent(go, property, frame, startFrame, endFrame, newKeys[l][property]).Submit();
+                    if (newKeys[l].ContainsKey(property))
+                        new CommandAddKeyframeTangent(go, property, frame, startFrame, endFrame, newKeys[l][property]).Submit();
                 }
             }
         }

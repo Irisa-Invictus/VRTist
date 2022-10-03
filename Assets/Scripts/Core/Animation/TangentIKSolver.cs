@@ -34,8 +34,8 @@ namespace VRtist
         private State currentState;
         private State targetState;
 
-        private List<AnimationKey> previousKeys;
-        private List<AnimationKey> nextKeys;
+        public List<AnimationKey> previousKeys;
+        public List<AnimationKey> nextKeys;
 
 
 
@@ -54,6 +54,8 @@ namespace VRtist
 
             //property count * 2 keyframes * 4 (inTan.x inTan.y outTan.x outTan.y) * animation count
             valueCount = propertyCount * 2 * 4 * animationList.Count;
+            previousFrame = start;
+            nextFrame = end;
 
             previousKeys = new List<AnimationKey>();
             nextKeys = new List<AnimationKey>();
@@ -87,6 +89,8 @@ namespace VRtist
                 Rotation = targetRotation,
                 Frame = frame
             };
+
+            Debug.Log(currentState.Position + " -> " + desiredState.Position);
 
             double[,] Js = dc_dtheta(frame);
 
