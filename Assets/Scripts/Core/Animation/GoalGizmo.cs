@@ -69,7 +69,14 @@ namespace VRtist
         {
             AnimationTool.Vector3Axis axis = GetAcutatorAxis(actuator.gameObject);
             SelectedAxis(axis);
-            Controller.OnGrabGizmo(mouthpiece, this, CurrentGizmo, axis, false);
+            if (currentGizmo == GizmoTool.Rotation)
+            {
+                Controller.OnGrabGizmo(mouthpiece, this, CurrentGizmo, axis, false);
+            }
+            else
+            {
+                Controller.OnGrabGizmo(mouthpiece, this, currentGizmo, axis, true);
+            }
         }
 
         public void DragGizmo(Transform mouthpiece)
