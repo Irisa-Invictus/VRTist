@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -20,6 +21,7 @@ namespace VRtist
         public Transform Parent { get { return PathToRoot.Count == 0 ? null : PathToRoot[PathToRoot.Count - 1]; } }
 
         bool updated = false;
+
 
         public void MoveJoint(Matrix4x4 localMatrix)
         {
@@ -74,9 +76,12 @@ namespace VRtist
             return parentPosition;
         }
 
+        /// <summary>
+        /// local to world matrice at frame
+        /// </summary>
         public Matrix4x4 MatrixAtFrame(int frame)
         {
-            if (null == Animation) Animation = GlobalState.Animation.GetObjectAnimation(this.gameObject);
+            Animation = GlobalState.Animation.GetObjectAnimation(this.gameObject);
             if (null == Animation) return Matrix4x4.identity;
 
             AnimationSet rootAnimation = GlobalState.Animation.GetObjectAnimation(RootController.gameObject);
@@ -115,7 +120,9 @@ namespace VRtist
             AnimToRoot.Clear();
             PathToRoot.ForEach(x =>
             {
-                AnimToRoot.Add(GlobalState.Animation.GetOrCreateObjectAnimation(x.gameObject));
+                AnimationSet anim = GlobalState.Animation.GetOrCreateObjectAnimation(x.gameObject);
+                AnimToRoot.Add(anim);
+                if (x.TryGetComponent(out JointController joint)) joint.Animation = anim;
             });
             Animation = GlobalState.Animation.GetObjectAnimation(gameObject);
         }

@@ -23,6 +23,7 @@
  * SOFTWARE.
  */
 
+using System;
 using System.Collections.Generic;
 
 using UnityEngine;
@@ -717,5 +718,6 @@ namespace VRtist
             oldAnimations.Clear();
             GlobalState.Settings.interpolation = preRecordInterpolation;
         }
+
     }
 }

@@ -40,7 +40,7 @@ namespace VRtist
 
 
 
-        public TangentIKSolver(JointController joint, Vector3 targetPosition, Quaternion targetRotation, int frame, int start, int end, List<JointController> hierarchy)
+        public TangentIKSolver(JointController joint, Vector3 targetPosition, Quaternion targetRotation, int frame, int start, int end, List<JointController> hierarchy, Matrix4x4 parentMatrix)
         {
             target = joint;
             this.frame = frame;
@@ -50,7 +50,7 @@ namespace VRtist
             hierarchy.ForEach(x => animationList.Add(x.Animation));
             animationList.Add(joint.Animation);
             animationCount = animationList.Count;
-            rootParentMatrix = hierarchy[0].ParentMatrixAtFrame(frame);
+            rootParentMatrix = parentMatrix;
 
             //property count * 2 keyframes * 4 (inTan.x inTan.y outTan.x outTan.y) * animation count
             valueCount = propertyCount * 2 * 4 * animationList.Count;
@@ -82,7 +82,7 @@ namespace VRtist
 
             double[] theta = GetAllTangents();
             double[,] Theta = Maths.ColumnArrayToArray(theta);
-            State currentState = GetState(frame);
+            currentState = GetState(frame);
             State desiredState = new State()
             {
                 Position = targetPosition,
@@ -155,6 +155,7 @@ namespace VRtist
             {
                 new_theta[i] = delta_theta[i] + theta[i];
             }
+            Debug.Log("new edit");
             for (int a = 0; a < animationCount; a++)
             {
                 AnimationSet animation = animationList[a];
@@ -163,8 +164,9 @@ namespace VRtist
                     AnimatableProperty property = (AnimatableProperty)p + 3;
                     Curve curve = animation.GetCurve(property);
                     int curveIndex = (a * 3) + p;
-                    int propIndex = curveIndex * 8;
+                    int propIndex = a * 24 + p * 8;
 
+                    Debug.Log("a " + a + " p " + p + " index " + propIndex + " prop " + property + " curve " + curve.property);
                     Vector2 PrevInTangent = new Vector2((float)new_theta[propIndex + 0], (float)(new_theta[propIndex + 1]));
                     Vector2 PrevOutTangent = new Vector2((float)new_theta[propIndex + 2], (float)(new_theta[propIndex + 3]));
                     Vector2 nextInTangent = new Vector2((float)new_theta[propIndex + 4], (float)(new_theta[propIndex + 5]));
@@ -173,6 +175,7 @@ namespace VRtist
                     ModifyTangents(curve, nextKeyIndex, nextInTangent, nextOutTangent);
                 }
             }
+
 
             return true;
         }
@@ -191,7 +194,7 @@ namespace VRtist
                     //modified value, k-1 out.x k-1 out.y k+1 in.x k+1 in.y
                     for (int prop = 0; prop < 4; prop++)
                     {
-                        Matrix4x4 matrice = rootParentMatrix;
+                        Matrix4x4 matrice = Matrix4x4.identity;
 
                         for (int m = 0; m < animationCount; m++)
                         {
@@ -216,31 +219,31 @@ namespace VRtist
                                 switch (prop)
                                 {
                                     case 0:
-                                        Vector2 A1 = new Vector2(previousKeys[(m * 3) + 0].frame, previousKeys[(m * 3) + 0].value);
-                                        Vector2 B1 = A1 + (previousKeys[(m * 3) + 0].outTangent + new Vector2(dtheta, 0));
-                                        Vector2 D1 = new Vector2(nextKeys[(m * 3) + 0].frame, nextKeys[(m * 3) + 0].value);
-                                        Vector2 C1 = D1 - nextKeys[(m * 3) + 0].inTangent;
+                                        Vector2 A1 = new Vector2(previousKeys[(m * 3) + i].frame, previousKeys[(m * 3) + i].value);
+                                        Vector2 B1 = A1 + (previousKeys[(m * 3) + i].outTangent + new Vector2(dtheta, 0));
+                                        Vector2 D1 = new Vector2(nextKeys[(m * 3) + i].frame, nextKeys[(m * 3) + i].value);
+                                        Vector2 C1 = D1 - nextKeys[(m * 3) + i].inTangent;
                                         eulerRotation[i] = Bezier.EvaluateBezier(A1, B1, C1, D1, frame);
                                         break;
                                     case 1:
-                                        Vector2 A2 = new Vector2(previousKeys[(m * 3) + 0].frame, previousKeys[(m * 3) + 0].value);
-                                        Vector2 B2 = A2 + (previousKeys[(m * 3) + 0].outTangent + new Vector2(0, dtheta));
-                                        Vector2 D2 = new Vector2(nextKeys[(m * 3) + 0].frame, nextKeys[(m * 3) + 0].value);
-                                        Vector2 C2 = D2 - nextKeys[(m * 3) + 0].inTangent;
+                                        Vector2 A2 = new Vector2(previousKeys[(m * 3) + i].frame, previousKeys[(m * 3) + i].value);
+                                        Vector2 B2 = A2 + (previousKeys[(m * 3) + i].outTangent + new Vector2(0, dtheta));
+                                        Vector2 D2 = new Vector2(nextKeys[(m * 3) + i].frame, nextKeys[(m * 3) + i].value);
+                                        Vector2 C2 = D2 - nextKeys[(m * 3) + i].inTangent;
                                         eulerRotation[i] = Bezier.EvaluateBezier(A2, B2, C2, D2, frame);
                                         break;
                                     case 2:
-                                        Vector2 A3 = new Vector2(previousKeys[(m * 3) + 0].frame, previousKeys[(m * 3) + 0].value);
-                                        Vector2 B3 = A3 + previousKeys[(m * 3) + 0].outTangent;
-                                        Vector2 D3 = new Vector2(nextKeys[(m * 3) + 0].frame, nextKeys[(m * 3) + 0].value);
-                                        Vector2 C3 = D3 - (nextKeys[(m * 3) + 0].inTangent + new Vector2(dtheta, 0));
+                                        Vector2 A3 = new Vector2(previousKeys[(m * 3) + i].frame, previousKeys[(m * 3) + i].value);
+                                        Vector2 B3 = A3 + previousKeys[(m * 3) + i].outTangent;
+                                        Vector2 D3 = new Vector2(nextKeys[(m * 3) + i].frame, nextKeys[(m * 3) + i].value);
+                                        Vector2 C3 = D3 - (nextKeys[(m * 3) + i].inTangent + new Vector2(dtheta, 0));
                                         eulerRotation[i] = Bezier.EvaluateBezier(A3, B3, C3, D3, frame);
                                         break;
                                     case 3:
-                                        Vector2 A4 = new Vector2(previousKeys[(m * 3) + 0].frame, previousKeys[(m * 3) + 0].value);
-                                        Vector2 B4 = A4 + previousKeys[(m * 3) + 0].outTangent;
-                                        Vector2 D4 = new Vector2(nextKeys[(m * 3) + 0].frame, nextKeys[(m * 3) + 0].value);
-                                        Vector2 C4 = D4 - (nextKeys[(m * 3) + 0].inTangent + new Vector2(0, dtheta));
+                                        Vector2 A4 = new Vector2(previousKeys[(m * 3) + i].frame, previousKeys[(m * 3) + i].value);
+                                        Vector2 B4 = A4 + previousKeys[(m * 3) + i].outTangent;
+                                        Vector2 D4 = new Vector2(nextKeys[(m * 3) + i].frame, nextKeys[(m * 3) + i].value);
+                                        Vector2 C4 = D4 - (nextKeys[(m * 3) + i].inTangent + new Vector2(0, dtheta));
                                         eulerRotation[i] = Bezier.EvaluateBezier(A4, B4, C4, D4, frame);
                                         break;
                                 }
@@ -256,13 +259,13 @@ namespace VRtist
                         }
                         Maths.DecomposeMatrix(matrice, out Vector3 resultPosition, out Quaternion resultRotation, out Vector3 resultScale);
                         //object position.x affected by delta 
-                        Js[0, (a * 12) + (prop + 2)] = (resultPosition.x - currentState.Position.x) / dtheta;
-                        Js[1, (a * 12) + (prop + 2)] = (resultPosition.y - currentState.Position.y) / dtheta;
-                        Js[2, (a * 12) + (prop + 2)] = (resultPosition.z - currentState.Position.z) / dtheta;
-                        Js[3, (a * 12) + (prop + 2)] = (resultRotation.x - currentState.Rotation.x) / dtheta;
-                        Js[4, (a * 12) + (prop + 2)] = (resultRotation.y - currentState.Rotation.y) / dtheta;
-                        Js[5, (a * 12) + (prop + 2)] = (resultRotation.z - currentState.Rotation.z) / dtheta;
-                        Js[6, (a * 12) + (prop + 2)] = (resultRotation.w - currentState.Rotation.w) / dtheta;
+                        Js[0, (a * 24) + (i * 8) + (prop + 2)] = (resultPosition.x - currentState.Position.x) / dtheta;
+                        Js[1, (a * 24) + (i * 8) + (prop + 2)] = (resultPosition.y - currentState.Position.y) / dtheta;
+                        Js[2, (a * 24) + (i * 8) + (prop + 2)] = (resultPosition.z - currentState.Position.z) / dtheta;
+                        Js[3, (a * 24) + (i * 8) + (prop + 2)] = (resultRotation.x - currentState.Rotation.x) / dtheta;
+                        Js[4, (a * 24) + (i * 8) + (prop + 2)] = (resultRotation.y - currentState.Rotation.y) / dtheta;
+                        Js[5, (a * 24) + (i * 8) + (prop + 2)] = (resultRotation.z - currentState.Rotation.z) / dtheta;
+                        Js[6, (a * 24) + (i * 8) + (prop + 2)] = (resultRotation.w - currentState.Rotation.w) / dtheta;
                     }
 
                 }

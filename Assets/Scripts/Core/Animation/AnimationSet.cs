@@ -36,7 +36,7 @@ namespace VRtist
     public class AnimationSet
     {
         public Transform transform;
-        public readonly Dictionary<AnimatableProperty, Curve> curves = new Dictionary<AnimatableProperty, Curve>();
+        public Dictionary<AnimatableProperty, Curve> curves = new Dictionary<AnimatableProperty, Curve>();
 
         public AnimationSet(GameObject gobject)
         {
@@ -46,6 +46,7 @@ namespace VRtist
             if (null != lightController) { CreateLightCurves(); }
             else if (null != cameraController) { CreateCameraCurves(); }
             else { CreateTransformCurves(); }
+            Debug.Log("curves " + curves);
         }
 
         public AnimationSet(AnimationSet set)
@@ -57,6 +58,7 @@ namespace VRtist
                 SetCurve(curve.Key, curve.Value.keys);
                 curves[curve.Key].ComputeCache();
             }
+            Debug.Log("curves " + curves);
         }
 
         public void EvaluateAnimation(int currentFrame)
@@ -160,6 +162,12 @@ namespace VRtist
 
         public Curve GetCurve(AnimatableProperty property)
         {
+            //this shouldn't happen?
+            if (curves == null)
+            {
+                curves = new Dictionary<AnimatableProperty, Curve>();
+                CreateTransformCurves();
+            }
             curves.TryGetValue(property, out Curve result);
             return result;
         }

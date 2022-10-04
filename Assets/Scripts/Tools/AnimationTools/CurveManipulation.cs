@@ -59,6 +59,7 @@ namespace VRtist
             public AnimationSet ObjectAnimation;
             public Matrix4x4 InitFrameMatrix;
             public TangentIKSolver Solver;
+            public Transform rootTransform;
         }
         private HumanData humanData;
 
@@ -105,8 +106,7 @@ namespace VRtist
             if (target.TryGetComponent(out JointController jointController))
             {
                 isRig = true;
-                debugObject.transform.parent = jointController.transform.parent.parent;
-                debugObject.transform.localScale = Vector3.one;
+
                 if (poseMode == AnimationTool.PoseEditMode.FK) RigFKPoint(jointController, frame, mouthpiece);
                 else RigIKPoint(jointController, frame, mouthpiece);
             }
@@ -213,14 +213,19 @@ namespace VRtist
                 Debug.Log("root " + controllerHierarchy[0]);
             }
 
+
+
             humanData = new HumanData()
             {
                 Controller = joint,
                 ObjectAnimation = new AnimationSet(joint.Animation),
                 Hierarchy = controllerHierarchy,
                 InitFrameMatrix = joint.MatrixAtFrame(frame),
-                JointAnimations = animations
+                JointAnimations = animations,
+                rootTransform = controllerHierarchy[0].Parent
             };
+            debugObject.transform.parent = humanData.rootTransform;
+            debugObject.transform.localScale = Vector3.one;
         }
         private void RigFKZone(JointController joint, int frame, int startFrame, int endFrame, Transform mouthpiece)
         {
@@ -235,20 +240,22 @@ namespace VRtist
         internal void DragCurve(Transform mouthpiece)
         {
             //TODO: add scale
-            Matrix4x4 transformation = Matrix4x4.identity;// mouthpiece.localToWorldMatrix * initialMouthMatrix;
+            Matrix4x4 transformation = mouthpiece.localToWorldMatrix * initialMouthMatrix;
             if (isRig)
             {
                 Matrix4x4 target = transformation * humanData.InitFrameMatrix;
                 JointController root = humanData.Hierarchy[0];
-                target = root.ParentMatrixAtFrame(Frame).inverse * target;
-                Maths.DecomposeMatrix(target, out Vector3 targetPos, out Quaternion targetRot, out Vector3 targetScale);
+                Matrix4x4 localTarget = humanData.rootTransform.GetComponent<JointController>().MatrixAtFrame(Frame).inverse;
+
+                Maths.DecomposeMatrix(localTarget * target, out Vector3 targetPos, out Quaternion targetRot, out Vector3 targetScale);
 
                 debugObject.transform.localPosition = targetPos;
                 debugObject.transform.localRotation = targetRot;
 
-                TangentIKSolver solver = new TangentIKSolver(humanData.Controller, targetPos, targetRot, Frame, startFrame, endFrame, humanData.Hierarchy);
+                TangentIKSolver solver = new TangentIKSolver(humanData.Controller, targetPos, targetRot, Frame, startFrame, endFrame, humanData.Hierarchy, localTarget);
                 solver.Setup();
                 humanData.Solver = solver;
+                GlobalState.Animation.onChangeCurve.Invoke(humanData.Controller.gameObject, AnimatableProperty.PositionX);
             }
             else
             {
