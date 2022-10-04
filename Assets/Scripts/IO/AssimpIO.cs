@@ -642,6 +642,7 @@ namespace VRtist
             if (parent != null && parent != go.transform)
                 go.transform.parent = parent;
 
+
             GlobalState.Instance.messageBox.ShowMessage("Importing Hierarchy : " + importCount);
             // Do not use Assimp Decompose function, it does not work properly
             // use unity decomposition instead
@@ -651,11 +652,10 @@ namespace VRtist
                 new Vector4(node.Transform.A3, node.Transform.B3, node.Transform.C3, node.Transform.D3),
                 new Vector4(node.Transform.A4, node.Transform.B4, node.Transform.C4, node.Transform.D4)
                 );
-
             Maths.DecomposeMatrix(nodeMatrix, out Vector3 nodePosition, out Quaternion nodeRotation, out Vector3 nodeScale);
             Maths.DecomposeMatrix(cumulMatrix, out Vector3 cumulPosition, out Quaternion cumulRotation, out Vector3 cumulScale);
 
-            if (node.Name.Contains("$AssimpFbx$") && node.HasChildren)
+            if (node.Name.Contains("$AssimpFbx$") && node.HasChildren && isHuman)
             {
                 if (!node.Name.Contains("Translation"))
                 {
@@ -848,11 +848,6 @@ namespace VRtist
                 objectRoot.transform.localPosition = Vector3.zero;
                 objectRoot.transform.localScale = new Vector3(-1, 1, 1);
             }
-            if (!isHuman)
-            {
-                objectRoot.transform.localScale = new Vector3(-1, 1, 1);
-                objectRoot.transform.localRotation = Quaternion.Euler(0, 180, 0);
-            }
 
             importCount = 1;
             if (blocking)
@@ -892,7 +887,9 @@ namespace VRtist
                 rigController.RootObject = rootBone;
 
                 GenerateSkeleton(rootBone, rigController);
+                GenerateControllers(rigController.transform);
             }
+
             isHuman = false;
 
         }
@@ -900,8 +897,29 @@ namespace VRtist
         public void GenerateSkeleton(Transform root, RigController rootController)
         {
             rigConfiguration.GenerateJoints(rootController, root, bones);
+
         }
 
+        private void GenerateControllers(Transform root)
+        {
+            string path = GlobalState.Settings.assetBankDirectory;
+            if (Directory.Exists(path))
+            {
+                string[] fbxpath = taskData[0].fileName.Split('\\');
+                string fbxname = fbxpath[fbxpath.Length - 1].Split('_')[0];
+                string[] filenames = Directory.GetFiles(path, "*.json");
+                foreach (string file in filenames)
+                {
+                    string[] filepath = file.Split('\\');
+                    string thisPath = filepath[filepath.Length - 1].Split('_')[0];
+                    if (thisPath == fbxname)
+                    {
+                        Dada.URig.Processor proc = new Dada.URig.Processor();
+                        proc.CreateControllers(root, file);
+                    }
+                }
+            }
+        }
 
         private async Task<Assimp.Scene> ImportAssimpFile(string fileName)
         {

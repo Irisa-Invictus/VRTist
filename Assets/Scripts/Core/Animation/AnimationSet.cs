@@ -46,7 +46,6 @@ namespace VRtist
             if (null != lightController) { CreateLightCurves(); }
             else if (null != cameraController) { CreateCameraCurves(); }
             else { CreateTransformCurves(); }
-            Debug.Log("curves " + curves);
         }
 
         public AnimationSet(AnimationSet set)

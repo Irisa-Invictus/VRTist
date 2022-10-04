@@ -8,6 +8,15 @@ namespace VRtist
     {
 
         public enum GizmoTool { Rotation, Position }
+        private GizmoTool currentGizmo = GizmoTool.Rotation;
+        public GizmoTool CurrentGizmo
+        {
+            get { return currentGizmo; }
+            set
+            {
+                currentGizmo = value;
+            }
+        }
 
         public GameObject xRotation;
         public GameObject yRotation;
@@ -19,48 +28,113 @@ namespace VRtist
 
         public RigObjectController Controller;
 
-        private bool isListening;
-
-        public void Init(RigObjectController controller)
+        public void Initialize(RigObjectController controller)
         {
             Controller = controller;
-
-            Matrix4x4 targetMatrix = controller.transform.localToWorldMatrix;
-            Maths.DecomposeMatrix(targetMatrix, out Vector3 pos, out Quaternion rot, out Vector3 scale);
-            transform.position = pos;
-            transform.rotation = rot;
-            transform.localScale = scale;
-
-            if (!isListening)
+            if (controller is DirectController)
             {
-                GlobalState.ObjectMovingEvent.AddListener(ResetPosition);
-                GlobalState.Animation.onFrameEvent.AddListener(ResetPosition);
-                isListening = true;
+                transform.parent = controller.transform.parent;
+                transform.localPosition = controller.transform.localPosition;
+                transform.localRotation = controller.transform.localRotation;
+                transform.localScale = controller.transform.localScale;
+            }
+            generatePositionCurves();
+            generateRotationCurves();
+            ChangeGizmo(GizmoTool.Rotation);
+        }
+
+        public void RemoveGizmo()
+        {
+
+        }
+
+        public void StartHover(GameObject actuator)
+        {
+            if (actuator.TryGetComponent(out LineRenderer line))
+            {
+                line.startWidth = 3f;
+                line.endWidth = 3f;
+            }
+        }
+        public void EndHover(GameObject actuator)
+        {
+            if (actuator.TryGetComponent(out LineRenderer line))
+            {
+                line.startWidth = 1f;
+                line.endWidth = 1f;
             }
         }
 
-        public void ResetPosition(GameObject gObject)
+        public void GrabGizmo(Transform mouthpiece, Transform actuator)
         {
-            if (Controller == null) return;
-            Matrix4x4 targetMatrix = Controller.transform.localToWorldMatrix;
-            Maths.DecomposeMatrix(targetMatrix, out Vector3 pos, out Quaternion rot, out Vector3 scale);
-            transform.position = pos;
-            transform.rotation = rot;
-            transform.localScale = scale;
+            AnimationTool.Vector3Axis axis = GetAcutatorAxis(actuator.gameObject);
+            SelectedAxis(axis);
+            Controller.OnGrabGizmo(mouthpiece, this, CurrentGizmo, axis, false);
         }
 
-        public void ResetPosition(int frame)
+        public void DragGizmo(Transform mouthpiece)
         {
-            ResetPosition(Controller.gameObject);
+            Controller.OnDragGizmo(mouthpiece);
+            transform.localRotation = Controller.transform.localRotation;
         }
 
-        //public PoseManipulation.AcutatorAxis GetAcutatorAxis(GameObject Gizmo)
-        //{
-        //    if (Gizmo == xPosition || Gizmo == xRotation) return PoseManipulation.AcutatorAxis.X;
-        //    if (Gizmo == yPosition || Gizmo == yRotation) return PoseManipulation.AcutatorAxis.Y;
-        //    if (Gizmo == zPosition || Gizmo == zRotation) return PoseManipulation.AcutatorAxis.Z;
-        //    return PoseManipulation.AcutatorAxis.X;
-        //}
+        public void ReleaseGizmo()
+        {
+            Controller.OnReleaseGizmo();
+            UnSelectAxis();
+        }
+        public void SelectGizmo(Transform actuator)
+        {
+
+        }
+        public void DeselectGizmo()
+        {
+
+        }
+        public AnimationTool.Vector3Axis GetAcutatorAxis(GameObject Gizmo)
+        {
+            if (Gizmo == xPosition || Gizmo == xRotation) return AnimationTool.Vector3Axis.X;
+            if (Gizmo == yPosition || Gizmo == yRotation) return AnimationTool.Vector3Axis.Y;
+            if (Gizmo == zPosition || Gizmo == zRotation) return AnimationTool.Vector3Axis.Z;
+            return AnimationTool.Vector3Axis.X;
+        }
+
+        public void SelectedAxis(AnimationTool.Vector3Axis axis)
+        {
+            bool isRotationMode = CurrentGizmo == GizmoTool.Rotation;
+            if (axis == AnimationTool.Vector3Axis.None)
+            {
+                xRotation.SetActive(isRotationMode);
+                yRotation.SetActive(isRotationMode);
+                zRotation.SetActive(isRotationMode);
+                xPosition.SetActive(!isRotationMode);
+                yPosition.SetActive(!isRotationMode);
+                zPosition.SetActive(!isRotationMode);
+                return;
+            }
+            if (isRotationMode && axis != AnimationTool.Vector3Axis.X) xRotation.SetActive(false);
+            if (isRotationMode && axis != AnimationTool.Vector3Axis.Y) yRotation.SetActive(false);
+            if (isRotationMode && axis != AnimationTool.Vector3Axis.Z) zRotation.SetActive(false);
+            if (!isRotationMode && axis != AnimationTool.Vector3Axis.X) xPosition.SetActive(false);
+            if (!isRotationMode && axis != AnimationTool.Vector3Axis.Y) yPosition.SetActive(false);
+            if (!isRotationMode && axis != AnimationTool.Vector3Axis.Z) zPosition.SetActive(false);
+        }
+
+        public void UnSelectAxis()
+        {
+            if (currentGizmo == GizmoTool.Rotation)
+            {
+                xRotation.SetActive(true);
+                yRotation.SetActive(true);
+                zRotation.SetActive(true);
+            }
+            else
+            {
+                xPosition.SetActive(true);
+                yPosition.SetActive(true);
+                zPosition.SetActive(true);
+            }
+        }
 
         public void ChangeGizmo(GizmoTool newTool)
         {
@@ -69,10 +143,12 @@ namespace VRtist
                 case GizmoTool.Position:
                     SetRotationGizmo(false);
                     SetPositionGizmo(true);
+                    currentGizmo = GizmoTool.Position;
                     break;
                 case GizmoTool.Rotation:
                     SetRotationGizmo(true);
                     SetPositionGizmo(false);
+                    currentGizmo = GizmoTool.Rotation;
                     break;
             }
         }
@@ -89,6 +165,7 @@ namespace VRtist
             yPosition.SetActive(state);
             zPosition.SetActive(state);
         }
+
 
         /// <summary>
         /// Editor call to create the gizmos curves.

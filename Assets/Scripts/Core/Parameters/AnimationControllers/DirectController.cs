@@ -88,40 +88,40 @@ namespace VRtist
         }
 
         #region Gizmo
-        //public override void OnGrabGizmo(Transform mouthpiece, GoalGizmo gizmo, GoalGizmo.GizmoTool tool, AnimationTool.Vector3Axis axis, bool isFK)
-        //{
-        //    if (isFK)
-        //    {
-        //        if (tool == GoalGizmo.GizmoTool.Position)
-        //        {
-        //            poseManip = new FKPositionGizmoPose(this, mouthpiece, axis);
-        //        }
-        //        if (tool == GoalGizmo.GizmoTool.Rotation)
-        //        {
-        //            poseManip = new FKRotationGizmoPose(this, mouthpiece, gizmo.transform, axis);
-        //        }
-        //    }
-        //    else
-        //    {
-        //        if (tool == GoalGizmo.GizmoTool.Position)
-        //        {
-        //            poseManip = new IKPositionGizmoPose(this, mouthpiece, axis, GetIKOrigin().transform);
-        //        }
-        //        if (tool == GoalGizmo.GizmoTool.Rotation)
-        //        {
-        //            poseManip = new FKRotationGizmoPose(this, mouthpiece, gizmo.transform, axis);
-        //        }
-        //    }
-        //}
-        //public override void OnDragGizmo(Transform mouthpiece)
-        //{
-        //    OnDrag(mouthpiece);
-        //}
+        public override void OnGrabGizmo(Transform mouthpiece, GoalGizmo gizmo, GoalGizmo.GizmoTool tool, AnimationTool.Vector3Axis axis, bool isFK)
+        {
+            if (isFK)
+            {
+                if (tool == GoalGizmo.GizmoTool.Position)
+                {
+                    poseManip = new FKPositionGizmoPose(this, mouthpiece, axis);
+                }
+                if (tool == GoalGizmo.GizmoTool.Rotation)
+                {
+                    poseManip = new FKRotationGizmoPose(this, mouthpiece, gizmo.transform, axis);
+                }
+            }
+            else
+            {
+                if (tool == GoalGizmo.GizmoTool.Position)
+                {
+                    poseManip = new IKPositionGizmoPose(this, mouthpiece, axis, GetIKOrigin().transform);
+                }
+                if (tool == GoalGizmo.GizmoTool.Rotation)
+                {
+                    poseManip = new FKRotationGizmoPose(this, mouthpiece, gizmo.transform, axis);
+                }
+            }
+        }
+        public override void OnDragGizmo(Transform mouthpiece)
+        {
+            OnDrag(mouthpiece);
+        }
 
-        //public override void OnReleaseGizmo()
-        //{
-        //    OnRelease();
-        //}
+        public override void OnReleaseGizmo()
+        {
+            OnRelease();
+        }
 
         #endregion
 

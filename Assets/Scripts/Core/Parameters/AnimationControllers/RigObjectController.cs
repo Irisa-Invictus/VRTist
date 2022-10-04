@@ -24,10 +24,10 @@ namespace VRtist
         public abstract void OnDrag(Transform mouthpiece);
         public abstract void OnRelease();
 
-        //public abstract void OnGrabGizmo(Transform mouthpiece, GoalGizmo gizmo, GoalGizmo.GizmoTool tool, AnimationTool.Vector3Axis axis, bool data);
+        public abstract void OnGrabGizmo(Transform mouthpiece, GoalGizmo gizmo, GoalGizmo.GizmoTool tool, AnimationTool.Vector3Axis axis, bool data);
 
-        //public abstract void OnDragGizmo(Transform mouthpiece);
-        //public abstract void OnReleaseGizmo();
+        public abstract void OnDragGizmo(Transform mouthpiece);
+        public abstract void OnReleaseGizmo();
 
         public abstract void StartHover();
         public abstract void EndHover();

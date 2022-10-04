@@ -38,6 +38,10 @@ namespace VRtist
         public Transform controlPanel;
         public Transform displayPanel;
 
+        public GameObject GizmoPrefab;
+        public List<GoalGizmo> gizmos = new List<GoalGizmo>();
+        public GoalGizmo draggedGizmo;
+
         private Transform ControlPanelButton;
         private Transform DisplayPanelButton;
         private Transform FKModeButton;
@@ -204,25 +208,68 @@ namespace VRtist
         }
 
         #region Gizmo/Actuator
+        internal void CreateGizmo(RigObjectController controller)
+        {
+            GameObject newGizmo = Instantiate(GizmoPrefab);
+            GoalGizmo gizmoScript = newGizmo.GetComponent<GoalGizmo>();
+            gizmos.Add(gizmoScript);
+            gizmoScript.Initialize(controller);
+        }
+
+        internal void RemoveGizmo(RigObjectController controller)
+        {
+            GoalGizmo gizmo = gizmos.Find(x => x.Controller == controller);
+            if (gizmo != null)
+            {
+                gizmos.Remove(gizmo);
+                Destroy(gizmo.gameObject);
+            }
+        }
+
         internal void NextGizmo()
         {
         }
         internal void HoverActuator(GameObject gameObject)
         {
+            if (gameObject.transform.parent.TryGetComponent<GoalGizmo>(out GoalGizmo gizmo))
+            {
+                gizmo.StartHover(gameObject);
+            }
         }
 
         internal void StopHoverActuator(GameObject gameObject)
         {
+            if (gameObject.transform.parent.TryGetComponent<GoalGizmo>(out GoalGizmo gizmo))
+            {
+                gizmo.EndHover(gameObject);
+            }
         }
-        internal void GrabActuator(GameObject gameObject, Transform transform)
+
+        internal void GrabActuator(GameObject gameObject, Transform mouthpiece)
         {
+            if (gameObject.transform.parent.TryGetComponent(out GoalGizmo gizmo))
+            {
+                gizmo.GrabGizmo(mouthpiece, gameObject.transform);
+                draggedGizmo = gizmo;
+            }
         }
+
         internal void DragActuator(Transform transform)
         {
+            if (draggedGizmo != null)
+            {
+                draggedGizmo.DragGizmo(mouthpiece);
+            }
         }
         internal void ReleaseActuator()
         {
+            if (draggedGizmo != null)
+            {
+                draggedGizmo.ReleaseGizmo();
+                draggedGizmo = null;
+            }
         }
+
         internal void SelectActuator(GameObject gameObject)
         {
         }
@@ -430,11 +477,13 @@ namespace VRtist
             {
                 hoveredController.GetTargets().ForEach(x => CurveManager.UnSelectJoint(x));
                 hoveredController.OnDeselect();
+                RemoveGizmo(hoveredController);
                 SelectedControllers.Remove(hoveredController);
             }
             else
             {
                 hoveredController.OnSelect();
+                CreateGizmo(hoveredController);
                 SelectedControllers.Add(hoveredController);
                 hoveredController.GetTargets().ForEach(x => CurveManager.SelectJoint(x));
             }
@@ -446,6 +495,7 @@ namespace VRtist
             {
                 controller.GetTargets().ForEach(x => CurveManager.UnSelectJoint(x));
                 controller.OnDeselect();
+                RemoveGizmo(controller);
             }
             SelectedControllers.Clear();
         }
