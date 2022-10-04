@@ -148,7 +148,23 @@ namespace VRtist
                         items.Value.transform.localScale = items.Key.transform.localScale;
                     }
                 }
-                controllers.ForEach(x => x.MoveController());
+                Vector3 maxValues = Vector3.zero;
+                Vector3 minValues = Vector3.zero;
+                controllers.ForEach(x =>
+                {
+                    Vector3 localPosition = transform.InverseTransformPoint(x.transform.position);
+                    maxValues.x = Mathf.Max(maxValues.x, localPosition.x);
+                    maxValues.y = Mathf.Max(maxValues.y, localPosition.y);
+                    maxValues.z = Mathf.Max(maxValues.z, localPosition.z);
+                    minValues.x = Mathf.Min(minValues.x, localPosition.x);
+                    minValues.y = Mathf.Min(minValues.y, localPosition.y);
+                    minValues.z = Mathf.Min(minValues.z, localPosition.z);
+                    x.MoveController();
+                });
+                BoxCollider thisCollider = GetComponent<BoxCollider>();
+                thisCollider.center = Vector3.zero;
+                thisCollider.size = new Vector3(-minValues.x + maxValues.x, -minValues.y + maxValues.y, -minValues.z + maxValues.z);
+
             }
         }
 

@@ -38,7 +38,9 @@ namespace VRtist
         public List<AnimationKey> nextKeys;
 
 
-
+        double[]
+           lowerBound,
+           upperBound;
 
         public TangentIKSolver(JointController joint, Vector3 targetPosition, Quaternion targetRotation, int frame, int start, int end, List<JointController> hierarchy, Matrix4x4 parentMatrix)
         {
@@ -64,6 +66,16 @@ namespace VRtist
         public bool Setup()
         {
             Curve rotXCurve = target.Animation.GetCurve(AnimatableProperty.RotationX);
+            animationList.ForEach(x =>
+            {
+                Curve rotXCurve = x.GetCurve(AnimatableProperty.RotationX);
+                if (!rotXCurve.HasKeyAt(previousFrame) || !rotXCurve.HasKeyAt(nextFrame)) rotXCurve.AddTangentKey(previousFrame, nextFrame);
+                Curve rotYCurve = x.GetCurve(AnimatableProperty.RotationY);
+                if (!rotYCurve.HasKeyAt(previousFrame) || !rotYCurve.HasKeyAt(nextFrame)) rotYCurve.AddTangentKey(previousFrame, nextFrame);
+                Curve rotZCurve = x.GetCurve(AnimatableProperty.RotationZ);
+                if (!rotZCurve.HasKeyAt(previousFrame) || !rotZCurve.HasKeyAt(nextFrame)) rotZCurve.AddTangentKey(previousFrame, nextFrame);
+            });
+
             rotXCurve.GetKeyIndex(previousFrame, out int previousKeyIndex);
             rotXCurve.GetKeyIndex(nextFrame, out int nextKeyIndex);
             if (frame < previousFrame) return false;
@@ -83,21 +95,20 @@ namespace VRtist
             double[] theta = GetAllTangents();
             double[,] Theta = Maths.ColumnArrayToArray(theta);
             currentState = GetState(frame);
-            State desiredState = new State()
+            targetState = new State()
             {
                 Position = targetPosition,
                 Rotation = targetRotation,
                 Frame = frame
             };
 
-            Debug.Log(currentState.Position + " -> " + desiredState.Position);
 
             double[,] Js = dc_dtheta(frame);
 
             double[,] DT_D = new double[valueCount, valueCount];
             for (int i = 0; i < valueCount; i++)
             {
-                DT_D[i, i] = 0d * 0d;
+                DT_D[i, i] = 1;
             }
             double[,] Delta_s_prime = new double[7, 1];
             for (int i = 0; i < 3; i++)
@@ -123,7 +134,7 @@ namespace VRtist
                     TT_T[j - 2, j] = -1d;
                 }
             }
-            double wm = 100d;
+            double wm = 2d;
             double wb = 1;
             double wd = 1d;
 
@@ -155,7 +166,6 @@ namespace VRtist
             {
                 new_theta[i] = delta_theta[i] + theta[i];
             }
-            Debug.Log("new edit");
             for (int a = 0; a < animationCount; a++)
             {
                 AnimationSet animation = animationList[a];
@@ -166,7 +176,6 @@ namespace VRtist
                     int curveIndex = (a * 3) + p;
                     int propIndex = a * 24 + p * 8;
 
-                    Debug.Log("a " + a + " p " + p + " index " + propIndex + " prop " + property + " curve " + curve.property);
                     Vector2 PrevInTangent = new Vector2((float)new_theta[propIndex + 0], (float)(new_theta[propIndex + 1]));
                     Vector2 PrevOutTangent = new Vector2((float)new_theta[propIndex + 2], (float)(new_theta[propIndex + 3]));
                     Vector2 nextInTangent = new Vector2((float)new_theta[propIndex + 4], (float)(new_theta[propIndex + 5]));
@@ -278,6 +287,8 @@ namespace VRtist
         private double[] GetAllTangents()
         {
             double[] theta = new double[valueCount];
+            lowerBound = new double[valueCount];
+            upperBound = new double[valueCount];
 
             for (int i = 0; i < previousKeys.Count; i++)
             {
@@ -289,10 +300,59 @@ namespace VRtist
                 theta[(i * 8) + 5] = nextKeys[i].inTangent.y;
                 theta[(i * 8) + 6] = nextKeys[i].outTangent.x;
                 theta[(i * 8) + 7] = nextKeys[i].outTangent.y;
+
+                FillLowerBounds(i, previousKeys[i], nextKeys[i], -360, 360);
+                FillUpperBounds(i, previousKeys[i], nextKeys[i], -360, 360);
+
             }
 
             return theta;
         }
+
+        private void FillLowerBounds(int curveIndex, AnimationKey previous1Key, AnimationKey next1Key, float Min, float Max)
+        {
+            //k- in.x
+            //lowerBound[curveIndex * 8 + 0] = 0 - previous1Key.inTangent.x;
+            ////k- in.y
+            //lowerBound[curveIndex * 8 + 1] = -Mathf.Max(0, Max - Mathf.Max(curvesMinMax[curveIndex, 0].x, curvesMinMax[curveIndex, 0].y));
+            //k- out.x
+            lowerBound[curveIndex * 8 + 2] = 0 - previous1Key.outTangent.x;
+            //k- out.y
+            lowerBound[curveIndex * 8 + 3] = Mathf.Min(0, (4 / 3f) * (Min - (previous1Key.value + (3 / 4f) * previous1Key.outTangent.y)));
+            //k+ in.x
+            lowerBound[curveIndex * 8 + 4] = 0 - next1Key.inTangent.x;
+            //k+ in.y
+            lowerBound[curveIndex * 8 + 5] = Mathf.Min(0, -(4 / 3f) * (Max - (next1Key.value - (3 / 4f) * next1Key.inTangent.y)));
+            ////k+ out.x
+            //lowerBound[curveIndex * 8 + 6] = 0 - next1Key.outTangent.x;
+            ////k+ out.y
+            //lowerBound[curveIndex * 8 + 7] = Mathf.Min(0, Min - Mathf.Min(curvesMinMax[curveIndex, 1].x, curvesMinMax[curveIndex, 1].y));
+        }
+
+        /// <summary>
+        /// Fill upper bounds array with delta from current values
+        /// </summary>
+        private void FillUpperBounds(int curveIndex, AnimationKey previous1Key, AnimationKey next1Key, float Min, float Max)
+        {
+            ////k- in.x
+            //upperBound[curveIndex * 8 + 0] = previous1Key.frame - previous2Key.frame - previous1Key.inTangent.x;
+            ////k- in.y
+            //upperBound[curveIndex * 8 + 1] = -Mathf.Min(0, Min - Mathf.Min(curvesMinMax[curveIndex, 0].x, curvesMinMax[curveIndex, 0].y));
+            //k- out.x
+            upperBound[curveIndex * 8 + 2] = frame - previous1Key.frame - previous1Key.outTangent.x;
+            //k- out.y
+            upperBound[curveIndex * 8 + 3] = Mathf.Max(0, (4 / 3f) * (Max - (previous1Key.value + (3 / 4f) * previous1Key.outTangent.y)));
+            //k+ in.x
+            upperBound[curveIndex * 8 + 4] = next1Key.frame - frame - next1Key.inTangent.x;
+            //k+ in.y
+            upperBound[curveIndex * 8 + 5] = Mathf.Max(0, -(4 / 3f) * (Min - (next1Key.value - (3 / 4f) * next1Key.inTangent.y)));
+            ////k+ out.x
+            //upperBound[curveIndex * 8 + 6] = next2Key.frame - next1Key.frame - next1Key.outTangent.x;
+            ////k+ out.y
+            //upperBound[curveIndex * 8 + 7] = Mathf.Max(0, Max - Mathf.Max(curvesMinMax[curveIndex, 1].x, curvesMinMax[curveIndex, 1].y));
+        }
+
+
         public void ModifyTangents(Curve curve, int index, Vector2 inTangent, Vector2 outTangent)
         {
             curve.keys[index].inTangent = inTangent;

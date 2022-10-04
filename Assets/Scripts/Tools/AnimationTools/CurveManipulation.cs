@@ -93,8 +93,6 @@ namespace VRtist
             }
         }
 
-        GameObject debugObject;
-
         public CurveManipulation(GameObject target, int frame, Transform mouthpiece, AnimationTool.PoseEditMode poseMode)
         {
             Target = target;
@@ -102,7 +100,6 @@ namespace VRtist
             _mouthpiece = mouthpiece;
             _poseMode = poseMode;
             initialMouthMatrix = mouthpiece.worldToLocalMatrix;
-            debugObject = GameObject.CreatePrimitive(PrimitiveType.Cube);
             if (target.TryGetComponent(out JointController jointController))
             {
                 isRig = true;
@@ -190,7 +187,27 @@ namespace VRtist
         }
         private void RigFKPoint(JointController joint, int frame, Transform mouthpiece)
         {
+            List<JointController> controllerHierarchy = new List<JointController>();
+            List<AnimationSet> animations = new List<AnimationSet>();
 
+            startFrame = joint.Animation.GetCurve(AnimatableProperty.RotationX).GetPreviousKey(frame).frame;
+            endFrame = joint.Animation.GetCurve(AnimatableProperty.RotationX).GetNextKey(frame).frame;
+
+            if (joint.TryGetParentJoint(out JointController parent))
+            {
+                controllerHierarchy.Add(parent);
+                animations.Add(new AnimationSet(parent.Animation));
+            }
+
+            humanData = new HumanData()
+            {
+                Controller = joint,
+                ObjectAnimation = new AnimationSet(joint.Animation),
+                Hierarchy = controllerHierarchy,
+                InitFrameMatrix = joint.MatrixAtFrame(frame),
+                JointAnimations = animations,
+                rootTransform = controllerHierarchy[0].Parent
+            };
         }
         private void RigIKPoint(JointController joint, int frame, Transform mouthpiece)
         {
@@ -204,13 +221,11 @@ namespace VRtist
             {
                 if (parent.TryGetParentJoint(out JointController grandPa))
                 {
-                    Debug.Log("gp " + grandPa + "   " + grandPa.Animation + " curves " + grandPa.Animation.curves);
                     controllerHierarchy.Add(grandPa);
                     animations.Add(new AnimationSet(grandPa.Animation));
                 }
                 controllerHierarchy.Add(parent);
                 animations.Add(new AnimationSet(parent.Animation));
-                Debug.Log("root " + controllerHierarchy[0]);
             }
 
 
@@ -224,16 +239,59 @@ namespace VRtist
                 JointAnimations = animations,
                 rootTransform = controllerHierarchy[0].Parent
             };
-            debugObject.transform.parent = humanData.rootTransform;
-            debugObject.transform.localScale = Vector3.one;
         }
         private void RigFKZone(JointController joint, int frame, int startFrame, int endFrame, Transform mouthpiece)
         {
+            List<JointController> controllerHierarchy = new List<JointController>();
+            List<AnimationSet> animations = new List<AnimationSet>();
 
+            this.startFrame = startFrame;
+            this.endFrame = endFrame;
+
+            if (joint.TryGetParentJoint(out JointController parent))
+            {
+                controllerHierarchy.Add(parent);
+                animations.Add(new AnimationSet(parent.Animation));
+            }
+
+            humanData = new HumanData()
+            {
+                Controller = joint,
+                ObjectAnimation = new AnimationSet(joint.Animation),
+                Hierarchy = controllerHierarchy,
+                InitFrameMatrix = joint.MatrixAtFrame(frame),
+                JointAnimations = animations,
+                rootTransform = controllerHierarchy[0].Parent
+            };
         }
         private void RigIKZone(JointController joint, int frame, int startFrame, int endFrame, Transform mouthpiece)
         {
+            List<JointController> controllerHierarchy = new List<JointController>();
+            List<AnimationSet> animations = new List<AnimationSet>();
 
+            this.startFrame = startFrame;
+            this.endFrame = endFrame;
+
+            if (joint.TryGetParentJoint(out JointController parent))
+            {
+                if (parent.TryGetParentJoint(out JointController grandPa))
+                {
+                    controllerHierarchy.Add(grandPa);
+                    animations.Add(new AnimationSet(grandPa.Animation));
+                }
+                controllerHierarchy.Add(parent);
+                animations.Add(new AnimationSet(parent.Animation));
+            }
+
+            humanData = new HumanData()
+            {
+                Controller = joint,
+                ObjectAnimation = new AnimationSet(joint.Animation),
+                Hierarchy = controllerHierarchy,
+                InitFrameMatrix = joint.MatrixAtFrame(frame),
+                JointAnimations = animations,
+                rootTransform = controllerHierarchy[0].Parent
+            };
         }
 
 
@@ -248,9 +306,6 @@ namespace VRtist
                 Matrix4x4 localTarget = humanData.rootTransform.GetComponent<JointController>().MatrixAtFrame(Frame).inverse;
 
                 Maths.DecomposeMatrix(localTarget * target, out Vector3 targetPos, out Quaternion targetRot, out Vector3 targetScale);
-
-                debugObject.transform.localPosition = targetPos;
-                debugObject.transform.localRotation = targetRot;
 
                 TangentIKSolver solver = new TangentIKSolver(humanData.Controller, targetPos, targetRot, Frame, startFrame, endFrame, humanData.Hierarchy, localTarget);
                 solver.Setup();
@@ -267,16 +322,16 @@ namespace VRtist
                 objectData.lastRotation = objectData.lastQRotation.eulerAngles;
                 objectData.lastScale *= 1;
 
-                Interpolation interpolation = GlobalState.Settings.interpolation;
-                AnimationKey posX = new AnimationKey(Frame, objectData.lastPosition.x, interpolation);
-                AnimationKey posY = new AnimationKey(Frame, objectData.lastPosition.y, interpolation);
-                AnimationKey posZ = new AnimationKey(Frame, objectData.lastPosition.z, interpolation);
-                AnimationKey rotX = new AnimationKey(Frame, objectData.lastRotation.x, interpolation);
-                AnimationKey rotY = new AnimationKey(Frame, objectData.lastRotation.y, interpolation);
-                AnimationKey rotZ = new AnimationKey(Frame, objectData.lastRotation.z, interpolation);
-                AnimationKey scalex = new AnimationKey(Frame, objectData.lastScale.z, interpolation);
-                AnimationKey scaley = new AnimationKey(Frame, objectData.lastScale.z, interpolation);
-                AnimationKey scalez = new AnimationKey(Frame, objectData.lastScale.z, interpolation);
+                //Interpolation interpolation = GlobalState.Settings.interpolation;
+                //AnimationKey posX = new AnimationKey(Frame, objectData.lastPosition.x, interpolation);
+                //AnimationKey posY = new AnimationKey(Frame, objectData.lastPosition.y, interpolation);
+                //AnimationKey posZ = new AnimationKey(Frame, objectData.lastPosition.z, interpolation);
+                //AnimationKey rotX = new AnimationKey(Frame, objectData.lastRotation.x, interpolation);
+                //AnimationKey rotY = new AnimationKey(Frame, objectData.lastRotation.y, interpolation);
+                //AnimationKey rotZ = new AnimationKey(Frame, objectData.lastRotation.z, interpolation);
+                //AnimationKey scalex = new AnimationKey(Frame, objectData.lastScale.z, interpolation);
+                //AnimationKey scaley = new AnimationKey(Frame, objectData.lastScale.z, interpolation);
+                //AnimationKey scalez = new AnimationKey(Frame, objectData.lastScale.z, interpolation);
 
 
                 AnimationSet ObjectAnimation = GlobalState.Animation.GetObjectAnimation(Target);
@@ -301,7 +356,6 @@ namespace VRtist
                     {
                         AnimatableProperty property = (AnimatableProperty)pIndex + 3;
                         List<AnimationKey> keys = new List<AnimationKey>();
-                        Curve curve = humanData.Hierarchy[iHier].Animation.GetCurve(property);
                         int curveIndex = iHier * 3 + pIndex;
                         keys.Add(humanData.Solver.previousKeys[curveIndex]);
                         keys.Add(humanData.Solver.nextKeys[curveIndex]);
@@ -315,7 +369,6 @@ namespace VRtist
                 {
                     AnimatableProperty property = (AnimatableProperty)pIndex + 3;
                     List<AnimationKey> keys = new List<AnimationKey>();
-                    Curve curve = humanData.ObjectAnimation.GetCurve(property);
                     int curveIndex = humanData.Hierarchy.Count * 3 + pIndex;
                     keys.Add(humanData.Solver.previousKeys[curveIndex]);
                     keys.Add(humanData.Solver.nextKeys[curveIndex]);

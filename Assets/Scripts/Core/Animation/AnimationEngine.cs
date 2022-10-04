@@ -517,7 +517,7 @@ namespace VRtist
                     key.value = delta;
                 }
             }
-            curve.AddTangentKey(key, start, end);
+            curve.AddTangentKey(start, end);
             if (updateCurves) onChangeCurve.Invoke(gobjet, property);
         }
 

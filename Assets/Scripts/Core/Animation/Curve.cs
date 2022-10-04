@@ -486,7 +486,7 @@ namespace VRtist
         /// Adds a keyframe at start and at end. Remove all keyframes in between.
         /// Used when starting to drag a curve to modify tangents.
         /// </summary>
-        public void AddTangentKey(AnimationKey key, int start, int end)
+        public void AddTangentKey(int start, int end)
         {
             if (keys.Count == 0) return;
 

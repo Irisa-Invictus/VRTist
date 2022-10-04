@@ -95,7 +95,11 @@ namespace VRtist
             transform.localRotation = controllerRotation;
             transform.localScale = controllerScale;
 
+            ApplyConstraints();
+        }
 
+        private void ApplyConstraints()
+        {
             foreach (Dada.URig.Descriptors.Constraint constraint in constraints)
             {
                 switch (constraint.type)
@@ -382,14 +386,76 @@ namespace VRtist
             ClearCommandData();
         }
 
+        private Vector3 acAxis;
+        private Vector3 initForward;
+        private float previousAngle;
+        private GoalGizmo.GizmoTool gizmoTool;
+
         public override void OnGrabGizmo(Transform mouthpiece, GoalGizmo gizmo, GoalGizmo.GizmoTool tool, AnimationTool.Vector3Axis axis, bool data)
         {
+            movedObjects.Add(this.gameObject);
+            startPositions.Add(this.transform.localPosition);
+            startRotations.Add(this.transform.localRotation);
+            startScales.Add(this.transform.localScale);
+            foreach (Dada.URig.Descriptors.Constraint constraint in constraints)
+            {
+                movedObjects.Add(constraint.drivenObjectTransform.gameObject);
+                startPositions.Add(constraint.drivenObjectTransform.localPosition);
+                startRotations.Add(constraint.drivenObjectTransform.localRotation);
+                startScales.Add(constraint.drivenObjectTransform.localScale);
+            }
+            gizmoTool = tool;
+
+            switch (axis)
+            {
+                case AnimationTool.Vector3Axis.X:
+                    acAxis = transform.right;
+                    initForward = transform.up;
+                    break;
+                case AnimationTool.Vector3Axis.Y:
+                    acAxis = transform.up;
+                    initForward = transform.forward;
+                    break;
+                case AnimationTool.Vector3Axis.Z:
+                    acAxis = transform.forward;
+                    initForward = transform.right;
+                    break;
+            }
+            previousAngle = Vector3.SignedAngle(initForward, mouthpiece.position - gizmo.transform.position, acAxis);
+            if (gizmoTool == GoalGizmo.GizmoTool.Position)
+            {
+                InitMatrix(mouthpiece);
+                acAxis = transform.parent.InverseTransformVector(acAxis);
+            }
         }
         public override void OnDragGizmo(Transform mouthpiece)
         {
+            if (gizmoTool == GoalGizmo.GizmoTool.Rotation)
+            {
+                Vector3 projection = Vector3.ProjectOnPlane(mouthpiece.position - transform.position, acAxis);
+                float currentAngle = Vector3.SignedAngle(initForward, projection, acAxis);
+                float angleOffset = Mathf.DeltaAngle(previousAngle, currentAngle);
+                transform.Rotate(acAxis, angleOffset, Space.World);
+                previousAngle = currentAngle;
+            }
+            else
+            {
+                Matrix4x4 transformation = mouthpiece.localToWorldMatrix * initialMouthMatrix;
+                Matrix4x4 transformed = InitialParentMatrixWorldToLocal *
+                        transformation * InitialParentMatrix *
+                        InitialTRS;
+                Maths.DecomposeMatrix(transformed, out Vector3 targetPosition, out Quaternion rotation, out Vector3 scale);
+                Vector3 movement = targetPosition - transform.localPosition;
+                Vector3 movementProj = Vector3.Project(movement, acAxis);
+                targetPosition = transform.localPosition + movementProj;
+                transform.localPosition = targetPosition;
+            }
+
+            ApplyConstraints();
         }
         public override void OnReleaseGizmo()
         {
+            OnRelease();
         }
 
         public void MoveController()
@@ -425,7 +491,12 @@ namespace VRtist
 
         public override List<JointController> GetTargets()
         {
-            throw new System.NotImplementedException();
+            List<JointController> jointsTargets = new List<JointController>();
+            for (int i = 0; i < constraints.Length; i++)
+            {
+                if (constraints[i].drivenObjectTransform.TryGetComponent(out JointController joint)) jointsTargets.Add(joint);
+            }
+            return jointsTargets;
         }
     }
 }

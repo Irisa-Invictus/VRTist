@@ -31,16 +31,19 @@ namespace VRtist
         public void Initialize(RigObjectController controller)
         {
             Controller = controller;
-            if (controller is DirectController)
-            {
-                transform.parent = controller.transform.parent;
-                transform.localPosition = controller.transform.localPosition;
-                transform.localRotation = controller.transform.localRotation;
-                transform.localScale = controller.transform.localScale;
-            }
+            transform.parent = controller.transform.parent;
+            transform.localPosition = controller.transform.localPosition;
+            transform.localRotation = controller.transform.localRotation;
+            transform.localScale = controller.transform.localScale;
             generatePositionCurves();
             generateRotationCurves();
             ChangeGizmo(GizmoTool.Rotation);
+        }
+
+        public void NextGizmo()
+        {
+            if (CurrentGizmo == GizmoTool.Position) ChangeGizmo(GizmoTool.Rotation);
+            else ChangeGizmo(GizmoTool.Position);
         }
 
         public void RemoveGizmo()
@@ -83,6 +86,7 @@ namespace VRtist
         {
             Controller.OnDragGizmo(mouthpiece);
             transform.localRotation = Controller.transform.localRotation;
+            transform.localPosition = Controller.transform.localPosition;
         }
 
         public void ReleaseGizmo()

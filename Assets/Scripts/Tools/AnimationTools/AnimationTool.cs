@@ -228,6 +228,7 @@ namespace VRtist
 
         internal void NextGizmo()
         {
+            gizmos.ForEach(x => x.NextGizmo());
         }
         internal void HoverActuator(GameObject gameObject)
         {

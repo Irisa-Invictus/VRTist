@@ -127,6 +127,16 @@ namespace VRtist
                     }
                 }
             }
+            else if (gObject.TryGetComponent(out JointController jointController))
+            {
+                if (jointCurves.TryGetValue(jointController.RootController, out Dictionary<JointController, GameObject> curves))
+                {
+                    foreach (KeyValuePair<JointController, GameObject> pair in curves)
+                    {
+                        UpdateJointCurve(pair.Key, pair.Value);
+                    }
+                }
+            }
 
             if (property != AnimatableProperty.PositionX && property != AnimatableProperty.PositionY && property != AnimatableProperty.PositionZ)
                 return;
@@ -220,7 +230,6 @@ namespace VRtist
 
         private void UpdateJointCurve(JointController joint, GameObject curve)
         {
-            //DeleteCurve(curve);
             GenerateCurve(joint, joint.RootController, curve);
         }
 
@@ -288,6 +297,7 @@ namespace VRtist
             AnimationSet jointAnimation = GlobalState.Animation.GetObjectAnimation(jointController.gameObject);
             if (null == jointAnimation) return;
             if (jointController.Animation != jointAnimation) jointController.Animation = jointAnimation;
+            if (jointAnimation.GetCurve(AnimatableProperty.RotationX).keys.Count < 2) return;
 
             GameObject curve3D = curves.TryGetValue(jointController.gameObject, out GameObject current) ? current : Instantiate(curvePrefab, curvesParent);
             curves[jointController.gameObject] = curve3D;

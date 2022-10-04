@@ -57,7 +57,6 @@ namespace VRtist
                 SetCurve(curve.Key, curve.Value.keys);
                 curves[curve.Key].ComputeCache();
             }
-            Debug.Log("curves " + curves);
         }
 
         public void EvaluateAnimation(int currentFrame)
