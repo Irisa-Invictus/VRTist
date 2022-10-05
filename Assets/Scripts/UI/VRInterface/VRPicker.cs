@@ -148,6 +148,7 @@ namespace VRtist
                         items.Value.transform.localScale = items.Key.transform.localScale;
                     }
                 }
+                controllers.ForEach(x => x.MoveController());
 
             }
         }
@@ -236,6 +237,24 @@ namespace VRtist
             body.isKinematic = true;
             //AssignController();
             ResetTPose(UseTPose);
+
+            Vector3 maxValues = Vector3.one * 0.5f;
+            Vector3 minValues = Vector3.one * 0.5f;
+            foreach (KeyValuePair<GameObject, GameObject> pair in CloneToTarget)
+            {
+
+                Vector3 localPosition = transform.InverseTransformPoint(pair.Key.transform.position);
+                maxValues.x = Mathf.Max(maxValues.x, localPosition.x);
+                maxValues.y = Mathf.Max(maxValues.y, localPosition.y);
+                maxValues.z = Mathf.Max(maxValues.z, localPosition.z);
+                minValues.x = Mathf.Min(minValues.x, localPosition.x);
+                minValues.y = Mathf.Min(minValues.y, localPosition.y);
+                minValues.z = Mathf.Min(minValues.z, localPosition.z);
+
+            }
+            BoxCollider thisCollider = GetComponent<BoxCollider>();
+            thisCollider.center = new Vector3((maxValues.x + minValues.x) / 2f, (maxValues.y + minValues.y) / 2f, (maxValues.z + minValues.z) / 2f);
+            thisCollider.size = new Vector3(Mathf.Max(maxValues.x, -minValues.x) * 2f, Mathf.Max(maxValues.y, -minValues.y) * 2f, Mathf.Max(maxValues.z, -minValues.z) * 2f);
         }
 
         public void RecursiveMaping(Transform target, Transform clone)
