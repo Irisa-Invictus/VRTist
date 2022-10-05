@@ -56,10 +56,14 @@ namespace VRtist
             poseManip.GetCommand().Submit();
             if (GlobalState.Animation.autoKeyEnabled)
             {
+                RigController rigController = null;
                 foreach (GameObject item in poseManip.movedObjects)
                 {
-
-                    //new CommandAddKeyframes(item, false, true, false).Submit();
+                    if (item.TryGetComponent(out JointController itemController) && itemController.RootController != rigController)
+                    {
+                        rigController = itemController.RootController;
+                        new CommandAddKeyframes(rigController.gameObject, true).Submit();
+                    }
                 }
             }
             group.Submit();

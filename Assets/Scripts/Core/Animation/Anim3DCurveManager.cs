@@ -422,6 +422,7 @@ namespace VRtist
 
         internal void StopHover(GameObject curve)
         {
+            if (curve == null) return;
             if (curve.TryGetComponent(out LineRenderer line))
             {
                 GameObject target = GetObjectFromCurve(curve);
