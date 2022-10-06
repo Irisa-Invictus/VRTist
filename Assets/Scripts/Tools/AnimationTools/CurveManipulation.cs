@@ -198,7 +198,7 @@ namespace VRtist
                 controllerHierarchy.Add(parent);
                 animations.Add(new AnimationSet(parent.Animation));
             }
-
+            Transform rTransform = controllerHierarchy.Count > 0 ? controllerHierarchy[0].Parent : joint.transform.parent;
             humanData = new HumanData()
             {
                 Controller = joint,
@@ -206,7 +206,7 @@ namespace VRtist
                 Hierarchy = controllerHierarchy,
                 InitFrameMatrix = joint.MatrixAtFrame(frame),
                 JointAnimations = animations,
-                rootTransform = controllerHierarchy[0].Parent
+                rootTransform = rTransform
             };
         }
         private void RigIKPoint(JointController joint, int frame, Transform mouthpiece)
@@ -228,7 +228,7 @@ namespace VRtist
                 animations.Add(new AnimationSet(parent.Animation));
             }
 
-
+            Transform rTransform = controllerHierarchy.Count > 0 ? controllerHierarchy[0].Parent : joint.transform.parent;
 
             humanData = new HumanData()
             {
@@ -237,7 +237,7 @@ namespace VRtist
                 Hierarchy = controllerHierarchy,
                 InitFrameMatrix = joint.MatrixAtFrame(frame),
                 JointAnimations = animations,
-                rootTransform = controllerHierarchy[0].Parent
+                rootTransform = rTransform
             };
         }
         private void RigFKZone(JointController joint, int frame, int startFrame, int endFrame, Transform mouthpiece)
@@ -253,7 +253,7 @@ namespace VRtist
                 controllerHierarchy.Add(parent);
                 animations.Add(new AnimationSet(parent.Animation));
             }
-
+            Transform rTransform = controllerHierarchy.Count > 0 ? controllerHierarchy[0].Parent : joint.transform.parent;
             humanData = new HumanData()
             {
                 Controller = joint,
@@ -261,7 +261,7 @@ namespace VRtist
                 Hierarchy = controllerHierarchy,
                 InitFrameMatrix = joint.MatrixAtFrame(frame),
                 JointAnimations = animations,
-                rootTransform = controllerHierarchy[0].Parent
+                rootTransform = rTransform
             };
         }
         private void RigIKZone(JointController joint, int frame, int startFrame, int endFrame, Transform mouthpiece)
@@ -283,6 +283,8 @@ namespace VRtist
                 animations.Add(new AnimationSet(parent.Animation));
             }
 
+            Transform rTransform = controllerHierarchy.Count > 0 ? controllerHierarchy[0].Parent : joint.transform.parent;
+
             humanData = new HumanData()
             {
                 Controller = joint,
@@ -290,7 +292,7 @@ namespace VRtist
                 Hierarchy = controllerHierarchy,
                 InitFrameMatrix = joint.MatrixAtFrame(frame),
                 JointAnimations = animations,
-                rootTransform = controllerHierarchy[0].Parent
+                rootTransform = rTransform
             };
         }
 
@@ -302,8 +304,7 @@ namespace VRtist
             if (isRig)
             {
                 Matrix4x4 target = transformation * humanData.InitFrameMatrix;
-                JointController root = humanData.Hierarchy[0];
-                Matrix4x4 localTarget = humanData.rootTransform.GetComponent<JointController>().MatrixAtFrame(Frame).inverse;
+                Matrix4x4 localTarget = humanData.rootTransform.TryGetComponent(out JointController parentJoint) ? parentJoint.MatrixAtFrame(Frame).inverse : humanData.rootTransform.localToWorldMatrix.inverse;
 
                 Maths.DecomposeMatrix(localTarget * target, out Vector3 targetPos, out Quaternion targetRot, out Vector3 targetScale);
 
@@ -321,17 +322,6 @@ namespace VRtist
                 Maths.DecomposeMatrix(transformed, out objectData.lastPosition, out objectData.lastQRotation, out objectData.lastScale);
                 objectData.lastRotation = objectData.lastQRotation.eulerAngles;
                 objectData.lastScale *= 1;
-
-                //Interpolation interpolation = GlobalState.Settings.interpolation;
-                //AnimationKey posX = new AnimationKey(Frame, objectData.lastPosition.x, interpolation);
-                //AnimationKey posY = new AnimationKey(Frame, objectData.lastPosition.y, interpolation);
-                //AnimationKey posZ = new AnimationKey(Frame, objectData.lastPosition.z, interpolation);
-                //AnimationKey rotX = new AnimationKey(Frame, objectData.lastRotation.x, interpolation);
-                //AnimationKey rotY = new AnimationKey(Frame, objectData.lastRotation.y, interpolation);
-                //AnimationKey rotZ = new AnimationKey(Frame, objectData.lastRotation.z, interpolation);
-                //AnimationKey scalex = new AnimationKey(Frame, objectData.lastScale.z, interpolation);
-                //AnimationKey scaley = new AnimationKey(Frame, objectData.lastScale.z, interpolation);
-                //AnimationKey scalez = new AnimationKey(Frame, objectData.lastScale.z, interpolation);
 
 
                 AnimationSet ObjectAnimation = GlobalState.Animation.GetObjectAnimation(Target);

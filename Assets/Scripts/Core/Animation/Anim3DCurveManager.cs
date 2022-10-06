@@ -319,7 +319,7 @@ namespace VRtist
         {
             Curve rotationX = jointController.Animation.GetCurve(AnimatableProperty.RotationX);
             if (rotationX == null) return;
-
+            if (rotationX.keys.Count < 2) return;
             List<Vector3> positions = new List<Vector3>();
             int frameStart = Mathf.Clamp(rotationX.keys[0].frame, GlobalState.Animation.StartFrame, GlobalState.Animation.EndFrame);
             int frameEnd = Mathf.Clamp(rotationX.keys[rotationX.keys.Count - 1].frame, GlobalState.Animation.StartFrame, GlobalState.Animation.EndFrame);

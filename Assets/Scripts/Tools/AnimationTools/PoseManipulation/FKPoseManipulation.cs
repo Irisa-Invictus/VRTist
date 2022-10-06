@@ -34,13 +34,13 @@ namespace VRtist
 
         public override bool TrySolver()
         {
-            if (hierarchySize > 2)
+            if (hierarchySize > 1)
             {
                 Vector3 to = Quaternion.FromToRotation(Vector3.forward, targetPosition) * Vector3.forward;
                 fullHierarchy[hierarchySize - 2].localRotation = initialRotation * Quaternion.FromToRotation(fromRotation, to);
                 endRotations[0] = fullHierarchy[hierarchySize - 2].localRotation;
             }
-            else if (hierarchySize <= 2)
+            else
             {
                 oTransform.localPosition = targetPosition;
                 endPositions[0] = targetPosition;

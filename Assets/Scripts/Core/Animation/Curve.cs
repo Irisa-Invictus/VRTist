@@ -587,7 +587,7 @@ namespace VRtist
                 value = float.NaN;
                 return false;
             }
-
+            if (frame < 0 || frame > cachedValues.Length - 1) Debug.Log(frame);
             value = cachedValues[frame - GlobalState.Animation.StartFrame];
             return value != float.NaN;
         }

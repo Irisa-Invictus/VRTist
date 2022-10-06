@@ -164,6 +164,7 @@ namespace VRtist
                 AnimationSet anim = GlobalState.Animation.GetObjectAnimation(items.Value);
                 if (anim != null)
                 {
+                    if (items.Key == null) Debug.Log(items.Value);
                     anim.EvaluateTransform(frame, items.Key.transform);
                 }
                 if (items.Value == root) items.Key.transform.position = rootPosition;
@@ -343,6 +344,7 @@ namespace VRtist
 
         public void RotateClone(Vector2 direction)
         {
+            if (PickerClone == null) return;
             Vector3 dir = new Vector3(direction.x, 0, direction.y);
             dir = transform.TransformDirection(dir);
             PickerClone.transform.forward = -dir;

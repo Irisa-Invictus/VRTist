@@ -110,6 +110,7 @@ namespace VRtist
             HoveredTypes.RemoveAt(index);
             if (index == 0 && HoveredTypes.Count > 0)
             {
+                CheckForNull();
                 StartHover(hoveredTargets[0], HoveredTypes[0]);
             }
         }

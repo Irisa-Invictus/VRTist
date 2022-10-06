@@ -40,14 +40,15 @@ namespace VRtist
             joints = new Dictionary<string, JointController>();
             this.bones = bones;
             List<Transform> path = new List<Transform>();
-            ParseObject(rootController, objectRoot, false, ref path);
+            ParseObject(rootController, objectRoot, false, false, ref path);
         }
 
-        public void ParseObject(RigController rootController, Transform current, bool inRig, ref List<Transform> path)
+        public void ParseObject(RigController rootController, Transform current, bool inRig, bool parentHasController, ref List<Transform> path)
         {
             if (current == rootController.RootObject) inRig = true;
             if (!bones.TryGetValue(current.name, out Transform tr) && current.childCount == 0) inRig = false;
-            if (inRig)
+            bool skipController = parentHasController && current.transform.localPosition.magnitude < 0.01f;
+            if (inRig && !skipController)
             {
                 JointController joint = current.gameObject.AddComponent<JointController>();
                 joint.SetPathToRoot(rootController, path);
@@ -57,11 +58,13 @@ namespace VRtist
                 joint.color = current.name.Contains("Left") ? Color.blue : current.name.Contains("Right") ? Color.green : Color.yellow;
 
                 AddDirectController(current, joint);
-
+                parentHasController = true;
             }
+            else
+                parentHasController = false;
             foreach (Transform child in current)
             {
-                ParseObject(rootController, child, inRig, ref path);
+                ParseObject(rootController, child, inRig, parentHasController, ref path);
             }
             if (inRig) path.Remove(current);
         }
