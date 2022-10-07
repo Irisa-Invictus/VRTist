@@ -138,13 +138,13 @@ namespace VRtist
                 {
                     HandlePalette();
                 }
-
+                UnityEngine.Profiling.Profiler.BeginSample("undo1");
                 // UNDO/REDO -- Left A/B
                 if (IsCompatibleWithUndoRedo(options.currentNavigationMode))
                 {
                     HandleUndoRedo();
                 }
-
+                UnityEngine.Profiling.Profiler.EndSample();
                 // Time manipulation
                 if (IsCompatibleWithTimeManipulation(options.currentNavigationMode))
                 {

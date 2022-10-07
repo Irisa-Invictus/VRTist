@@ -305,13 +305,17 @@ namespace VRtist
             {
                 Matrix4x4 target = transformation * humanData.InitFrameMatrix;
                 Matrix4x4 localTarget = humanData.rootTransform.TryGetComponent(out JointController parentJoint) ? parentJoint.MatrixAtFrame(Frame).inverse : humanData.rootTransform.localToWorldMatrix.inverse;
+                //Debug.Log("object name " + humanData.ObjectAnimation.transform.name);
+                //Debug.Log("object befor " + humanData.ObjectAnimation.GetCurve(AnimatableProperty.RotationX).keys[0].outTangent);
 
                 Maths.DecomposeMatrix(localTarget * target, out Vector3 targetPos, out Quaternion targetRot, out Vector3 targetScale);
+
 
                 TangentIKSolver solver = new TangentIKSolver(humanData.Controller, targetPos, targetRot, Frame, startFrame, endFrame, humanData.Hierarchy, localTarget);
                 solver.Setup();
                 humanData.Solver = solver;
                 GlobalState.Animation.onChangeCurve.Invoke(humanData.Controller.gameObject, AnimatableProperty.PositionX);
+                Debug.Log("object after " + humanData.ObjectAnimation.GetCurve(AnimatableProperty.RotationX).keys[0].outTangent);
             }
             else
             {
@@ -322,7 +326,6 @@ namespace VRtist
                 Maths.DecomposeMatrix(transformed, out objectData.lastPosition, out objectData.lastQRotation, out objectData.lastScale);
                 objectData.lastRotation = objectData.lastQRotation.eulerAngles;
                 objectData.lastScale *= 1;
-
 
                 AnimationSet ObjectAnimation = GlobalState.Animation.GetObjectAnimation(Target);
                 objectData.Solver = new TangentSimpleSolver(objectData.lastPosition, objectData.lastQRotation, ObjectAnimation, Frame, startFrame, endFrame, 1);
