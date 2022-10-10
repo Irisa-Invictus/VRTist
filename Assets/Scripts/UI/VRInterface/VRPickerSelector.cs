@@ -8,9 +8,129 @@ namespace VRtist
 {
     public class VRPickerSelector : MonoBehaviour
     {
-
         public VRPickerTool PickerTool;
         public NavigationOptions navigation;
+
+        public enum TargetType { none, Base, Controller, Gizmo, Actuator }
+        public List<TargetType> HoveredTypes;
+        public TargetType CurrentDragged = TargetType.none;
+        public TargetType CurrentSelection = TargetType.none;
+
+        private GameObject interactingObject;
+        private List<GameObject> hoveredTargets = new List<GameObject>();
+
+        private bool gripPressed;
+        private bool triggerPressed;
+
+        public void OnTriggerEnter(Collider other)
+        {
+            if (!other.transform.IsChildOf(PickerTool.Picker.transform)) return;
+            if (other.gameObject == PickerTool.Picker.PickerBase)
+            {
+                AddToHovered(other.gameObject, TargetType.Base);
+            }
+            if (other.gameObject == PickerTool.Picker.PickerGizmo)
+            {
+                AddToHovered(other.gameObject, TargetType.Gizmo);
+            }
+            if (other.gameObject.CompareTag("Controller"))
+            {
+                AddToHovered(other.gameObject, TargetType.Controller);
+            }
+            if (other.gameObject.CompareTag("Actuator"))
+            {
+                AddToHovered(other.gameObject, TargetType.Actuator);
+            }
+        }
+        public void OnTriggerExit(Collider other)
+        {
+            if (!other.transform.IsChildOf(PickerTool.Picker.transform)) return;
+            if (other.gameObject == PickerTool.Picker.PickerBase)
+            {
+                RemoveFromHovered(other.gameObject);
+            }
+            if (other.gameObject == PickerTool.Picker.PickerGizmo)
+            {
+                RemoveFromHovered(other.gameObject);
+            }
+            if (other.gameObject.CompareTag("Controller"))
+            {
+                RemoveFromHovered(other.gameObject);
+            }
+            if (other.gameObject.CompareTag("Actuator"))
+            {
+                RemoveFromHovered(other.gameObject);
+            }
+        }
+
+        private void AddToHovered(GameObject target, TargetType type)
+        {
+            if (hoveredTargets.Contains(target)) return;
+            if (HoveredTypes.Count > 0)
+            {
+                EndHover(hoveredTargets[0], HoveredTypes[0]);
+            }
+            hoveredTargets.Insert(0, target);
+            HoveredTypes.Insert(0, type);
+            StartHover(target, type);
+        }
+
+        private void RemoveFromHovered(GameObject target)
+        {
+            int index = hoveredTargets.IndexOf(target);
+            if (index == -1) return;
+            if (index == 0)
+            {
+                EndHover(hoveredTargets[0], HoveredTypes[0]);
+            }
+            hoveredTargets.RemoveAt(index);
+            HoveredTypes.RemoveAt(index);
+            if (index == 0 && HoveredTypes.Count > 0)
+            {
+                CheckForNull();
+                StartHover(hoveredTargets[0], HoveredTypes[0]);
+            }
+        }
+
+        private void StartHover(GameObject target, TargetType type)
+        {
+            switch (type)
+            {
+                case TargetType.Actuator:
+                    PickerTool.HoverActuator(hoveredTargets[0]);
+                    break;
+                case TargetType.Base:
+                    PickerTool.HoverBase();
+                    break;
+                case TargetType.Controller: break;
+                case TargetType.Gizmo: break;
+            }
+        }
+
+        private void EndHover(GameObject target, TargetType type)
+        {
+            switch (type)
+            {
+                case TargetType.Actuator:
+                    PickerTool.HoverActuatorEnd(target);
+                    break;
+                case TargetType.Base:
+                    PickerTool.HoverBaseEnd();
+                    break;
+                case TargetType.Controller: break;
+                case TargetType.Gizmo: break;
+            }
+        }
+
+        private void CheckForNull()
+        {
+            if (hoveredTargets.Count > 0 && hoveredTargets[0] == null)
+            {
+                hoveredTargets.RemoveAt(0);
+                HoveredTypes.RemoveAt(0);
+                CheckForNull();
+            }
+        }
 
         private bool hoverBase;
         private bool HoverBase
@@ -97,7 +217,7 @@ namespace VRtist
                         PickerTool.ActuatorGrab(hoveredActuator, transform);
                         dragActuator = true;
                     }
-               
+
                     if (HoverController)
                     {
                         PickerTool.ControllerGrab(transform, HoverdController);
@@ -122,7 +242,7 @@ namespace VRtist
                         PickerTool.ActuatorRelease();
                         dragActuator = false;
                     }
-      
+
                     if (dragController)
                     {
                         PickerTool.ControllerRelease();
@@ -136,33 +256,33 @@ namespace VRtist
             //if (DragLanguette)PickerTool.LanguetteDrag(transform,Vector3.zero);
         }
 
-        public void OnTriggerEnter(Collider other)
-        {
-            if (!other.transform.IsChildOf(PickerTool.Picker.transform)) return;
-            if (!HoverBase) HoverBase = other.gameObject == PickerTool.Picker.PickerBase;
-            //hoverGizmo = other.gameObject == PickerTool.Gizmo.gameObject;
-            if (other.gameObject.CompareTag("Controller")) HoveredController(other.GetComponent<RigObjectController>());
-            //if (other.tag == "Goal" && other.TryGetComponent<RigGoalController>(out RigGoalController controller) && !hoveredGoals.Contains(controller)) AddHoveredGoal(controller);
-            if (other.tag == "Actuator" && hoveredActuator != other.gameObject)
-            {
-                hoveredActuator = other.gameObject;
-                HoverActuator = true;
-            }
-            // if (other.tag == "Goal")
-        }
+        //public void OnTriggerEnter(Collider other)
+        //{
+        //    if (!other.transform.IsChildOf(PickerTool.Picker.transform)) return;
+        //    if (!HoverBase) HoverBase = other.gameObject == PickerTool.Picker.PickerBase;
+        //    if (!hoverGizmo) hoverGizmo = other.gameObject == PickerTool.Picker.PickerGizmo.gameObject;
+        //    if (other.gameObject.CompareTag("Controller")) HoveredController(other.GetComponent<RigObjectController>());
+        //    //if (other.tag == "Goal" && other.TryGetComponent<RigGoalController>(out RigGoalController controller) && !hoveredGoals.Contains(controller)) AddHoveredGoal(controller);
+        //    if (other.gameObject.CompareTag("Actuator") && hoveredActuator != other.gameObject)
+        //    {
+        //        hoveredActuator = other.gameObject;
+        //        HoverActuator = true;
+        //    }
+        //    // if (other.tag == "Goal")
+        //}
 
-        public void OnTriggerExit(Collider other)
-        {
-            if (!other.transform.IsChildOf(PickerTool.Picker.transform)) return;
-            if (other.gameObject == PickerTool.Picker.PickerBase) HoverBase = false;
-            //if (other.gameObject == PickerTool.Gizmo.gameObject) hoverGizmo = false;
-            if (other.gameObject.CompareTag("Controller") && HoverdController == other.GetComponent<RigObjectController>()) RemoveHoveredController();
-            if (other.tag == "Actuator" && hoveredActuator == other.gameObject)
-            {
-                hoveredActuator = null;
-                HoverActuator = false;
-            }
-        }
+        //public void OnTriggerExit(Collider other)
+        //{
+        //    if (!other.transform.IsChildOf(PickerTool.Picker.transform)) return;
+        //    if (other.gameObject == PickerTool.Picker.PickerBase) HoverBase = false;
+        //    if (other.gameObject == PickerTool.Picker.PickerGizmo.gameObject) hoverGizmo = false;
+        //    if (other.gameObject.CompareTag("Controller") && HoverdController == other.GetComponent<RigObjectController>()) RemoveHoveredController();
+        //    if (other.tag == "Actuator" && hoveredActuator == other.gameObject)
+        //    {
+        //        hoveredActuator = null;
+        //        HoverActuator = false;
+        //    }
+        //}
 
         private void HoveredController(RigObjectController controller)
         {

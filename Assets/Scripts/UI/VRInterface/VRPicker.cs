@@ -9,6 +9,7 @@ namespace VRtist
     public class VRPicker : MonoBehaviour
     {
         public VRPickerTool PickerTool;
+        public GoalGizmo PickerGizmo;
         public bool AutoSwitch;
         private bool locked;
         private bool OutAndLocked;
@@ -31,12 +32,9 @@ namespace VRtist
         private Vector3 oldScale;
         public GameObject BoxControllerBase;
         public GameObject ControllerBase;
-        private GameObject Controller;
         public Material Red;
         public Material Blue;
         public Material Yellow;
-        private bool repeat;
-
 
         public void SwitchTPose()
         {
@@ -44,9 +42,6 @@ namespace VRtist
             PoseButton.GetComponent<MeshRenderer>().material.SetColor("_BaseColor", UseTPose ? Color.blue : Color.red);
             ResetTPose(UseTPose);
         }
-
-
-
 
         public void ResetHands()
         {
@@ -118,7 +113,7 @@ namespace VRtist
             GlobalState.ObjectMovingEvent.AddListener(MovedObject);
 
             PoseButton.GetComponent<MeshRenderer>().material.SetColor("_BaseColor", UseTPose ? Color.blue : Color.red);
-
+            PickerGizmo.gameObject.SetActive(false);
         }
 
         public void Update()

@@ -40,6 +40,14 @@ namespace VRtist
             ChangeGizmo(GizmoTool.Rotation);
         }
 
+        public void FixedInitialize(RigObjectController controller)
+        {
+            Controller = controller;
+            generatePositionCurves();
+            generateRotationCurves();
+            ChangeGizmo(GizmoTool.Rotation);
+        }
+
         public void NextGizmo()
         {
             if (CurrentGizmo == GizmoTool.Position) ChangeGizmo(GizmoTool.Rotation);

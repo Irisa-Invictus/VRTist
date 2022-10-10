@@ -10,7 +10,6 @@ namespace VRtist
     {
 
         public VRPicker Picker;
-        public GoalGizmo Gizmo;
 
         private Matrix4x4 initialObjectTRS;
         private Matrix4x4 initialMouthWorldToLocal;
@@ -30,8 +29,6 @@ namespace VRtist
         protected override void DoUpdate()
         {
         }
-
-
 
 
         public void SelectController(RigObjectController controller)
@@ -54,10 +51,11 @@ namespace VRtist
                 if (ctrl.TryGetComponent(out MeshRenderer renderer)) renderer.enabled = true;
                 if (ctrl.TryGetComponent(out MeshCollider collider)) collider.enabled = true;
             }
+            Picker.PickerGizmo.gameObject.SetActive(true);
+            Picker.PickerGizmo.FixedInitialize(controller);
 
             //controller.OnSelect(Gizmo);
             //SelectedGoal.Invoke(controller);
-
         }
 
         public void UnselectController(RigObjectController controller)
@@ -80,6 +78,23 @@ namespace VRtist
             selectedControllers.Clear();
         }
 
+        #region Actuator
+
+        public void HoverActuator(GameObject actuator)
+        {
+            if (Picker.PickerGizmo.isActiveAndEnabled)
+            {
+                Picker.PickerGizmo.StartHover(actuator);
+            }
+        }
+        public void HoverActuatorEnd(GameObject actuator)
+        {
+            if (Picker.PickerGizmo.isActiveAndEnabled)
+            {
+                Picker.PickerGizmo.EndHover(actuator);
+            }
+        }
+
         public void ActuatorGrab(GameObject actuator, Transform mouthpiece)
         {
             //Gizmo.GrabGizmo(actuator, mouthpiece, false);
@@ -98,9 +113,18 @@ namespace VRtist
             //draggedController = null;
             //Picker.Lock = false;
         }
-
+        #endregion
 
         #region Base
+        public void HoverBase()
+        {
+            Picker.PickerBase.GetComponent<MeshRenderer>().material.SetColor("_BASE_COLOR", Color.red);
+        }
+        public void HoverBaseEnd()
+        {
+            Picker.PickerBase.GetComponent<MeshRenderer>().material.SetColor("_BASE_COLOR", Color.black);
+        }
+
         public void BaseGrab(Transform mouthpiece)
         {
             initialObjectTRS = Picker.transform.localToWorldMatrix;
@@ -155,11 +179,11 @@ namespace VRtist
 
         public void GizmoGrab(Transform mouthpiece)
         {
-            initialObjectTRS = Gizmo.transform.localToWorldMatrix;
+            initialObjectTRS = Picker.PickerGizmo.transform.localToWorldMatrix;
             initialMouthWorldToLocal = mouthpiece.worldToLocalMatrix;
             Picker.Lock = true;
             ScaleValue = 1f;
-            initialScale = Gizmo.transform.localScale;
+            initialScale = Picker.PickerGizmo.transform.localScale;
         }
         public void GizmoDrag(Transform mouthpiece, Vector2 axis)
         {
@@ -174,8 +198,8 @@ namespace VRtist
             if (axis.y > scaleDeadzone) scaleIndice *= scaleFactor;
             if (axis.y < -scaleDeadzone) scaleIndice /= scaleFactor;
             ScaleValue = Mathf.Clamp(ScaleValue * scaleIndice, 0.001f, 100f);
-            Gizmo.transform.localScale = initialScale * ScaleValue;
-            Gizmo.transform.position = position;
+            Picker.PickerGizmo.transform.localScale = initialScale * ScaleValue;
+            Picker.PickerGizmo.transform.position = position;
             //Gizmo.transform.rotation = rotation;
         }
         public void GizmoRelease()

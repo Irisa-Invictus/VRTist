@@ -46,15 +46,15 @@ namespace VRtist
         #region hovering
         public void OnTriggerEnter(Collider other)
         {
-            if (other.gameObject.tag == "Controller")
+            if (other.gameObject.CompareTag("Controller"))
             {
                 AddToHovered(other.gameObject, TargetType.Controller);
             }
-            if (other.gameObject.tag == "Curve")
+            if (other.gameObject.CompareTag("Curve"))
             {
                 AddToHovered(other.gameObject, TargetType.Curve);
             }
-            if (other.gameObject.tag == "Actuator")
+            if (other.gameObject.CompareTag("Actuator"))
             {
                 AddToHovered(other.gameObject, TargetType.Actuator);
             }
@@ -65,15 +65,15 @@ namespace VRtist
         }
         public void OnTriggerExit(Collider other)
         {
-            if (other.gameObject.tag == "Controller")
+            if (other.gameObject.CompareTag("Controller"))
             {
                 RemoveFromHovered(other.gameObject);
             }
-            if (other.gameObject.tag == "Curve")
+            if (other.gameObject.CompareTag("Curve"))
             {
                 RemoveFromHovered(other.gameObject);
             }
-            if (other.gameObject.tag == "Actuator")
+            if (other.gameObject.CompareTag("Actuator"))
             {
                 RemoveFromHovered(other.gameObject);
             }
