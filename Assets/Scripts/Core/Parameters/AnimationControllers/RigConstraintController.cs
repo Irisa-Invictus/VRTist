@@ -394,6 +394,7 @@ namespace VRtist
         private Vector3 initForward;
         private float previousAngle;
         private GoalGizmo.GizmoTool gizmoTool;
+        private Transform gizmoTransform;
 
         public override void OnGrabGizmo(Transform mouthpiece, GoalGizmo gizmo, GoalGizmo.GizmoTool tool, AnimationTool.Vector3Axis axis, bool data)
         {
@@ -401,6 +402,7 @@ namespace VRtist
             startPositions.Add(this.transform.localPosition);
             startRotations.Add(this.transform.localRotation);
             startScales.Add(this.transform.localScale);
+            gizmoTransform = gizmo.transform;
             foreach (Dada.URig.Descriptors.Constraint constraint in constraints)
             {
                 movedObjects.Add(constraint.drivenObjectTransform.gameObject);
@@ -436,7 +438,7 @@ namespace VRtist
         {
             if (gizmoTool == GoalGizmo.GizmoTool.Rotation)
             {
-                Vector3 projection = Vector3.ProjectOnPlane(mouthpiece.position - transform.position, acAxis);
+                Vector3 projection = Vector3.ProjectOnPlane(mouthpiece.position - gizmoTransform.position, acAxis);
                 float currentAngle = Vector3.SignedAngle(initForward, projection, acAxis);
                 float angleOffset = Mathf.DeltaAngle(previousAngle, currentAngle);
                 transform.Rotate(acAxis, angleOffset, Space.World);

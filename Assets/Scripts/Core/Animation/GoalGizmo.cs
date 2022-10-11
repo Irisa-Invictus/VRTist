@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -27,6 +28,26 @@ namespace VRtist
         public GameObject zPosition;
 
         public RigObjectController Controller;
+        private bool freePosition = false;
+
+
+        public void OnEnable()
+        {
+            GlobalState.ObjectMovingEvent.AddListener(UpdateGizmo);
+        }
+
+        private void UpdateGizmo(GameObject obj)
+        {
+            if (Controller != null && Controller.gameObject == obj)
+            {
+                UpdateGizmo();
+            }
+        }
+
+        public void OnDisable()
+        {
+            GlobalState.ObjectMovingEvent.RemoveListener(UpdateGizmo);
+        }
 
         public void Initialize(RigObjectController controller)
         {
@@ -43,15 +64,24 @@ namespace VRtist
         public void FixedInitialize(RigObjectController controller)
         {
             Controller = controller;
+            freePosition = true;
+            transform.rotation = controller.transform.rotation;
             generatePositionCurves();
             generateRotationCurves();
             ChangeGizmo(GizmoTool.Rotation);
+
         }
 
         public void NextGizmo()
         {
             if (CurrentGizmo == GizmoTool.Position) ChangeGizmo(GizmoTool.Rotation);
             else ChangeGizmo(GizmoTool.Position);
+        }
+
+        public void UpdateGizmo()
+        {
+            transform.rotation = Controller.transform.rotation;
+            if (!freePosition) transform.localPosition = Controller.transform.localPosition;
         }
 
         public void RemoveGizmo()
@@ -93,8 +123,8 @@ namespace VRtist
         public void DragGizmo(Transform mouthpiece)
         {
             Controller.OnDragGizmo(mouthpiece);
-            transform.localRotation = Controller.transform.localRotation;
-            transform.localPosition = Controller.transform.localPosition;
+            transform.rotation = Controller.transform.rotation;
+            if (!freePosition) transform.localPosition = Controller.transform.localPosition;
         }
 
         public void ReleaseGizmo()
@@ -102,14 +132,7 @@ namespace VRtist
             Controller.OnReleaseGizmo();
             UnSelectAxis();
         }
-        public void SelectGizmo(Transform actuator)
-        {
 
-        }
-        public void DeselectGizmo()
-        {
-
-        }
         public AnimationTool.Vector3Axis GetAcutatorAxis(GameObject Gizmo)
         {
             if (Gizmo == xPosition || Gizmo == xRotation) return AnimationTool.Vector3Axis.X;

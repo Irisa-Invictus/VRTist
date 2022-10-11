@@ -21,6 +21,7 @@ namespace VRtist
 
         private bool gripPressed;
         private bool triggerPressed;
+        private Vector2 axisValues;
 
         public void OnTriggerEnter(Collider other)
         {
@@ -29,7 +30,7 @@ namespace VRtist
             {
                 AddToHovered(other.gameObject, TargetType.Base);
             }
-            if (other.gameObject == PickerTool.Picker.PickerGizmo)
+            if (other.gameObject == PickerTool.Picker.PickerGizmo.gameObject)
             {
                 AddToHovered(other.gameObject, TargetType.Gizmo);
             }
@@ -102,7 +103,9 @@ namespace VRtist
                 case TargetType.Base:
                     PickerTool.HoverBase();
                     break;
-                case TargetType.Controller: break;
+                case TargetType.Controller:
+                    PickerTool.HoverController(hoveredTargets[0]);
+                    break;
                 case TargetType.Gizmo: break;
             }
         }
@@ -117,7 +120,9 @@ namespace VRtist
                 case TargetType.Base:
                     PickerTool.HoverBaseEnd();
                     break;
-                case TargetType.Controller: break;
+                case TargetType.Controller:
+                    PickerTool.StopHoverController(target);
+                    break;
                 case TargetType.Gizmo: break;
             }
         }
@@ -132,39 +137,125 @@ namespace VRtist
             }
         }
 
-        private bool hoverBase;
-        private bool HoverBase
-        {
-            get { return hoverBase; }
-            set
-            {
-                hoverBase = value;
-                PickerTool.Picker.PickerBase.GetComponent<MeshRenderer>().material.SetColor("_BASE_COLOR", value ? Color.red : Color.black);
-            }
-        }
-        private bool dragBase;
-
-        private bool hoverGizmo;
-        private bool dragGizmo;
 
 
-        private bool HoverController;
-        private bool dragController;
-
-        private bool HoverActuator;
-        private bool dragActuator;
-        private GameObject hoveredActuator;
-
-        private Vector2 axisValues;
-
-        //private List<RigGoalController> hoveredGoals = new List<RigGoalController>();
-        private RigObjectController HoverdController;
 
         public void Update()
         {
-            Grip();
-            Trigger();
+            VRInput.ButtonEvent(VRInput.primaryController, CommonUsages.grip, OnGripPressed, OnGripRelease);
+            if (gripPressed) Gripped();
+            VRInput.ButtonEvent(VRInput.primaryController, CommonUsages.triggerButton, OnTriggerPressed, OnTriggerRelease);
+            if (triggerPressed) Triggered();
             Joystick();
+        }
+
+        public void OnGripPressed()
+        {
+            gripPressed = true;
+            CheckForNull();
+            if (hoveredTargets.Count > 0)
+            {
+                interactingObject = hoveredTargets[0];
+                switch (HoveredTypes[0])
+                {
+                    case TargetType.Actuator:
+                        CurrentDragged = TargetType.Actuator;
+                        PickerTool.ActuatorGrab(interactingObject, transform);
+                        break;
+                    case TargetType.Base:
+                        CurrentDragged = TargetType.Base;
+                        PickerTool.BaseGrab(transform);
+                        break;
+                    case TargetType.Controller:
+                        CurrentDragged = TargetType.Controller;
+                        PickerTool.ControllerGrab(interactingObject, transform);
+                        break;
+                    case TargetType.Gizmo:
+                        CurrentDragged = TargetType.Gizmo;
+                        PickerTool.GizmoGrab(transform);
+                        break;
+                }
+            }
+        }
+        public void Gripped()
+        {
+            switch (CurrentDragged)
+            {
+                case TargetType.none: return;
+                case TargetType.Actuator:
+                    PickerTool.ActuatorDrag(transform);
+                    break;
+                case TargetType.Base:
+                    PickerTool.BaseDrag(transform, axisValues);
+                    break;
+                case TargetType.Controller:
+                    PickerTool.ControllerDrag(transform, axisValues);
+                    break;
+                case TargetType.Gizmo:
+                    PickerTool.GizmoDrag(transform, axisValues);
+                    break;
+            }
+        }
+        public void OnGripRelease()
+        {
+            gripPressed = false;
+            switch (CurrentDragged)
+            {
+                case TargetType.none: return;
+                case TargetType.Actuator:
+                    PickerTool.ActuatorRelease();
+                    break;
+                case TargetType.Base:
+                    PickerTool.BaseRelease();
+                    break;
+                case TargetType.Controller:
+                    PickerTool.ControllerRelease();
+                    break;
+                case TargetType.Gizmo:
+                    PickerTool.GizmoRelease();
+                    break;
+            }
+            EndHover(interactingObject, CurrentDragged);
+            CurrentDragged = TargetType.none;
+            interactingObject = null;
+            if (hoveredTargets.Count > 0) StartHover(hoveredTargets[0], HoveredTypes[0]);
+        }
+        public void OnTriggerPressed()
+        {
+            triggerPressed = true;
+            CheckForNull();
+            if (HoveredTypes.Count == 0)
+            {
+                PickerTool.SelectEmpty();
+                return;
+            }
+            interactingObject = hoveredTargets[0];
+            switch (HoveredTypes[0])
+            {
+                case TargetType.Actuator:
+                    CurrentSelection = TargetType.Actuator;
+                    break;
+                case TargetType.Base:
+                    CurrentSelection = TargetType.Base;
+                    break;
+                case TargetType.Controller:
+                    CurrentSelection = TargetType.Controller;
+                    PickerTool.SelectController(hoveredTargets[0]);
+                    break;
+                case TargetType.Gizmo:
+                    CurrentSelection = TargetType.Gizmo;
+                    break;
+            }
+        }
+        public void Triggered()
+        {
+        }
+        public void OnTriggerRelease()
+        {
+            triggerPressed = false;
+            EndHover(interactingObject, CurrentSelection);
+            interactingObject = null;
+            CurrentSelection = TargetType.none;
         }
 
         private void Joystick()
@@ -172,132 +263,18 @@ namespace VRtist
             if (navigation.CanUseControls(NavigationMode.UsedControls.RIGHT_JOYSTICK))
             {
                 axisValues = VRInput.GetValue(VRInput.primaryController, CommonUsages.primary2DAxis);
-                if (axisValues.magnitude > 0.5f && !dragBase && !dragGizmo) PickerTool.Picker.RotateClone(axisValues);
+                if (axisValues.magnitude > 0.5f && CurrentSelection == TargetType.none && CurrentDragged == TargetType.none) PickerTool.Picker.RotateClone(axisValues);
             }
         }
 
-        private void Trigger()
+        public void OnDisable()
         {
-            VRInput.ButtonEvent(VRInput.primaryController, CommonUsages.trigger,
-                () =>
-                {
-                    if (HoverController)
-                    {
-                        PickerTool.SelectController(HoverdController);
-                    }
-
-                    else
-                    {
-                        PickerTool.SelectEmpty();
-                    }
-                },
-                () =>
-                {
-                });
-        }
-
-        private void Grip()
-        {
-            VRInput.ButtonEvent(VRInput.primaryController, CommonUsages.grip,
-                () =>
-                {
-                    if (HoverBase)
-                    {
-                        PickerTool.BaseGrab(transform);
-                        dragBase = true;
-                        return;
-                    }
-                    if (hoverGizmo)
-                    {
-                        PickerTool.GizmoGrab(transform);
-                        dragGizmo = true;
-                    }
-                    if (HoverActuator)
-                    {
-                        PickerTool.ActuatorGrab(hoveredActuator, transform);
-                        dragActuator = true;
-                    }
-
-                    if (HoverController)
-                    {
-                        PickerTool.ControllerGrab(transform, HoverdController);
-                        dragController = true;
-                    }
-                },
-                () =>
-                {
-                    if (dragBase)
-                    {
-                        PickerTool.BaseRelease();
-                        dragBase = false;
-                        return;
-                    }
-                    if (dragGizmo)
-                    {
-                        PickerTool.GizmoRelease();
-                        dragGizmo = false;
-                    }
-                    if (dragActuator)
-                    {
-                        PickerTool.ActuatorRelease();
-                        dragActuator = false;
-                    }
-
-                    if (dragController)
-                    {
-                        PickerTool.ControllerRelease();
-                        dragController = false;
-                    }
-                });
-            if (dragBase) PickerTool.BaseDrag(transform, axisValues);
-            if (dragController) PickerTool.ControllerDrag(transform, axisValues);
-            if (dragActuator) PickerTool.ActuatorDrag(transform);
-            if (dragGizmo) PickerTool.GizmoDrag(transform, axisValues);
-            //if (DragLanguette)PickerTool.LanguetteDrag(transform,Vector3.zero);
-        }
-
-        //public void OnTriggerEnter(Collider other)
-        //{
-        //    if (!other.transform.IsChildOf(PickerTool.Picker.transform)) return;
-        //    if (!HoverBase) HoverBase = other.gameObject == PickerTool.Picker.PickerBase;
-        //    if (!hoverGizmo) hoverGizmo = other.gameObject == PickerTool.Picker.PickerGizmo.gameObject;
-        //    if (other.gameObject.CompareTag("Controller")) HoveredController(other.GetComponent<RigObjectController>());
-        //    //if (other.tag == "Goal" && other.TryGetComponent<RigGoalController>(out RigGoalController controller) && !hoveredGoals.Contains(controller)) AddHoveredGoal(controller);
-        //    if (other.gameObject.CompareTag("Actuator") && hoveredActuator != other.gameObject)
-        //    {
-        //        hoveredActuator = other.gameObject;
-        //        HoverActuator = true;
-        //    }
-        //    // if (other.tag == "Goal")
-        //}
-
-        //public void OnTriggerExit(Collider other)
-        //{
-        //    if (!other.transform.IsChildOf(PickerTool.Picker.transform)) return;
-        //    if (other.gameObject == PickerTool.Picker.PickerBase) HoverBase = false;
-        //    if (other.gameObject == PickerTool.Picker.PickerGizmo.gameObject) hoverGizmo = false;
-        //    if (other.gameObject.CompareTag("Controller") && HoverdController == other.GetComponent<RigObjectController>()) RemoveHoveredController();
-        //    if (other.tag == "Actuator" && hoveredActuator == other.gameObject)
-        //    {
-        //        hoveredActuator = null;
-        //        HoverActuator = false;
-        //    }
-        //}
-
-        private void HoveredController(RigObjectController controller)
-        {
-            if (HoverdController != null) RemoveHoveredController();
-            HoverController = true;
-            HoverdController = controller;
-            controller.StartHover();
-        }
-
-        private void RemoveHoveredController()
-        {
-            HoverdController.EndHover();
-            HoverdController = null;
-            HoverController = false;
-
+            for (int i = 0; i < hoveredTargets.Count; i++)
+            {
+                EndHover(hoveredTargets[i], HoveredTypes[i]);
+            }
+            HoveredTypes.Clear();
+            hoveredTargets.Clear();
         }
 
     }

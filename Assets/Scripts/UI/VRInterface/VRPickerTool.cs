@@ -31,8 +31,10 @@ namespace VRtist
         }
 
 
-        public void SelectController(RigObjectController controller)
+        public void SelectController(GameObject target)
         {
+            RigObjectController controller = target.GetComponent<RigObjectController>();
+
             if (selectedControllers.Contains(controller))
             {
                 UnselectController(controller);
@@ -70,6 +72,7 @@ namespace VRtist
                 if (ctrl.TryGetComponent(out MeshRenderer renderer)) renderer.enabled = false;
                 if (ctrl.TryGetComponent(out MeshCollider collider)) collider.enabled = false;
             }
+            if (Picker.PickerGizmo.isActiveAndEnabled && controller == Picker.PickerGizmo.Controller) Picker.PickerGizmo.gameObject.SetActive(false);
         }
 
         public void SelectEmpty()
@@ -97,21 +100,24 @@ namespace VRtist
 
         public void ActuatorGrab(GameObject actuator, Transform mouthpiece)
         {
+            Picker.PickerGizmo.GrabGizmo(mouthpiece, actuator.transform);
             //Gizmo.GrabGizmo(actuator, mouthpiece, false);
             //draggedController = Gizmo.Controller;
-            //Picker.Lock = true;
+            Picker.Lock = true;
         }
         public void ActuatorDrag(Transform mouthpiece)
         {
+            Picker.PickerGizmo.DragGizmo(mouthpiece);
             //draggedController.OnDragGizmo(mouthpiece);
         }
 
         public void ActuatorRelease()
         {
+            Picker.PickerGizmo.ReleaseGizmo();
             //draggedController.OnReleaseGizmo();
             //Gizmo.UnSelectAxis();
             //draggedController = null;
-            //Picker.Lock = false;
+            Picker.Lock = false;
         }
         #endregion
 
@@ -157,11 +163,24 @@ namespace VRtist
             Picker.Lock = false;
         }
         #endregion
-        public void ControllerGrab(Transform mouthpiece, RigObjectController Controller)
+        #region Controller
+        public void HoverController(GameObject target)
         {
+            RigObjectController controller = target.GetComponent<RigObjectController>();
+            controller.StartHover();
+        }
+        public void StopHoverController(GameObject target)
+        {
+            RigObjectController controller = target.GetComponent<RigObjectController>();
+            controller.EndHover();
+        }
+
+        public void ControllerGrab(GameObject target, Transform mouthpiece)
+        {
+            RigObjectController controller = target.GetComponent<RigObjectController>();
             Picker.Lock = true;
-            draggedController = Controller;
-            Controller.OnGrab(mouthpiece, true);
+            draggedController = controller;
+            controller.OnGrab(mouthpiece, true);
         }
 
         public void ControllerDrag(Transform mouthpiece, Vector2 axis)
@@ -176,7 +195,7 @@ namespace VRtist
             draggedController.OnRelease();
             Picker.Lock = false;
         }
-
+        #endregion
         public void GizmoGrab(Transform mouthpiece)
         {
             initialObjectTRS = Picker.PickerGizmo.transform.localToWorldMatrix;
