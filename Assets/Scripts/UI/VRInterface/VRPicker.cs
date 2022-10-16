@@ -178,6 +178,7 @@ namespace VRtist
             foreach (KeyValuePair<GameObject, GameObject> items in CloneToTarget)
             {
                 if (items.Value == Target) continue;
+                if (items.Key == null || items.Value == null) continue;
                 if (items.Value == root) rootPosition = items.Key.transform.position;
                 AnimationSet anim = GlobalState.Animation.GetObjectAnimation(items.Value);
                 if (anim != null)

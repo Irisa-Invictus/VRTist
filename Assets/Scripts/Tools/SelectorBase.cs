@@ -867,7 +867,7 @@ namespace VRtist
                     continue;
                 }
                 SkinnedMeshRenderer[] skinMeshes = obj.GetComponentsInChildren<SkinnedMeshRenderer>(); ;
-                if (null != skinMeshes)
+                if (null != skinMeshes && skinMeshes.Length > 0)
                 {
                     GetSkinnedMeshBounds(selectionCount, foundHierarchicalObject, obj, skinMeshes);
                 }
@@ -998,7 +998,6 @@ namespace VRtist
             if (selectionCount == 1 && !foundHierarchicalObject)
             {
                 planeContainerMatrix = SceneManager.RightHanded.worldToLocalMatrix * meshFilter.transform.localToWorldMatrix;
-                Debug.Log(meshFilter + "  " + meshFilter.transform.localToWorldMatrix);
             }
             else
             {

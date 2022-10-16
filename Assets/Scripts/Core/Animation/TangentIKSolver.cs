@@ -77,8 +77,6 @@ namespace VRtist
             animationCount = animationList.Count;
             rootParentMatrix = parentMatrix;
 
-            Debug.Log(animationList[0].transform.name);
-
             //property count * 2 keyframes * 4 (inTan.x inTan.y outTan.x outTan.y) * animation count
             valueCount = propertyCount * 2 * 4 * animationList.Count;
             previousFrame = start;
@@ -209,8 +207,6 @@ namespace VRtist
                     ModifyTangents(curve, nextKeyIndex, nextInTangent, nextOutTangent);
                 }
             }
-            Debug.Log("curve after : " + animationList[0].GetCurve(AnimatableProperty.RotationX).keys[0].outTangent);
-
 
             return true;
         }
