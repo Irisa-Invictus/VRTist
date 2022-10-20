@@ -170,10 +170,8 @@ namespace VRtist
 
         public override void Undo()
         {
-            UnityEngine.Profiling.Profiler.BeginSample("CommandAddKeyframes");
             base.Undo();
             GlobalState.Animation.onChangeCurve.Invoke(gObject, AnimatableProperty.PositionX);
-            UnityEngine.Profiling.Profiler.EndSample();
         }
 
         public override void Redo()

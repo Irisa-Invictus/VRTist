@@ -15,7 +15,7 @@ MonoBehaviour:
   version: 1
   displayGizmos: 1
   displayLocators: 1
-  displayWorldGrid: 1
+  displayWorldGrid: 0
   displayAvatars: 1
   displayFPS: 0
   curveForwardOffset: 0
@@ -24,11 +24,12 @@ MonoBehaviour:
   uiVolume: 0
   rightHanded: 1
   forcePaletteOpen: 0
-  palettePositionOffset: {x: -0.0000007338822, y: -0.0000005625079, z: 0.00000022152594}
-  paletteRotationOffset: {x: 0, y: 0, z: 0, w: 1.0000002}
+  palettePositionOffset: {x: 0.000000063329935, y: -0.000000017939854, z: 0.0000001738182}
+  paletteRotationOffset: {x: -0.00000010556876, y: 0.000000008903595, z: 0.000000047101903,
+    w: 1.0000001}
   pinnedPalette: 0
-  dopeSheetPosition: {x: 0.6597982, y: 1.7439083, z: 0.058858953}
-  dopeSheetRotation: {x: -0.10360992, y: 0.7397863, z: 0.06656705, w: 0.6614756}
+  dopeSheetPosition: {x: 0.51538986, y: 1.9379466, z: 0.85646135}
+  dopeSheetRotation: {x: -0.154496, y: 0.39597854, z: -0.045458455, w: 0.9040274}
   dopeSheetVisible: 1
   shotManagerPosition: {x: 0, y: 0, z: 0}
   shotManagerRotation: {x: 0.2588191, y: 0, z: 0, w: 0.9659258}
@@ -40,19 +41,16 @@ MonoBehaviour:
   cameraFeedbackScaleValue: 1
   cameraFeedbackMaxScaleValue: 1.7
   cameraFeedbackMinScaleValue: 0.4
-  cameraFeedbackVisible: 1
+  cameraFeedbackVisible: 0
   cameraDamping: 21.065893
   consoleVisible: 0
   consolePosition: {x: 0.0898, y: 1.674, z: 0.2262}
   consoleRotation: {x: 0.2588191, y: 0, z: 0, w: 0.9659258}
   sky:
-    topColor: {r: 0.83137256, g: 0.83137256, b: 0.83137256, a: 1}
-    middleColor: {r: 0.2505678, g: 0.8386994, b: 0.75437874, a: 1}
-    bottomColor: {r: 0.19558293, g: 0.54092807, b: 0.9256608, a: 1}
-  skies:
-  - topColor: {r: 0.83137256, g: 0.83137256, b: 0.83137256, a: 1}
-    middleColor: {r: 0.7647059, g: 0.7647059, b: 0.7647059, a: 1}
-    bottomColor: {r: 0.44313726, g: 0.44313726, b: 0.44313726, a: 1}
+    topColor: {r: 0.42549622, g: 0.42549622, b: 0.42549622, a: 1}
+    middleColor: {r: 0.5945368, g: 0.5945368, b: 0.5945368, a: 1}
+    bottomColor: {r: 0.48864704, g: 0.48864704, b: 0.48864704, a: 1}
+  skies: []
   castShadows: 1
   videoOutputResolution:
     width: 1920

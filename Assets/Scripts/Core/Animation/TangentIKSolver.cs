@@ -1,3 +1,26 @@
+/* MIT License
+ *
+ * Université de Rennes 1 / Invictus Project
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
+
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -53,8 +76,6 @@ namespace VRtist
             animationList.Add(joint.Animation);
             animationCount = animationList.Count;
             rootParentMatrix = parentMatrix;
-
-            Debug.Log(animationList[0].transform.name);
 
             //property count * 2 keyframes * 4 (inTan.x inTan.y outTan.x outTan.y) * animation count
             valueCount = propertyCount * 2 * 4 * animationList.Count;
@@ -186,8 +207,6 @@ namespace VRtist
                     ModifyTangents(curve, nextKeyIndex, nextInTangent, nextOutTangent);
                 }
             }
-            Debug.Log("curve after : " + animationList[0].GetCurve(AnimatableProperty.RotationX).keys[0].outTangent);
-
 
             return true;
         }

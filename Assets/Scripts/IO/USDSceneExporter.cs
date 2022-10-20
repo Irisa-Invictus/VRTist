@@ -106,7 +106,6 @@ namespace VRtist
             // Scale overall scene for export (e.g. USDZ export needs scale 100)
             root.transform.localScale *= context.scale;
 
-            UnityEngine.Profiling.Profiler.BeginSample("USD: Export");
             try
             {
                 ExportImpl(root, context);
@@ -131,7 +130,6 @@ namespace VRtist
                     root.transform.localScale = localScale;
                 }
 
-                UnityEngine.Profiling.Profiler.EndSample();
             }
         }
 

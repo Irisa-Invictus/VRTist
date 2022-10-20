@@ -67,7 +67,7 @@ namespace VRtist
         public GameObject interactingObject;
 
         public class DragObjectData
-        {
+        { 
             public GameObject target;
             public Matrix4x4 initialMouthpieceWorldToLocal, initialParentMatrixLocalToWorld, initialParentMatrixWorldToLocal;
             public Vector3 initialPosition, initialScale;

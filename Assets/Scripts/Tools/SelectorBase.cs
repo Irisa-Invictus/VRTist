@@ -867,7 +867,7 @@ namespace VRtist
                     continue;
                 }
                 SkinnedMeshRenderer[] skinMeshes = obj.GetComponentsInChildren<SkinnedMeshRenderer>(); ;
-                if (null != skinMeshes)
+                if (null != skinMeshes && skinMeshes.Length > 0)
                 {
                     GetSkinnedMeshBounds(selectionCount, foundHierarchicalObject, obj, skinMeshes);
                 }

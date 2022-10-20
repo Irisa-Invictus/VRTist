@@ -244,12 +244,8 @@ namespace VRtist
 
         public static void RemoveKeyframe(GameObject gobject, AnimatableProperty property, AnimationKey key, bool updateCurves = true, bool lockTangents = false)
         {
-            UnityEngine.Profiling.Profiler.BeginSample("GlobalState");
             GlobalState.Animation.RemoveKeyframe(gobject, property, key.frame, updateCurves, lockTangents);
-            UnityEngine.Profiling.Profiler.EndSample();
-            UnityEngine.Profiling.Profiler.BeginSample("Remove keyframe");
             Instance.scene.RemoveKeyframe(gobject, property, key);
-            UnityEngine.Profiling.Profiler.EndSample();
         }
 
         public static void MoveKeyframe(GameObject gobject, AnimatableProperty property, int oldTime, int newTime)
