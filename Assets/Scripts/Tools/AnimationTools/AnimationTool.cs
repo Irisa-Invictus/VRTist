@@ -35,15 +35,14 @@ namespace VRtist
     {
         [SerializeField] private NavigationOptions navigation;
         public Anim3DCurveManager CurveManager;
+        public VRPicker Picker;
+
         public Transform controlPanel;
-        public Transform displayPanel;
 
         public GameObject GizmoPrefab;
         public List<GoalGizmo> gizmos = new List<GoalGizmo>();
         public GoalGizmo draggedGizmo;
 
-        private Transform ControlPanelButton;
-        private Transform DisplayPanelButton;
         private Transform FKModeButton;
         private Transform IKModeButton;
 
@@ -112,30 +111,20 @@ namespace VRtist
         {
             PoseMode = PoseEditMode.IK;
         }
-        public void OpenControlPanel()
-        {
-            ChangeControlPanelState(true);
-        }
 
-        private void ChangeControlPanelState(bool state)
+        public void ShowPicker(bool state)
         {
-            controlPanel.gameObject.SetActive(state);
-            displayPanel.gameObject.SetActive(!state);
-            ControlPanelButton.GetComponent<UIButton>().Checked = state;
-            DisplayPanelButton.GetComponent<UIButton>().Checked = !state;
+            Picker.gameObject.SetActive(state);
         }
 
         protected override void Awake()
         {
             base.Awake();
 
-            ControlPanelButton = panel.Find("ControlButton");
-            DisplayPanelButton = panel.Find("DisplayButton");
             FKModeButton = controlPanel.Find("FK");
             IKModeButton = controlPanel.Find("IK");
 
             PoseMode = PoseEditMode.FK;
-            OpenControlPanel();
         }
 
 

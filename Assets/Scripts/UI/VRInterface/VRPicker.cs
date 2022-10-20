@@ -116,6 +116,13 @@ namespace VRtist
             PickerGizmo.gameObject.SetActive(false);
         }
 
+        public void OnDisable()
+        {
+            Selection.onSelectionChanged.RemoveListener(OnSelectionChange);
+            GlobalState.Animation.onFrameEvent.RemoveListener(OnFrameChange);
+            GlobalState.ObjectMovingEvent.RemoveListener(MovedObject);
+        }
+
         public void Update()
         {
         }

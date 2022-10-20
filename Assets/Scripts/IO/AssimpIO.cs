@@ -642,8 +642,8 @@ namespace VRtist
             if (parent != null && parent != go.transform)
                 go.transform.parent = parent;
 
-
             GlobalState.Instance.messageBox.ShowMessage("Importing Hierarchy : " + importCount);
+            
             // Do not use Assimp Decompose function, it does not work properly
             // use unity decomposition instead
             Matrix4x4 nodeMatrix = new Matrix4x4(
@@ -652,20 +652,10 @@ namespace VRtist
                 new Vector4(node.Transform.A3, node.Transform.B3, node.Transform.C3, node.Transform.D3),
                 new Vector4(node.Transform.A4, node.Transform.B4, node.Transform.C4, node.Transform.D4)
                 );
-            Maths.DecomposeMatrix(nodeMatrix, out Vector3 nodePosition, out Quaternion nodeRotation, out Vector3 nodeScale);
-            Maths.DecomposeMatrix(cumulMatrix, out Vector3 cumulPosition, out Quaternion cumulRotation, out Vector3 cumulScale);
 
-            if (node.Name.Contains("$AssimpFbx$") && node.HasChildren && isHuman)
+            cumulMatrix = cumulMatrix * nodeMatrix;
+            if (node.Name.Contains("$AssimpFbx$") && node.HasChildren)
             {
-                if (!node.Name.Contains("Translation"))
-                {
-                    nodePosition += cumulPosition;
-                }
-                if (node.Name.Contains("PreRotation"))
-                {
-                    preRotation = nodeRotation;
-                }
-                cumulMatrix = Matrix4x4.TRS(nodePosition, nodeRotation, nodeScale);
                 if (blocking)
                     ImportHierarchy(node.Children[0], parent, go, cumulMatrix, preRotation).MoveNext();
                 else
@@ -673,15 +663,13 @@ namespace VRtist
             }
             else
             {
-                nodePosition = nodePosition + cumulPosition;
-                node.Transform.Decompose(out Assimp.Vector3D scale1, out Assimp.Quaternion rot, out Assimp.Vector3D trans);
+                Maths.DecomposeMatrix(cumulMatrix, out Vector3 cumulPosition, out Quaternion cumulRotation, out Vector3 cumulScale);
                 AssignMeshes(node, go);
-
                 if (node.Parent != null)
                 {
-                    go.transform.localPosition = nodePosition;
-                    go.transform.localRotation = preRotation * nodeRotation;
-                    go.transform.localScale = nodeScale;
+                    go.transform.localPosition = cumulPosition;
+                    go.transform.localRotation = cumulRotation;
+                    go.transform.localScale = cumulScale;
                     go.name = isHuman ? node.Name : Utils.CreateUniqueName(node.Name);
                     if (isHuman)
                     {
@@ -693,13 +681,11 @@ namespace VRtist
                         if (rootBone == null && node.Name.Contains("Hips")) rootBone = go.transform;
                     }
                 }
-
                 if (scene.HasAnimations)
                 {
-                    ImportAnimation(node, go, preRotation);
+                    ImportAnimation(node, go, cumulRotation);
                 }
-
-                nodeMatrix = Matrix4x4.TRS(Vector3.zero, Quaternion.identity, nodeScale);
+                nodeMatrix = Matrix4x4.TRS(Vector3.zero, Quaternion.identity, Vector3.one);
                 importCount++;
                 foreach (Assimp.Node assimpChild in node.Children)
                 {
@@ -821,7 +807,6 @@ namespace VRtist
                 animationSet.curves[AnimatableProperty.RotationY].ComputeCache();
                 animationSet.curves[AnimatableProperty.RotationZ].ComputeCache();
                 GlobalState.Animation.SetObjectAnimations(go, animationSet);
-
             }
         }
 
