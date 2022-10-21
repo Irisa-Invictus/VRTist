@@ -998,7 +998,6 @@ namespace VRtist
             if (selectionCount == 1 && !foundHierarchicalObject)
             {
                 planeContainerMatrix = SceneManager.RightHanded.worldToLocalMatrix * meshFilter.transform.localToWorldMatrix;
-                Debug.Log(meshFilter + "  " + meshFilter.transform.localToWorldMatrix);
             }
             else
             {

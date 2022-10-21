@@ -108,9 +108,9 @@ namespace VRtist
             }
             hoveredTargets.RemoveAt(index);
             HoveredTypes.RemoveAt(index);
+            CheckForNull();
             if (index == 0 && HoveredTypes.Count > 0)
             {
-                CheckForNull();
                 StartHover(hoveredTargets[0], HoveredTypes[0]);
             }
         }
@@ -173,6 +173,7 @@ namespace VRtist
             CheckForNull();
             if (hoveredTargets.Count > 0)
             {
+                GlobalState.SetPrimaryControllerVisible(false);
                 interactingObject = hoveredTargets[0];
                 switch (HoveredTypes[0])
                 {
@@ -227,6 +228,7 @@ namespace VRtist
         }
         public void OnGripRelease()
         {
+            GlobalState.SetPrimaryControllerVisible(true);
             gripPressed = false;
             switch (CurrentDragged)
             {
