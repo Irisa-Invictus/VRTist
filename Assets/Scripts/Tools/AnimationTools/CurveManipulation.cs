@@ -315,7 +315,6 @@ namespace VRtist
                 solver.Setup();
                 humanData.Solver = solver;
                 GlobalState.Animation.onChangeCurve.Invoke(humanData.Controller.gameObject, AnimatableProperty.PositionX);
-                Debug.Log("object after " + humanData.ObjectAnimation.GetCurve(AnimatableProperty.RotationX).keys[0].outTangent);
             }
             else
             {
@@ -399,31 +398,6 @@ namespace VRtist
             }
         }
 
-        //private void AddSegmentKeyframes(int frame, AnimationSet animation)
-        //{
-        //    if (!animation.GetCurve(AnimatableProperty.PositionX).Evaluate(frame, out float posx)) posx = animation.transform.localPosition.x;
-        //    if (!animation.GetCurve(AnimatableProperty.PositionY).Evaluate(frame, out float posy)) posy = animation.transform.localPosition.y;
-        //    if (!animation.GetCurve(AnimatableProperty.PositionZ).Evaluate(frame, out float posz)) posz = animation.transform.localPosition.z;
-        //    if (!animation.GetCurve(AnimatableProperty.RotationX).Evaluate(frame, out float rotx)) rotx = animation.transform.localEulerAngles.x;
-        //    if (!animation.GetCurve(AnimatableProperty.RotationY).Evaluate(frame, out float roty)) roty = animation.transform.localEulerAngles.y;
-        //    if (!animation.GetCurve(AnimatableProperty.RotationZ).Evaluate(frame, out float rotz)) rotz = animation.transform.localEulerAngles.z;
-        //    if (!animation.GetCurve(AnimatableProperty.ScaleX).Evaluate(frame, out float scax)) scax = animation.transform.localScale.x;
-        //    if (!animation.GetCurve(AnimatableProperty.ScaleY).Evaluate(frame, out float scay)) scay = animation.transform.localScale.y;
-        //    if (!animation.GetCurve(AnimatableProperty.ScaleZ).Evaluate(frame, out float scaz)) scaz = animation.transform.localScale.z;
-
-        //    AddFilteredKeyframeTangent(animation.transform.gameObject,
-        //        new AnimationKey(frame, posx),
-        //        new AnimationKey(frame, posy),
-        //        new AnimationKey(frame, posz),
-        //        new AnimationKey(frame, rotx),
-        //        new AnimationKey(frame, roty),
-        //        new AnimationKey(frame, rotz),
-        //        new AnimationKey(frame, scax),
-        //        new AnimationKey(frame, scay),
-        //        new AnimationKey(frame, scaz));
-        //}
-
-
 
         private void AddFilteredKeyframeTangent(GameObject target, int firstFrame, int lastFrame, AnimationKey posX, AnimationKey posY, AnimationKey posZ, AnimationKey rotX, AnimationKey rotY, AnimationKey rotZ, AnimationKey scaleX, AnimationKey scaleY, AnimationKey scaleZ)
         {
@@ -438,30 +412,5 @@ namespace VRtist
             GlobalState.Animation.AddFilteredKeyframeTangent(target, AnimatableProperty.PositionZ, posZ, firstFrame, lastFrame, false);
         }
 
-        private void AddFilteredKeyframe(GameObject target, AnimationKey posX, AnimationKey posY, AnimationKey posZ, AnimationKey rotX, AnimationKey rotY, AnimationKey rotZ, AnimationKey scalex, AnimationKey scaley, AnimationKey scalez)
-        {
-            GlobalState.Animation.AddFilteredKeyframe(target, AnimatableProperty.RotationX, rotX, false);
-            GlobalState.Animation.AddFilteredKeyframe(target, AnimatableProperty.RotationY, rotY, false);
-            GlobalState.Animation.AddFilteredKeyframe(target, AnimatableProperty.RotationZ, rotZ, false);
-            GlobalState.Animation.AddFilteredKeyframe(target, AnimatableProperty.ScaleX, scalex, false);
-            GlobalState.Animation.AddFilteredKeyframe(target, AnimatableProperty.ScaleY, scaley, false);
-            GlobalState.Animation.AddFilteredKeyframe(target, AnimatableProperty.ScaleZ, scalez, false);
-            GlobalState.Animation.AddFilteredKeyframe(target, AnimatableProperty.PositionY, posY, false);
-            GlobalState.Animation.AddFilteredKeyframe(target, AnimatableProperty.PositionZ, posZ, false);
-            GlobalState.Animation.AddFilteredKeyframe(target, AnimatableProperty.PositionX, posX);
-        }
-
-        private void AddFilteredKeyframeZone(GameObject target, AnimationKey posX, AnimationKey posY, AnimationKey posZ, AnimationKey rotX, AnimationKey rotY, AnimationKey rotZ, AnimationKey scalex, AnimationKey scaley, AnimationKey scalez)
-        {
-            GlobalState.Animation.AddFilteredKeyframeZone(target, AnimatableProperty.RotationX, rotX, startFrame, endFrame, false);
-            GlobalState.Animation.AddFilteredKeyframeZone(target, AnimatableProperty.RotationY, rotY, startFrame, endFrame, false);
-            GlobalState.Animation.AddFilteredKeyframeZone(target, AnimatableProperty.RotationZ, rotZ, startFrame, endFrame, false);
-            GlobalState.Animation.AddFilteredKeyframeZone(target, AnimatableProperty.ScaleX, scalex, startFrame, endFrame, false);
-            GlobalState.Animation.AddFilteredKeyframeZone(target, AnimatableProperty.ScaleY, scaley, startFrame, endFrame, false);
-            GlobalState.Animation.AddFilteredKeyframeZone(target, AnimatableProperty.ScaleZ, scalez, startFrame, endFrame, false);
-            GlobalState.Animation.AddFilteredKeyframeZone(target, AnimatableProperty.PositionX, posX, startFrame, endFrame, false);
-            GlobalState.Animation.AddFilteredKeyframeZone(target, AnimatableProperty.PositionY, posY, startFrame, endFrame, false);
-            GlobalState.Animation.AddFilteredKeyframeZone(target, AnimatableProperty.PositionZ, posZ, startFrame, endFrame);
-        }
     }
 }

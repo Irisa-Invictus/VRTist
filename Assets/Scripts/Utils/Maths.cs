@@ -338,7 +338,7 @@ namespace VRtist
             Vector2 avg = A;
             float dt = D.x - A.x;
             int safety = 0;
-            while (dt > 0.1f)
+            while (dt > 0.01f)
             {
                 float param = (pmin + pmax) * 0.5f;
                 avg = CubicBezier(A, B, C, D, param);

@@ -175,7 +175,7 @@ namespace VRtist
             alglib.minqpsetquadraticterm(state_opt, Q_opt);
             alglib.minqpsetlinearterm(state_opt, b_opt);
             alglib.minqpsetstartingpoint(state_opt, delta_theta_0);
-            //alglib.minqpsetbc(state_opt, lowerBound, upperBound);
+            alglib.minqpsetbc(state_opt, lowerBound, upperBound);
 
             //alglib.minqpsetscale(state_opt, scale);
 
@@ -188,7 +188,6 @@ namespace VRtist
             {
                 new_theta[i] = delta_theta[i] + theta[i];
             }
-            Debug.Log("curve befor : " + animationList[0].GetCurve(AnimatableProperty.RotationX).keys[0].outTangent);
             for (int a = 0; a < animationCount; a++)
             {
                 AnimationSet animation = animationList[a];
@@ -323,8 +322,8 @@ namespace VRtist
                 theta[(i * 8) + 6] = nextKeys[i].outTangent.x;
                 theta[(i * 8) + 7] = nextKeys[i].outTangent.y;
 
-                FillLowerBounds(i, previousKeys[i], nextKeys[i], -360, 360);
-                FillUpperBounds(i, previousKeys[i], nextKeys[i], -360, 360);
+                FillLowerBounds(i, previousKeys[i], nextKeys[i], -90, 90);
+                FillUpperBounds(i, previousKeys[i], nextKeys[i], -90, 90);
 
             }
 
@@ -349,7 +348,9 @@ namespace VRtist
             //lowerBound[curveIndex * 8 + 6] = 0 - next1Key.outTangent.x;
             ////k+ out.y
             //lowerBound[curveIndex * 8 + 7] = Mathf.Min(0, Min - Mathf.Min(curvesMinMax[curveIndex, 1].x, curvesMinMax[curveIndex, 1].y));
+
         }
+
 
         /// <summary>
         /// Fill upper bounds array with delta from current values

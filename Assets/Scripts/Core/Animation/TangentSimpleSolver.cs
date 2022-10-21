@@ -94,7 +94,6 @@ namespace VRtist
                 time = currentFrame
             };
 
-
             double[,] Js = dc_dtheta(currentFrame);
             double[,] DT_D = new double[valueCount, valueCount];
             for (int i = 0; i < valueCount; i++)
