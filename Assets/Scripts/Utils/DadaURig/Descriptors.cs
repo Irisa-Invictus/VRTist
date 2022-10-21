@@ -29,10 +29,38 @@ using UnityEngine;
 namespace Dada.URig.Descriptors
 {
 	[Serializable]
-	public class ObjectAttribute
+	public class Target
+	{
+		public float factor = 1f;
+		public float offset = 0f;
+		public Range range = new Range();
+
+		public Target()
+		{
+		}
+
+		public Target(float value)
+		{
+			range = new Range(value);
+		}
+
+		public float Transform(float value)
+		{
+			return range.Clamp((value * factor) + offset);
+		}
+	}
+
+	[Serializable]
+	public class BlendShapeTarget : Target
+	{
+		public SkinnedMeshRenderer skinnedMeshRenderer;
+		public int blendShapeIndex;
+	}
+
+	[Serializable]
+	public class ControllerAttributeTarget : Target
 	{
 		public string name;
-		public Range range;
 	}
 
 	[Serializable]
@@ -51,21 +79,19 @@ namespace Dada.URig.Descriptors
 	[Serializable]
 	public class CopyLocalAttributeToBlendShapeWeightConstraint : CopyAttributeConstraint
 	{
-		public SkinnedMeshRenderer skinnedMeshRenderer;
-		public int blendShapeIndex;
-		public Range range = new Range();
+		public BlendShapeTarget target;
 	}
 
 	[Serializable]
 	public class CopyLocalAttributeToTransformAttributeConstraint : CopyAttributeConstraint
 	{
-		public ObjectAttribute target;
+		public ControllerAttributeTarget target;
 	}
 
 	[Serializable]
 	public class CopyWorldAttributeToTransformAttributeConstraint : CopyAttributeConstraint
 	{
-		public ObjectAttribute target;
+		public ControllerAttributeTarget target;
 	}
 
 	[Serializable]
@@ -76,19 +102,19 @@ namespace Dada.URig.Descriptors
 	[Serializable]
 	public class ParentConstraint
 	{
-		public Matrix4x4 localToTargetMatrix;
+		public Matrix4x4 localTargetMatrix;
 
-		public Range xTranslationRange;
-		public Range yTranslationRange;
-		public Range zTranslationRange;
+		public Target xTranslationTarget;
+		public Target yTranslationTarget;
+		public Target zTranslationTarget;
 
-		public Range xRotationRange;
-		public Range yRotationRange;
-		public Range zRotationRange;
+		public Target xRotationTarget;
+		public Target yRotationTarget;
+		public Target zRotationTarget;
 
-		public Range xScaleRange;
-		public Range yScaleRange;
-		public Range zScaleRange;
+		public Target xScaleTarget;
+		public Target yScaleTarget;
+		public Target zScaleTarget;
 	}
 
 	[Serializable]

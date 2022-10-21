@@ -60,6 +60,7 @@ namespace VRtist
         internal List<Vector3> endPositions = new List<Vector3>();
         internal List<Quaternion> endRotations = new List<Quaternion>();
         internal List<Vector3> endScales = new List<Vector3>();
+
         private void ClearCommandData()
         {
             movedObjects = new List<GameObject>();
@@ -93,6 +94,34 @@ namespace VRtist
             gameObject.layer = startLayer;
         }
 
+        public void DirectGrab(Transform controller)
+        {
+            InitMatrix(controller);
+            movedObjects.Add(this.gameObject);
+            startPositions.Add(this.transform.localPosition);
+            startRotations.Add(this.transform.localRotation);
+            startScales.Add(this.transform.localScale);
+        }
+        public void DirectDrag(Transform controller)
+        {
+            Matrix4x4 transformation = controller.localToWorldMatrix * initialMouthMatrix;
+            Matrix4x4 transformed = InitialParentMatrixWorldToLocal *
+                    transformation * InitialParentMatrix *
+                    InitialTRS;
+            Maths.DecomposeMatrix(transformed, out Vector3 controllerPosition, out Quaternion controllerRotation, out Vector3 controllerScale);
+            transform.localPosition = controllerPosition;
+            transform.localRotation = controllerRotation;
+            transform.localScale = controllerScale;
+        }
+        public void DirectRelease()
+        {
+            endPositions.Add(this.transform.localPosition);
+            endRotations.Add(this.transform.localRotation);
+            endScales.Add(this.transform.localScale);
+            new CommandMoveObjects(movedObjects, startPositions, startRotations, startScales, endPositions, endRotations, endScales).Submit();
+
+            ClearCommandData();
+        }
 
         public override void OnGrab(Transform mouthpiece, bool data)
         {
@@ -109,6 +138,7 @@ namespace VRtist
                 startScales.Add(constraint.drivenObjectTransform.localScale);
             }
         }
+
         public override void OnDrag(Transform mouthpiece)
         {
             Matrix4x4 transformation = mouthpiece.localToWorldMatrix * initialMouthMatrix;
@@ -182,11 +212,22 @@ namespace VRtist
         {
             Dada.URig.Descriptors.ParentConstraint constraintVariant = constraint.parent;
 
-            Matrix4x4 worldMatrix = constraint.drivenObjectTransform.parent.worldToLocalMatrix * transform.localToWorldMatrix * constraintVariant.localToTargetMatrix;
-            Maths.DecomposeMatrix(worldMatrix, out Vector3 worldPosition, out Quaternion worldRotation, out Vector3 worldScale);
+            //Matrix4x4 worldMatrix = constraint.drivenObjectTransform.parent.worldToLocalMatrix * transform.localToWorldMatrix * constraintVariant.localToTargetMatrix;
+            Matrix4x4 localMatrix = constraint.drivenObjectTransform.parent.worldToLocalMatrix * transform.localToWorldMatrix * constraintVariant.localTargetMatrix;
+            Maths.DecomposeMatrix(localMatrix, out Vector3 localPosition, out Quaternion localRotation, out Vector3 localScale);
 
-            constraint.drivenObjectTransform.localEulerAngles = Clamp(worldRotation.eulerAngles, constraintVariant.xRotationRange, constraintVariant.yRotationRange, constraintVariant.zRotationRange);
-            constraint.drivenObjectTransform.localPosition = Clamp(worldPosition, constraintVariant.xTranslationRange, constraintVariant.yTranslationRange, constraintVariant.zTranslationRange);
+            //constraint.drivenObjectTransform.localEulerAngles = Clamp(worldRotation.eulerAngles, constraintVariant.xRotationRange, constraintVariant.yRotationRange, constraintVariant.zRotationRange);
+            //constraint.drivenObjectTransform.localPosition = Clamp(worldPosition, constraintVariant.xTranslationRange, constraintVariant.yTranslationRange, constraintVariant.zTranslationRange);
+
+            //Dada.URig.Descriptors.ParentConstraint constraintVariant = constraint.parent;
+
+            //Matrix4x4 worldMatrix = constraintVariant.localToTargetMatrix * transform.localToWorldMatrix;
+            //Maths.DecomposeMatrix(worldMatrix, out Vector3 worldPosition, out Quaternion worldRotation, out Vector3 worldScale);
+            Vector3 worldEulerAngles = localRotation.eulerAngles;
+
+            constraint.drivenObjectTransform.localEulerAngles = Clamp(worldEulerAngles, constraintVariant.xTranslationTarget, constraintVariant.yTranslationTarget, constraintVariant.zTranslationTarget);
+            constraint.drivenObjectTransform.localPosition = Clamp(localPosition, constraintVariant.xRotationTarget, constraintVariant.yRotationTarget, constraintVariant.zRotationTarget);
+            constraint.drivenObjectTransform.localScale = Clamp(localScale, constraintVariant.xScaleTarget, constraintVariant.yScaleTarget, constraintVariant.zScaleTarget);
         }
 
         private void OrientConstraint(Dada.URig.Descriptors.Constraint constraint)
@@ -358,12 +399,9 @@ namespace VRtist
                 _ => throw new InvalidAttributeNameExeption(constraintVariant.attributeName),
             };
 
-            float clampedValue = constraintVariant.range.Clamp(value);
+            var targetValue = constraintVariant.target.Transform(value) * 100f;
 
-            // In Unity, blendshape weights range from 0 to 100.
-            float targetValue = clampedValue * 100f;
-
-            constraintVariant.skinnedMeshRenderer.SetBlendShapeWeight(constraintVariant.blendShapeIndex, targetValue);
+            constraintVariant.target.skinnedMeshRenderer.SetBlendShapeWeight(constraintVariant.target.blendShapeIndex, targetValue);
         }
 
         private void AimUpRotateConstraint(Dada.URig.Descriptors.Constraint constraint)
@@ -492,6 +530,12 @@ namespace VRtist
         public void MoveController()
         {
             //if (isDragged) return;
+
+            //for(int i =0; i< constraints.Length; i++)
+            //{
+
+            //}
+
             //relations.ForEach(x =>
             //{
             //    switch (x.type)
@@ -518,6 +562,11 @@ namespace VRtist
         public static Vector3 Clamp(Vector3 vector, Range xRange, Range yRange, Range zRange)
         {
             return new Vector3(xRange.Clamp(vector.x), yRange.Clamp(vector.y), zRange.Clamp(vector.z));
+        }
+
+        public static Vector3 Clamp(Vector3 vector, Dada.URig.Descriptors.Target xTarget, Dada.URig.Descriptors.Target yTarget, Dada.URig.Descriptors.Target zTarget)
+        {
+            return new Vector3(xTarget.Transform(vector.x), yTarget.Transform(vector.y), zTarget.Transform(vector.z));
         }
 
         public override List<JointController> GetTargets()

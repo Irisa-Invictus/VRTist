@@ -137,6 +137,15 @@ namespace VRtist
 
             PoseButton.GetComponent<MeshRenderer>().material.SetColor("_BaseColor", UseTPose ? Color.blue : Color.red);
             PickerGizmo.gameObject.SetActive(false);
+
+            foreach (GameObject item in Selection.SelectedObjects)
+            {
+                if (item.TryGetComponent(out RigController controller))
+                {
+                    CreatePickerClone(controller);
+                    break;
+                }
+            }
         }
 
         public void OnDisable()
@@ -237,6 +246,7 @@ namespace VRtist
 
         private void CreatePickerClone(RigController rigController)
         {
+            Debug.Log("scales : " + rigController.transform.localScale + " " + rigController.transform.lossyScale);
             Target = rigController.gameObject;
             root = rigController.RootObject.gameObject;
 
@@ -249,27 +259,28 @@ namespace VRtist
             cloneCollider.isTrigger = true;
             BoxCollider pickerCollider = GetComponent<BoxCollider>();
 
-            float xRatio = pickerCollider.size.x / cloneCollider.size.x * 0.5f;
-            float yRatio = (pickerCollider.size.y - 0.1f) / cloneCollider.size.y * 0.5f;
-            float zRatio = pickerCollider.size.z / cloneCollider.size.z * 0.5f;
+            float xRatio = 0.075f;// pickerCollider.size.x / cloneCollider.size.x;
+            float yRatio = 0.075f;// pickerCollider.size.y / cloneCollider.size.y;
+            float zRatio = 0.075f;// pickerCollider.size.z / cloneCollider.size.z;
 
-
-            PickerClone.transform.localScale = new Vector3(-1, 1, 1) * Mathf.Min(new float[] { xRatio, yRatio, zRatio });
-            PickerClone.transform.localPosition = PickerBase.transform.localPosition + new Vector3(0, 0.05f, 0);
+            PickerClone.transform.localPosition = Vector3.zero;// PickerClone.transform.TransformVector(cloneCollider.center) + pickerCollider.center;
+            PickerClone.transform.localScale = new Vector3(-xRatio, yRatio, zRatio);
             PickerClone.transform.localRotation = Quaternion.identity;
             RecursiveMaping(rigController.transform, PickerClone.transform);
 
             Rigidbody body = PickerClone.AddComponent<Rigidbody>();
             body.useGravity = false;
             body.isKinematic = true;
-            //AssignController();
             ResetTPose(UseTPose);
+            //ComputeCollider();
+        }
 
+        private void ComputeCollider()
+        {
             Vector3 maxValues = Vector3.one * 0.5f;
             Vector3 minValues = Vector3.one * 0.5f;
             foreach (KeyValuePair<GameObject, GameObject> pair in CloneToTarget)
             {
-
                 Vector3 localPosition = transform.InverseTransformPoint(pair.Key.transform.position);
                 maxValues.x = Mathf.Max(maxValues.x, localPosition.x);
                 maxValues.y = Mathf.Max(maxValues.y, localPosition.y);
@@ -277,8 +288,10 @@ namespace VRtist
                 minValues.x = Mathf.Min(minValues.x, localPosition.x);
                 minValues.y = Mathf.Min(minValues.y, localPosition.y);
                 minValues.z = Mathf.Min(minValues.z, localPosition.z);
-
             }
+            Debug.Log("max values " + maxValues);
+            Debug.Log("min values " + minValues);
+
             BoxCollider thisCollider = GetComponent<BoxCollider>();
             thisCollider.center = new Vector3((maxValues.x + minValues.x) / 2f, (maxValues.y + minValues.y) / 2f, (maxValues.z + minValues.z) / 2f);
             thisCollider.size = new Vector3(Mathf.Max(maxValues.x, -minValues.x) * 2f, Mathf.Max(maxValues.y, -minValues.y) * 2f, Mathf.Max(maxValues.z, -minValues.z) * 2f);
@@ -290,15 +303,23 @@ namespace VRtist
 
             if (clone.TryGetComponent(out RigConstraintController controller))
             {
-                if (clone.TryGetComponent(out MeshRenderer renderer)) renderer.enabled = true;
-                if (clone.TryGetComponent(out MeshCollider collider)) collider.enabled = true;
-                controllers.Add(controller);
-                controllers.Add(target.GetComponent<RigConstraintController>());
+                if (controller.constraints.Length > 0)
+                {
+                    if (clone.TryGetComponent(out MeshRenderer renderer)) renderer.enabled = true;
+                    if (clone.TryGetComponent(out MeshCollider collider)) collider.enabled = true;
+                    controllers.Add(controller);
+                    controllers.Add(target.GetComponent<RigConstraintController>());
+                }
             }
             if (clone.TryGetComponent<JointController>(out JointController joint))
             {
                 joint.LinkJoint = target.GetComponent<JointController>();
                 target.GetComponent<JointController>().LinkJoint = joint;
+            }
+            if (clone.TryGetComponent(out DirectController dController))
+            {
+                if (clone.TryGetComponent(out Renderer dRenderer)) dRenderer.enabled = false;
+                if (clone.TryGetComponent(out Collider dCollider)) dCollider.enabled = false;
             }
 
             for (int i = 0; i < target.childCount; i++)

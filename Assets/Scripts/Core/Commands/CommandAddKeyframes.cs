@@ -40,7 +40,7 @@ namespace VRtist
             Interpolation interpolation = GlobalState.Settings.interpolation;
             int frame = GlobalState.Animation.CurrentFrame;
 
-            bool isHuman = obj.TryGetComponent<RigController>(out RigController skinController);
+            bool isHuman = obj.TryGetComponent(out RigController skinController);
 
             if (ToolsManager.CurrentToolName() != "Animation" || !isHuman)
             {
@@ -55,21 +55,21 @@ namespace VRtist
                 new CommandAddKeyframe(gObject, AnimatableProperty.RotationZ, frame, angles.z, interpolation, updateCurve).Submit();
             }
 
-            CameraController controller = gObject.GetComponent<CameraController>();
-            LightController lcontroller = gObject.GetComponent<LightController>();
+            CameraController cameraController = gObject.GetComponent<CameraController>();
+            LightController lightController = gObject.GetComponent<LightController>();
 
-            if (null != controller)
+            if (null != cameraController)
             {
-                new CommandAddKeyframe(gObject, AnimatableProperty.CameraFocal, frame, controller.focal, interpolation, updateCurve).Submit();
-                new CommandAddKeyframe(gObject, AnimatableProperty.CameraFocus, frame, controller.Focus, interpolation, updateCurve).Submit();
-                new CommandAddKeyframe(gObject, AnimatableProperty.CameraAperture, frame, controller.aperture, interpolation, updateCurve).Submit();
+                new CommandAddKeyframe(gObject, AnimatableProperty.CameraFocal, frame, cameraController.focal, interpolation, updateCurve).Submit();
+                new CommandAddKeyframe(gObject, AnimatableProperty.CameraFocus, frame, cameraController.Focus, interpolation, updateCurve).Submit();
+                new CommandAddKeyframe(gObject, AnimatableProperty.CameraAperture, frame, cameraController.aperture, interpolation, updateCurve).Submit();
             }
-            else if (null != lcontroller)
+            else if (null != lightController)
             {
-                new CommandAddKeyframe(gObject, AnimatableProperty.Power, frame, lcontroller.Power, interpolation, updateCurve).Submit();
-                new CommandAddKeyframe(gObject, AnimatableProperty.ColorR, frame, lcontroller.Color.r, interpolation, updateCurve).Submit();
-                new CommandAddKeyframe(gObject, AnimatableProperty.ColorG, frame, lcontroller.Color.g, interpolation, updateCurve).Submit();
-                new CommandAddKeyframe(gObject, AnimatableProperty.ColorB, frame, lcontroller.Color.b, interpolation, updateCurve).Submit();
+                new CommandAddKeyframe(gObject, AnimatableProperty.Power, frame, lightController.Power, interpolation, updateCurve).Submit();
+                new CommandAddKeyframe(gObject, AnimatableProperty.ColorR, frame, lightController.Color.r, interpolation, updateCurve).Submit();
+                new CommandAddKeyframe(gObject, AnimatableProperty.ColorG, frame, lightController.Color.g, interpolation, updateCurve).Submit();
+                new CommandAddKeyframe(gObject, AnimatableProperty.ColorB, frame, lightController.Color.b, interpolation, updateCurve).Submit();
             }
             else
             {
@@ -97,34 +97,20 @@ namespace VRtist
                     new CommandAddKeyframe(target.gameObject, AnimatableProperty.ScaleY, frame, target.localScale.y, interpolation, false).Submit();
                     new CommandAddKeyframe(target.gameObject, AnimatableProperty.ScaleZ, frame, target.localScale.z, interpolation, false).Submit();
                 }
+
+                SkinnedMeshRenderer[] skinMeshes = skinController.GetComponentsInChildren<SkinnedMeshRenderer>();
+                for (int j = 0; j < skinMeshes.Length; j++)
+                {
+                    SkinnedMeshRenderer mesh = skinMeshes[j];
+                    for (int s = 0; s < mesh.sharedMesh.blendShapeCount; s++)
+                    {
+                        new CommandAddKeyframe(mesh.gameObject, AnimatableProperty.BlendShape, frame, mesh.GetBlendShapeWeight(s), interpolation, updateCurve).Submit();
+                    }
+                }
+
             }
         }
 
-        private void RecursiveAddKeyFrame(Transform target, int frame, Interpolation interpolation)
-        {
-            Vector3 angles = ReduceAngles(target.transform.localRotation);
-            new CommandAddKeyframe(target.gameObject, AnimatableProperty.PositionX, frame, target.localPosition.x, interpolation, false).Submit();
-            new CommandAddKeyframe(target.gameObject, AnimatableProperty.PositionY, frame, target.localPosition.y, interpolation, false).Submit();
-            new CommandAddKeyframe(target.gameObject, AnimatableProperty.PositionZ, frame, target.localPosition.z, interpolation, false).Submit();
-            new CommandAddKeyframe(target.gameObject, AnimatableProperty.RotationX, frame, angles.x, interpolation, false).Submit();
-            new CommandAddKeyframe(target.gameObject, AnimatableProperty.RotationY, frame, angles.y, interpolation, false).Submit();
-            new CommandAddKeyframe(target.gameObject, AnimatableProperty.RotationZ, frame, angles.z, interpolation, false).Submit();
-            new CommandAddKeyframe(target.gameObject, AnimatableProperty.ScaleX, frame, target.localScale.x, interpolation, false).Submit();
-            new CommandAddKeyframe(target.gameObject, AnimatableProperty.ScaleY, frame, target.localScale.y, interpolation, false).Submit();
-            new CommandAddKeyframe(target.gameObject, AnimatableProperty.ScaleZ, frame, target.localScale.z, interpolation, false).Submit();
-
-            if (target.TryGetComponent(out RigController controller))
-            {
-                RecursiveAddKeyFrame(controller.transform, frame, interpolation);
-                return;
-            }
-            Debug.Log(controller + target.name, target);
-            foreach (Transform child in target)
-            {
-                if (child.tag == "Actuator") continue;
-                RecursiveAddKeyFrame(child, frame, interpolation);
-            }
-        }
 
         public Vector3 ReduceAngles(Quaternion qrotation)
         {

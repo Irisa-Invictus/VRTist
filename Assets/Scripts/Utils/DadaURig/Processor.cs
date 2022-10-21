@@ -92,7 +92,7 @@ namespace Dada.URig
             controller.zScaleRange = new Range(localScale.z);
         }
 
-        private static void ApplyLimits(VRtist.RigConstraintController sceneObjectPart, JSONDescriptors.ObjectAttribute attribute)
+        private static void ApplyLimits(VRtist.RigConstraintController sceneObjectPart, JSONDescriptors.ControllerAttribute attribute)
         {
             Range limits = attribute.range;
             switch (attribute.name)
@@ -160,16 +160,15 @@ namespace Dada.URig
                     controller.gameObject.tag = "Controller";
 
                     InitializeLimitRanges(controller);
-                    foreach (JSONDescriptors.ObjectAttribute attributeDescriptor in objectDescriptor.attributes)
+                    foreach (JSONDescriptors.ControllerAttribute attributeDescriptor in objectDescriptor.attributes)
                     {
                         ApplyLimits(controller, attributeDescriptor);
                     }
 
                     List<Descriptors.Constraint> constraints = new List<Descriptors.Constraint>();
-
                     foreach (var constraintDescriptor in objectDescriptor.constraints)
                     {
-                        Transform targetTransform = GetTransformByPath(constraintDescriptor.drivenObjectPath);
+                        // var targetTransform = GetTransformByPath(constraintDescriptor.drivenObjectPath);
 
                         if (constraintDescriptor.aim != null)
                         {
@@ -190,7 +189,7 @@ namespace Dada.URig
 
                                     constraints.Add(new Descriptors.Constraint
                                     {
-                                        drivenObjectTransform = GetTransformByPath(constraintDescriptor.drivenObjectPath),
+                                        drivenObjectTransform = GetTransformByPath(constraintDescriptorVariant.drivenObjectPath),
                                         type = Descriptors.Constraint.Type.AimUpAim,
                                         aimUpAim = new Descriptors.AimUpConstraint
                                         {
@@ -216,21 +215,22 @@ namespace Dada.URig
 
                         else if (constraintDescriptor.copyAttributes != null)
                         {
-                            JSONDescriptors.CopyAttributesConstraint constraintDescriptorVariant = constraintDescriptor.copyAttributes;
+                            var constraintDescriptorVariant = constraintDescriptor.copyAttributes;
 
                             foreach (var attribute in constraintDescriptorVariant.drivenAttributes)
                             {
-
                                 constraints.Add(new Descriptors.Constraint
                                 {
-                                    drivenObjectTransform = GetTransformByPath(constraintDescriptor.drivenObjectPath),
+                                    drivenObjectTransform = GetTransformByPath(constraintDescriptorVariant.drivenObjectPath),
                                     type = Descriptors.Constraint.Type.CopyWorldAttributeToTransformAttribute,
                                     copyWorldAttributeToTransformAttribute = new Descriptors.CopyWorldAttributeToTransformAttributeConstraint
                                     {
                                         attributeName = attribute.name,
-                                        target = new Descriptors.ObjectAttribute
+                                        target = new Descriptors.ControllerAttributeTarget
                                         {
                                             name = attribute.name,
+                                            factor = attribute.factor,
+                                            offset = attribute.offset,
                                             range = attribute.range
                                         }
                                     },
@@ -246,8 +246,8 @@ namespace Dada.URig
                             {
                                 var targetDescriptorVariant = constraintDescriptorVariant.target.blendShape;
 
-                                string blendShapeName = constraintDescriptor.drivenObjectPath + "." + targetDescriptorVariant.name;
-                                bool found = false;
+                                var blendShapeName = targetDescriptorVariant.drivenNodeName + '.' + targetDescriptorVariant.drivenBlendShapeName;
+                                var found = false;
                                 foreach (var skinnedMeshRenderer in skinnedMeshRenderers)
                                 {
                                     for (int blendShapeIndex = 0; blendShapeIndex < skinnedMeshRenderer.sharedMesh.blendShapeCount; ++blendShapeIndex)
@@ -256,14 +256,19 @@ namespace Dada.URig
                                         {
                                             constraints.Add(new Descriptors.Constraint
                                             {
-                                                drivenObjectTransform = GetTransformByPath(constraintDescriptor.drivenObjectPath),
+                                                drivenObjectTransform = skinnedMeshRenderer.transform,
                                                 type = Descriptors.Constraint.Type.CopyLocalAttributeToBlendShapeWeight,
                                                 copyLocalAttributeToBlendShapeWeight = new Descriptors.CopyLocalAttributeToBlendShapeWeightConstraint
                                                 {
                                                     attributeName = constraintDescriptorVariant.attributeName,
-                                                    blendShapeIndex = blendShapeIndex,
-                                                    skinnedMeshRenderer = skinnedMeshRenderer,
-                                                    range = targetDescriptorVariant.range,
+                                                    target = new Descriptors.BlendShapeTarget
+                                                    {
+                                                        factor = targetDescriptorVariant.factor,
+                                                        offset = targetDescriptorVariant.offset,
+                                                        blendShapeIndex = blendShapeIndex,
+                                                        skinnedMeshRenderer = skinnedMeshRenderer,
+                                                        range = targetDescriptorVariant.range,
+                                                    }
                                                 },
                                             });
                                             found = true;
@@ -283,14 +288,16 @@ namespace Dada.URig
 
                                 constraints.Add(new Descriptors.Constraint
                                 {
-                                    drivenObjectTransform = GetTransformByPath(constraintDescriptor.drivenObjectPath),
+                                    drivenObjectTransform = GetTransformByPath(targetDescriptorVariant.drivenObjectPath),
                                     type = Descriptors.Constraint.Type.CopyLocalAttributeToTransformAttribute,
                                     copyLocalAttributeToTransformAttribute = new Descriptors.CopyLocalAttributeToTransformAttributeConstraint
                                     {
                                         attributeName = constraintDescriptorVariant.attributeName,
-                                        target = new Descriptors.ObjectAttribute
+                                        target = new Descriptors.ControllerAttributeTarget
                                         {
-                                            name = targetDescriptorVariant.name,
+                                            name = targetDescriptorVariant.drivenAttributeName,
+                                            factor = targetDescriptorVariant.factor,
+                                            offset = targetDescriptorVariant.offset,
                                             range = targetDescriptorVariant.range,
                                         }
                                     },
@@ -306,14 +313,26 @@ namespace Dada.URig
                         {
                             JSONDescriptors.ParentConstraint constraintDescriptorVariant = constraintDescriptor.parent;
 
-                            Transform drivenObjectTransform = GetTransformByPath(constraintDescriptor.drivenObjectPath);
-                            //Matrix4x4 localToTargetMatrix = drivenObjectTransform.localToWorldMatrix * childTransform.parent.worldToLocalMatrix;
-                            Matrix4x4 localToTargetMatrix = drivenObjectTransform.localToWorldMatrix * childTransform.worldToLocalMatrix;
+                            Transform drivenObjectTransform = GetTransformByPath(constraintDescriptorVariant.drivenObjectPath);
+                            Matrix4x4 localTargetOffset = childTransform.worldToLocalMatrix * drivenObjectTransform.localToWorldMatrix;
 
-                            Range getRange(string attributeName)
+                            Descriptors.Target getTarget(string attributeName)
                             {
-                                // Return blocking range if nonexistent.
-                                return constraintDescriptorVariant.drivenAttributes.FirstOrDefault(attribute => attribute.name == "RX")?.range ?? new Range(0f);
+                                JSONDescriptors.ObjectAttribute attribute = constraintDescriptorVariant.drivenAttributes.FirstOrDefault(attribute => attribute.name == attributeName);
+                                if (attribute != null)
+                                {
+                                    return new Descriptors.Target
+                                    {
+                                        factor = attribute.factor,
+                                        offset = attribute.offset,
+                                        range = attribute.range
+                                    };
+                                }
+                                else
+                                {
+                                    // Return blocking range if nonexistent.
+                                    return new Descriptors.Target(0f);
+                                }
                             }
 
                             constraints.Add(new Descriptors.Constraint
@@ -322,16 +341,16 @@ namespace Dada.URig
                                 type = Descriptors.Constraint.Type.Parent,
                                 parent = new Descriptors.ParentConstraint
                                 {
-                                    localToTargetMatrix = localToTargetMatrix,
-                                    xTranslationRange = getRange("TX"),
-                                    yTranslationRange = getRange("TY"),
-                                    zTranslationRange = getRange("TZ"),
-                                    xRotationRange = getRange("RX"),
-                                    yRotationRange = getRange("RY"),
-                                    zRotationRange = getRange("RZ"),
-                                    xScaleRange = getRange("SX"),
-                                    yScaleRange = getRange("SY"),
-                                    zScaleRange = getRange("SZ"),
+                                    localTargetMatrix = localTargetOffset,
+                                    xTranslationTarget = getTarget("TX"),
+                                    yTranslationTarget = getTarget("TY"),
+                                    zTranslationTarget = getTarget("TZ"),
+                                    xRotationTarget = getTarget("RX"),
+                                    yRotationTarget = getTarget("RY"),
+                                    zRotationTarget = getTarget("RZ"),
+                                    xScaleTarget = getTarget("SX"),
+                                    yScaleTarget = getTarget("SY"),
+                                    zScaleTarget = getTarget("SZ"),
                                 }
                             });
                         }
@@ -343,6 +362,11 @@ namespace Dada.URig
 
                         controller.constraints = constraints.ToArray();
                     }
+
+                    constraints.ForEach(x =>
+                    {
+                        if (x.drivenObjectTransform.TryGetComponent(out VRtist.DirectController dController) && !dController.rigControllers.Contains(controller)) dController.rigControllers.Add(controller);
+                    });
                 }
             }
         }

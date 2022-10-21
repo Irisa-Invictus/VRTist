@@ -57,6 +57,7 @@ namespace VRtist
         CameraFocal,
         CameraFocus,
         CameraAperture,
+        BlendShape,
         Unknown
     }
 
@@ -429,18 +430,6 @@ namespace VRtist
             return animationSet;
         }
 
-        public void AddKeyframe(GameObject gobject, AnimatableProperty property, AnimationKey key)
-        {
-            AnimationSet animationSet = GetObjectAnimation(gobject);
-            if (null == animationSet)
-            {
-                animationSet = new AnimationSet(gobject);
-                animations.Add(gobject, animationSet);
-            }
-            Curve curve = animationSet.GetCurve(property);
-            curve.AddKey(key);
-            onChangeCurve.Invoke(gobject, property);
-        }
 
         // To be used by in-app add key (not from networked keys)
         public void AddFilteredKeyframe(GameObject gobject, AnimatableProperty property, AnimationKey key, bool updateCurves = true, bool lockTangents = false)

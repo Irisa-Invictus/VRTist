@@ -119,8 +119,12 @@ namespace VRtist
         public void Import(string fileName, Transform root, bool synchronous = false)
         {
             blocking = synchronous;
+            ImportTaskData d = new ImportTaskData();
+            d.fileName = fileName;
+            d.root = root;
             if (synchronous)
             {
+                taskData.Add(d);
                 Assimp.AssimpContext ctx = new Assimp.AssimpContext();
                 var aScene = ctx.ImportFile(fileName,
                     Assimp.PostProcessSteps.Triangulate |
@@ -128,14 +132,12 @@ namespace VRtist
                     Assimp.PostProcessSteps.GenerateUVCoords);
                 CreateUnityDataFromAssimp(fileName, aScene, root).MoveNext();
                 Clear();
+                taskData.Remove(d);
                 progress = 1.0f;
             }
             else
             {
                 unityDataInCoroutineCreated = false;
-                ImportTaskData d = new ImportTaskData();
-                d.fileName = fileName;
-                d.root = root;
                 taskData.Add(d);
             }
         }
@@ -539,6 +541,7 @@ namespace VRtist
             Dictionary<int, List<BoneWeight1>> VertexBonesWeights = new Dictionary<int, List<BoneWeight1>>();
             List<Transform[]> bonesArray = new List<Transform[]>();
             List<Matrix4x4[]> bindPoses = new List<Matrix4x4[]>();
+            List<Assimp.MeshAnimationAttachment> blendMeshes = new List<Assimp.MeshAnimationAttachment>();
             //Debug.Log(node.Name + " / " + parent.name);
 
             int previousVertexCount = 0;
@@ -570,6 +573,13 @@ namespace VRtist
                     }
                 }
                 previousVertexCount += currentMesh.VertexCount;
+                if (currentMesh.HasMeshAnimationAttachments)
+                {
+                    for (int i = 0; i < currentMesh.MeshAnimationAttachmentCount; i++)
+                    {
+                        blendMeshes.Add(currentMesh.MeshAnimationAttachments[i]);
+                    }
+                }
             }
 
             List<Assimp.Bone> meshBonesFlat = new List<Assimp.Bone>();
@@ -621,6 +631,37 @@ namespace VRtist
                 meshSize = meshRenderer.bounds.size;
                 bodyMesh = meshRenderer;
             }
+
+            foreach (Assimp.MeshAnimationAttachment blendShape in blendMeshes)
+            {
+                string name = blendShape.Name;
+                float frameWeight = blendShape.Weight;
+                Vector3[] deltaVerts = new Vector3[meshRenderer.sharedMesh.vertexCount];
+                if (blendShape.HasVertices)
+                {
+                    Assimp.Vector3D thisVector = new Assimp.Vector3D();
+                    Vector3 unityVector = new Vector3();
+                    for (int iVert = 0; iVert < blendShape.VertexCount; iVert++)
+                    {
+                        thisVector = blendShape.Vertices[iVert];
+                        unityVector = new Vector3(-thisVector.X, thisVector.Y, thisVector.Z);
+                        deltaVerts[iVert] = unityVector - meshRenderer.sharedMesh.vertices[iVert];
+                    }
+                }
+                Vector3[] deltaNormals = new Vector3[meshRenderer.sharedMesh.normals.Length];
+                if (blendShape.HasNormals)
+                {
+                    Assimp.Vector3D thisVector = new Assimp.Vector3D();
+                    Vector3 unityVector = new Vector3();
+                    for (int iNormals = 0; iNormals < blendShape.Normals.Count; iNormals++)
+                    {
+                        thisVector = blendShape.Normals[iNormals];
+                        unityVector = new Vector3(thisVector.X, thisVector.Y, thisVector.Z);
+                        deltaNormals[iNormals] = meshRenderer.sharedMesh.normals[iNormals] - unityVector;
+                    }
+                }
+                meshRenderer.sharedMesh.AddBlendShapeFrame(name, frameWeight, deltaVerts, deltaNormals, null);
+            }
         }
 
         private void AddSimpleMesh(Assimp.Node node, GameObject parent, Material[] mats, CombineInstance[] combine)
@@ -643,7 +684,7 @@ namespace VRtist
                 go.transform.parent = parent;
 
             GlobalState.Instance.messageBox.ShowMessage("Importing Hierarchy : " + importCount);
-            
+
             // Do not use Assimp Decompose function, it does not work properly
             // use unity decomposition instead
             Matrix4x4 nodeMatrix = new Matrix4x4(
