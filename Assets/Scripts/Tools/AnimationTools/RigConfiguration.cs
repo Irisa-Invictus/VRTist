@@ -23,6 +23,9 @@
 
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
+using System.Net.NetworkInformation;
+using UnityEditor.UI;
 using UnityEngine;
 namespace VRtist
 {
@@ -31,12 +34,29 @@ namespace VRtist
     {
         public Mesh mesh;
         public Material material;
+        public float scale = 0.1f;
 
         private Dictionary<string, JointController> joints = new Dictionary<string, JointController>();
         private Dictionary<string, Transform> bones = new Dictionary<string, Transform>();
+        private Mesh scaledMesh;
+
 
         public void GenerateJoints(RigController rootController, Transform objectRoot, Dictionary<string, Transform> bones)
         {
+            scaledMesh = new Mesh();
+            scaledMesh.vertices = mesh.vertices;
+            scaledMesh.triangles = mesh.triangles;
+            scaledMesh.tangents = mesh.tangents;
+            if (scale != 1)
+            {
+                Vector3[] verts = scaledMesh.vertices;
+                for (int i = 0; i < verts.Length; i++)
+                {
+                    verts[i] *= scale;
+                }
+                scaledMesh.vertices = verts;
+            }
+
             joints = new Dictionary<string, JointController>();
             this.bones = bones;
             List<Transform> path = new List<Transform>();
@@ -78,6 +98,7 @@ namespace VRtist
             directController.LowerAngleBound = -Vector3.one * 360; ;
             directController.UpperAngleBound = Vector3.one * 360;
             directController.FreePosition = false;
+            directController.SetStartPosition();
             MeshCollider collider = current.gameObject.AddComponent<MeshCollider>();
             collider.convex = true;
             directController.gameObject.layer = 21;
@@ -94,8 +115,8 @@ namespace VRtist
             renderer.material = new Material(material);
             directController.MeshRenderer = renderer;
             directController.UseController(false);
-            filter.mesh = mesh;
-            collider.sharedMesh = mesh;
+            filter.mesh = scaledMesh;
+            collider.sharedMesh = scaledMesh;
             collider.isTrigger = true;
         }
     }

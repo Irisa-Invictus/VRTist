@@ -29,10 +29,22 @@ namespace VRtist
 {
     public abstract class RigObjectController : MonoBehaviour
     {
+        public RigObjectController pairedController;
+        public bool isPickerController;
+        public bool isTPose;
+
         internal MeshRenderer meshRenderer;
         internal bool isHovered;
         internal bool isSelected;
         internal int startLayer;
+
+        private Matrix4x4 initialMatrix;
+        [SerializeField]
+        private Vector3 initialLocalPosition;
+        [SerializeField]
+        private Quaternion initialLocalRotation;
+        [SerializeField]
+        private Vector3 initialLocalScale;
 
         public void Start()
         {
@@ -40,6 +52,20 @@ namespace VRtist
             startLayer = gameObject.layer;
         }
 
+        public virtual void ResetPosition(bool applyToPair = true, bool applyToChild = true)
+        {
+            transform.localPosition = initialLocalPosition;
+            transform.localRotation = initialLocalRotation;
+            transform.localScale = initialLocalScale;
+            UpdateController(applyToPair);
+        }
+
+        public virtual void SetStartPosition()
+        {
+            initialLocalPosition = transform.localPosition;
+            initialLocalRotation = transform.localRotation;
+            initialLocalScale = transform.localScale;
+        }
 
         public abstract void OnSelect();
         public abstract void OnDeselect();
@@ -54,6 +80,8 @@ namespace VRtist
 
         public abstract void StartHover();
         public abstract void EndHover();
+
+        public abstract void UpdateController(bool applyToPair = true, bool applyToChild = true);
 
         public abstract List<JointController> GetTargets();
     }

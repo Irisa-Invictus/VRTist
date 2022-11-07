@@ -33,7 +33,6 @@ namespace VRtist
     {
         public VRPickerTool PickerTool;
         public GoalGizmo PickerGizmo;
-        public bool AutoSwitch;
         private bool locked;
         private bool OutAndLocked;
 
@@ -51,8 +50,6 @@ namespace VRtist
         public Dictionary<GameObject, GameObject> CloneToTarget = new Dictionary<GameObject, GameObject>();
         public List<RigConstraintController> controllers = new List<RigConstraintController>();
         public Material Invisible;
-        private Vector3 oldPos;
-        private Vector3 oldScale;
         public GameObject BoxControllerBase;
         public GameObject ControllerBase;
         public Material Red;
@@ -66,34 +63,9 @@ namespace VRtist
             ResetTPose(UseTPose);
         }
 
-        public void ResetHands()
+        public void ResetControllerPosition()
         {
-            SkinnedMeshRenderer[] Renderers = PickerClone.transform.GetComponentsInChildren<SkinnedMeshRenderer>();
-            SkinnedMeshRenderer[] OldRenderers = Target.GetComponentsInChildren<SkinnedMeshRenderer>();
-            int incr = 0;
-            foreach (var item in Renderers)
-            {
-                item.material = OldRenderers[incr].material;
-                item.gameObject.GetComponentInChildren<Transform>().gameObject.SetActive(true);
-                incr++;
-            }
-            Transform[] Rig = PickerClone.gameObject.GetComponentsInChildren<Transform>();
-            //Debug.Log(Rig);
-            foreach (var item in Rig)
-            {
-                if (item.name.Contains("mixamo") && !item.name.Contains("controller"))
-                    item.gameObject.layer = 21;
-                else if (item.name.Contains("controller"))
-                {
-                    item.gameObject.GetComponentInChildren<MeshRenderer>().enabled = true;
-                }
-                else
-                {
-                    item.gameObject.layer = 0;
-                }
-            }
-            PickerClone.transform.localPosition = oldPos;
-            PickerClone.transform.localScale = oldScale;
+            PickerTool.ResetControllers();
         }
 
         public void ColorizeController(GameObject Controller)
@@ -127,9 +99,7 @@ namespace VRtist
             }
         }
 
-
-
-        public void Start()
+        public void OnEnable()
         {
             Selection.onSelectionChanged.AddListener(OnSelectionChange);
             GlobalState.Animation.onFrameEvent.AddListener(OnFrameChange);
@@ -183,7 +153,6 @@ namespace VRtist
                     }
                 }
                 controllers.ForEach(x => x.MoveController());
-
             }
         }
 
@@ -208,11 +177,25 @@ namespace VRtist
 
         public void ResetTPose(bool tPose)
         {
-            foreach (KeyValuePair<GameObject, GameObject> items in CloneToTarget)
+            if (!tPose)
             {
-                if (items.Key == PickerClone) continue;
-                if (tPose) items.Key.transform.localRotation = Quaternion.identity;
-                else items.Key.transform.localRotation = items.Value.transform.localRotation;
+                controllers.ForEach(x =>
+                {
+                    if (x.isPickerController)
+                    {
+                        x.isTPose = false;
+                        x.CopiePairedController();
+                    }
+                });
+                return;
+            }
+            foreach (RigConstraintController controller in controllers)
+            {
+                if (controller.isPickerController)
+                {
+                    controller.ResetPosition(applyToPair: false);
+                    controller.isTPose = true;
+                }
             }
         }
 
@@ -246,7 +229,6 @@ namespace VRtist
 
         private void CreatePickerClone(RigController rigController)
         {
-            Debug.Log("scales : " + rigController.transform.localScale + " " + rigController.transform.lossyScale);
             Target = rigController.gameObject;
             root = rigController.RootObject.gameObject;
 
@@ -255,13 +237,11 @@ namespace VRtist
             PickerClone.transform.localScale = rigController.transform.localScale;
             PickerClone.tag = "Untagged";
 
-            BoxCollider cloneCollider = PickerClone.GetComponent<BoxCollider>();
-            cloneCollider.isTrigger = true;
-            BoxCollider pickerCollider = GetComponent<BoxCollider>();
+            PickerClone.GetComponent<BoxCollider>().enabled = false;
 
-            float xRatio = 0.075f;// pickerCollider.size.x / cloneCollider.size.x;
-            float yRatio = 0.075f;// pickerCollider.size.y / cloneCollider.size.y;
-            float zRatio = 0.075f;// pickerCollider.size.z / cloneCollider.size.z;
+            float xRatio = 3;// pickerCollider.size.x / cloneCollider.size.x;
+            float yRatio = 3;// pickerCollider.size.y / cloneCollider.size.y;
+            float zRatio = 3;// pickerCollider.size.z / cloneCollider.size.z;
 
             PickerClone.transform.localPosition = Vector3.zero;// PickerClone.transform.TransformVector(cloneCollider.center) + pickerCollider.center;
             PickerClone.transform.localScale = new Vector3(-xRatio, yRatio, zRatio);
@@ -272,56 +252,37 @@ namespace VRtist
             body.useGravity = false;
             body.isKinematic = true;
             ResetTPose(UseTPose);
-            //ComputeCollider();
-        }
-
-        private void ComputeCollider()
-        {
-            Vector3 maxValues = Vector3.one * 0.5f;
-            Vector3 minValues = Vector3.one * 0.5f;
-            foreach (KeyValuePair<GameObject, GameObject> pair in CloneToTarget)
-            {
-                Vector3 localPosition = transform.InverseTransformPoint(pair.Key.transform.position);
-                maxValues.x = Mathf.Max(maxValues.x, localPosition.x);
-                maxValues.y = Mathf.Max(maxValues.y, localPosition.y);
-                maxValues.z = Mathf.Max(maxValues.z, localPosition.z);
-                minValues.x = Mathf.Min(minValues.x, localPosition.x);
-                minValues.y = Mathf.Min(minValues.y, localPosition.y);
-                minValues.z = Mathf.Min(minValues.z, localPosition.z);
-            }
-            Debug.Log("max values " + maxValues);
-            Debug.Log("min values " + minValues);
-
-            BoxCollider thisCollider = GetComponent<BoxCollider>();
-            thisCollider.center = new Vector3((maxValues.x + minValues.x) / 2f, (maxValues.y + minValues.y) / 2f, (maxValues.z + minValues.z) / 2f);
-            thisCollider.size = new Vector3(Mathf.Max(maxValues.x, -minValues.x) * 2f, Mathf.Max(maxValues.y, -minValues.y) * 2f, Mathf.Max(maxValues.z, -minValues.z) * 2f);
         }
 
         public void RecursiveMaping(Transform target, Transform clone)
         {
             CloneToTarget.Add(clone.gameObject, target.gameObject);
-
             if (clone.TryGetComponent(out RigConstraintController controller))
             {
-                if (controller.constraints.Length > 0)
-                {
-                    if (clone.TryGetComponent(out MeshRenderer renderer)) renderer.enabled = true;
-                    if (clone.TryGetComponent(out MeshCollider collider)) collider.enabled = true;
-                    controllers.Add(controller);
-                    controllers.Add(target.GetComponent<RigConstraintController>());
-                }
+                if (clone.TryGetComponent(out MeshRenderer renderer)) renderer.enabled = true;
+                if (clone.TryGetComponent(out MeshCollider collider)) collider.enabled = true;
+                controllers.Add(controller);
+                controllers.Add(target.GetComponent<RigConstraintController>());
+                controller.isPickerController = true;
+                controller.isTPose = UseTPose;
+                RigConstraintController originalController = target.GetComponent<RigConstraintController>();
+                controller.pairedController = originalController;
+                originalController.pairedController = controller;
             }
-            if (clone.TryGetComponent<JointController>(out JointController joint))
+            if (clone.TryGetComponent(out JointController joint))
             {
                 joint.LinkJoint = target.GetComponent<JointController>();
                 target.GetComponent<JointController>().LinkJoint = joint;
+
             }
             if (clone.TryGetComponent(out DirectController dController))
             {
                 if (clone.TryGetComponent(out Renderer dRenderer)) dRenderer.enabled = false;
                 if (clone.TryGetComponent(out Collider dCollider)) dCollider.enabled = false;
+                DirectController targetDirect = target.GetComponent<DirectController>();
+                dController.pairedController = targetDirect;
+                targetDirect.pairedController = dController;
             }
-
             for (int i = 0; i < target.childCount; i++)
             {
                 RecursiveMaping(target.GetChild(i), clone.GetChild(i));
@@ -341,30 +302,6 @@ namespace VRtist
             PickerClone = null;
         }
 
-        public void OnTriggerEnter(Collider other)
-        {
-            if (!AutoSwitch) return;
-
-            if (other.TryGetComponent<AnimationTrigger>(out AnimationTrigger animTrigger))
-            {
-                AutoSwitchOnTool();
-            }
-            if (other.TryGetComponent<SelectorTrigger>(out SelectorTrigger selectTrigger))
-            {
-                AutoSwitchOnTool();
-            }
-        }
-
-        public void OnTriggerExit(Collider other)
-        {
-            if (!AutoSwitch) return;
-
-            if (other.TryGetComponent<VRPickerSelector>(out VRPickerSelector picker))
-            {
-                AutoSwitchOffTool();
-            }
-        }
-
         public void AutoSwitchOnTool()
         {
             if (locked)
@@ -373,7 +310,6 @@ namespace VRtist
                 return;
             }
             previousTool = ToolsUIManager.Instance.CurrentTool == "Lobby" ? "Selector" : ToolsUIManager.Instance.CurrentTool;
-            //Debug.Log("switch tool picker");
             ToolsUIManager.Instance.ChangeTool("Picker");
         }
 
@@ -384,7 +320,6 @@ namespace VRtist
                 OutAndLocked = true;
                 return;
             }
-            //Debug.Log("switch tool " + previousTool);
             ToolsUIManager.Instance.ChangeTool(previousTool);
             OutAndLocked = false;
         }

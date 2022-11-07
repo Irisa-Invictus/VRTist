@@ -1,6 +1,8 @@
 ﻿/* MIT License
  *
  * Copyright (c) 2021 Ubisoft
+ * &
+ * Université de Rennes 1 / Invictus Project
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -42,6 +44,11 @@ namespace VRtist
         // Empty
     }
 
+    public class ControllerSelectionChangedEvent : UnityEvent
+    {
+        // Empty
+    }
+
     [Serializable]
     public class HoverChangedEvent : UnityEvent<GameObject, GameObject>
     {
@@ -73,6 +80,13 @@ namespace VRtist
             get { return selectedObjects; }
         }
         public static SelectionChangedEvent onSelectionChanged = new SelectionChangedEvent();
+
+        private static readonly List<RigObjectController> selectedControllers = new List<RigObjectController>();
+        public static List<RigObjectController> SelectedControllers
+        {
+            get { return selectedControllers; }
+        }
+        public static ControllerSelectionChangedEvent OnControllerSelection = new ControllerSelectionChangedEvent();
 
         // Current hovered object (yellow outlined)
         static GameObject hoveredObject = null;

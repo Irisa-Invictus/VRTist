@@ -31,7 +31,6 @@ namespace VRtist
 
     public class PoseProperty
     {
-
         public DirectController controller;
         private Transform transform;
         private Transform rootTransform;
