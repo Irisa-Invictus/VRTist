@@ -246,7 +246,6 @@ namespace VRtist
 
         private void CreatePickerClone(RigController rigController)
         {
-            Debug.Log("scales : " + rigController.transform.localScale + " " + rigController.transform.lossyScale);
             Target = rigController.gameObject;
             root = rigController.RootObject.gameObject;
 
@@ -272,7 +271,6 @@ namespace VRtist
             body.useGravity = false;
             body.isKinematic = true;
             ResetTPose(UseTPose);
-            //ComputeCollider();
         }
 
         private void ComputeCollider()
