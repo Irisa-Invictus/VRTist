@@ -61,6 +61,8 @@ namespace VRtist
         internal List<Quaternion> endRotations = new List<Quaternion>();
         internal List<Vector3> endScales = new List<Vector3>();
 
+        private CommandGroup cmdGroup;
+
         private void ClearCommandData()
         {
             movedObjects = new List<GameObject>();
@@ -137,6 +139,7 @@ namespace VRtist
                 startRotations.Add(constraint.drivenObjectTransform.localRotation);
                 startScales.Add(constraint.drivenObjectTransform.localScale);
             }
+            cmdGroup = new CommandGroup("Add Keyframe");
         }
 
         public override void OnDrag(Transform mouthpiece)
@@ -426,6 +429,7 @@ namespace VRtist
 
         public override void OnRelease()
         {
+            if (cmdGroup == null) cmdGroup = new CommandGroup("Add Keyframe");
             endPositions.Add(this.transform.localPosition);
             endRotations.Add(this.transform.localRotation);
             endScales.Add(this.transform.localScale);
@@ -435,7 +439,6 @@ namespace VRtist
                 endRotations.Add(constraint.drivenObjectTransform.localRotation);
                 endScales.Add(constraint.drivenObjectTransform.localScale);
             }
-            CommandGroup group = new CommandGroup("Add Keyframe");
             new CommandMoveObjects(movedObjects, startPositions, startRotations, startScales, endPositions, endRotations, endScales).Submit();
             if (GlobalState.Animation.autoKeyEnabled)
             {
@@ -449,7 +452,8 @@ namespace VRtist
                     }
                 }
             }
-            group.Submit();
+            cmdGroup.Submit();
+            cmdGroup = null;
             ClearCommandData();
         }
 
@@ -461,6 +465,7 @@ namespace VRtist
 
         public override void OnGrabGizmo(Transform mouthpiece, GoalGizmo gizmo, GoalGizmo.GizmoTool tool, AnimationTool.Vector3Axis axis, bool data)
         {
+            cmdGroup = new CommandGroup("Add Keyframe");
             movedObjects.Add(this.gameObject);
             startPositions.Add(this.transform.localPosition);
             startRotations.Add(this.transform.localRotation);

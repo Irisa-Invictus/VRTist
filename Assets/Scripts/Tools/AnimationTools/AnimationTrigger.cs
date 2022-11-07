@@ -173,7 +173,7 @@ namespace VRtist
             CheckForNull();
             if (hoveredTargets.Count > 0)
             {
-                GlobalState.SetPrimaryControllerVisible(false);
+                animationTool.SetControllerVisible(false);
                 interactingObject = hoveredTargets[0];
                 switch (HoveredTypes[0])
                 {
@@ -228,7 +228,7 @@ namespace VRtist
         }
         public void OnGripRelease()
         {
-            GlobalState.SetPrimaryControllerVisible(true);
+            animationTool.SetControllerVisible(true);
             gripPressed = false;
             switch (CurrentDragged)
             {

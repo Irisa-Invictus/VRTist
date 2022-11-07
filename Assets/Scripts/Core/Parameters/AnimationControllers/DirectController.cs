@@ -42,9 +42,8 @@ namespace VRtist
         public Vector3 UpperPositionBound;
         private PoseManipulation poseManip;
         public List<RigConstraintController> rigControllers = new List<RigConstraintController>();
-        //private List<Vector3> rigControllerInitPosition;
-        //private List<Quaternion> rigControllerInitRotation;
-        //private List<Vector3> rigControllerInitScale;
+
+        private CommandGroup cmdGroup;
 
         public override void OnSelect()
         {
@@ -60,6 +59,7 @@ namespace VRtist
 
         public override void OnGrab(Transform mouthpiece, bool isFK)
         {
+            cmdGroup = new CommandGroup("Add Keyframe");
             if (isFK)
             {
                 poseManip = new FKPoseManipulation(this, mouthpiece);
@@ -80,7 +80,7 @@ namespace VRtist
 
         public override void OnRelease()
         {
-            CommandGroup group = new CommandGroup("Add Keyframe");
+            if (cmdGroup == null) cmdGroup = new CommandGroup("Add Keyframe");
             poseManip.GetCommand().Submit();
             rigControllers.ForEach(x => x.DirectRelease());
             if (GlobalState.Animation.autoKeyEnabled)
@@ -95,7 +95,8 @@ namespace VRtist
                     }
                 }
             }
-            group.Submit();
+            cmdGroup.Submit();
+            cmdGroup = null;
             poseManip = null;
         }
 
@@ -123,6 +124,7 @@ namespace VRtist
         #region Gizmo
         public override void OnGrabGizmo(Transform mouthpiece, GoalGizmo gizmo, GoalGizmo.GizmoTool tool, AnimationTool.Vector3Axis axis, bool isFK)
         {
+            cmdGroup = new CommandGroup("Add Keyframe");
             if (isFK)
             {
                 if (tool == GoalGizmo.GizmoTool.Position)

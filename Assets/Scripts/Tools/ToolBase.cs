@@ -63,7 +63,7 @@ namespace VRtist
             }
         }
 
-        protected void SetControllerVisible(bool visible)
+        public void SetControllerVisible(bool visible)
         {
             GlobalState.SetPrimaryControllerVisible(visible);
             // Mouth piece have the selectorTrigger script attached to them which has to be always enabled
