@@ -41,7 +41,10 @@ namespace VRtist
         public Vector3 LowerPositionBound;
         public Vector3 UpperPositionBound;
         private PoseManipulation poseManip;
-
+        public List<RigConstraintController> rigControllers = new List<RigConstraintController>();
+        //private List<Vector3> rigControllerInitPosition;
+        //private List<Quaternion> rigControllerInitRotation;
+        //private List<Vector3> rigControllerInitScale;
 
         public override void OnSelect()
         {
@@ -65,18 +68,21 @@ namespace VRtist
             {
                 poseManip = new IKPoseManipulation(this, mouthpiece, GetIKOrigin().transform);
             }
+            rigControllers.ForEach(x => x.DirectGrab(transform));
         }
 
         public override void OnDrag(Transform mouthpiece)
         {
             poseManip.SetDestination(mouthpiece);
             poseManip.TrySolver();
+            rigControllers.ForEach(x => x.DirectDrag(transform));
         }
 
         public override void OnRelease()
         {
             CommandGroup group = new CommandGroup("Add Keyframe");
             poseManip.GetCommand().Submit();
+            rigControllers.ForEach(x => x.DirectRelease());
             if (GlobalState.Animation.autoKeyEnabled)
             {
                 RigController rigController = null;

@@ -41,16 +41,19 @@ namespace VRtist
         public List<AnimationKey> keys;
         private int[] cachedKeysIndices;
         private float[] cachedValues;
+        public int BlendShapeIndex;
 
-        public Curve(AnimatableProperty property)
+        public Curve(AnimatableProperty property, int shapeIndex = 0)
         {
             this.property = property;
+            BlendShapeIndex = shapeIndex;
             keys = new List<AnimationKey>();
             cachedKeysIndices = new int[GlobalState.Animation.EndFrame - GlobalState.Animation.StartFrame + 1];
             for (int i = 0; i < cachedKeysIndices.Length; i++)
                 cachedKeysIndices[i] = -1;
             cachedValues = new float[GlobalState.Animation.EndFrame - GlobalState.Animation.StartFrame + 1];
         }
+
 
         public void ClearCache()
         {

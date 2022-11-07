@@ -35,6 +35,7 @@ namespace VRtist
         public Transform RootObject;
         public BoxCollider Collider;
 
+
         public void Start()
         {
             GlobalState.Animation.onFrameEvent.AddListener(RefreshCollider);
@@ -80,5 +81,7 @@ namespace VRtist
                 RecursiveAnimation(curves, child);
             }
         }
+
+
     }
 }

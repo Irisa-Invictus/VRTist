@@ -20,13 +20,12 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  * SOFTWARE.
  */
-
 using System;
 
 namespace Dada.URig.JSONDescriptors
 {
 	[Serializable]
-	public class ObjectAttribute
+	public class ControllerAttribute
 	{
 		public string name;
 		public Range range = new Range();
@@ -35,6 +34,7 @@ namespace Dada.URig.JSONDescriptors
 	[Serializable]
 	public class AimConstraintUpTarget
 	{
+
 		public string[] targetPath;
 	}
 
@@ -49,8 +49,19 @@ namespace Dada.URig.JSONDescriptors
 	}
 
 	[Serializable]
-	public class ObjectAttributesBasedConstraint
+	public class ObjectAttribute
 	{
+		public string name;
+		public float factor = 1f;
+		public float offset = 0f;
+		public Range range = new Range();
+	}
+
+	[Serializable]
+	public class ControllerAttributesBasedConstraint
+	{
+		public string[] drivenObjectPath;
+
 		public ObjectAttribute[] drivenAttributes;
 
 	}
@@ -58,23 +69,39 @@ namespace Dada.URig.JSONDescriptors
 	[Serializable]
 	public class AimConstraint
 	{
+		public string[] drivenObjectPath;
+
 		public float[] vector;
 		// Nullable.
 		public AimConstraintUp up;
 	}
 
 	[Serializable]
-	public class BlendShapeAttribute
+	public class CursorTargetBlendShape
 	{
-		public string name;
+		public string drivenNodeName;
+
+		public string drivenBlendShapeName;
+		public float factor = 1f;
+		public float offset = 0f;
+		public Range range = new Range();
+	}
+
+	[Serializable]
+	public class CursorTargetObject
+	{
+		public string[] drivenObjectPath;
+		public string drivenAttributeName;
+		public float factor = 1f;
+		public float offset = 0f;
 		public Range range = new Range();
 	}
 
 	[Serializable]
 	public class CursorTarget
 	{
-		public BlendShapeAttribute blendShape;
-		public ObjectAttribute @object;
+		public CursorTargetBlendShape blendShape;
+		public CursorTargetObject @object;
 	}
 
 	[Serializable]
@@ -85,20 +112,18 @@ namespace Dada.URig.JSONDescriptors
 	}
 
 	[Serializable]
-	public class CopyAttributesConstraint : ObjectAttributesBasedConstraint
+	public class CopyAttributesConstraint : ControllerAttributesBasedConstraint
 	{
 	}
 
 	[Serializable]
-	public class ParentConstraint : ObjectAttributesBasedConstraint
+	public class ParentConstraint : ControllerAttributesBasedConstraint
 	{
 	}
 
 	[Serializable]
 	public class Constraint
 	{
-		public string[] drivenObjectPath;
-
 		public float weight = 1f;
 		// Nullable.
 
@@ -113,7 +138,7 @@ namespace Dada.URig.JSONDescriptors
 	public class Controller
 	{
 		public string[] path;
-		public ObjectAttribute[] attributes;
+		public ControllerAttribute[] attributes;
 
 		public Constraint[] constraints;
 	}
@@ -124,3 +149,4 @@ namespace Dada.URig.JSONDescriptors
 		public Controller[] controllers;
 	}
 }
+
