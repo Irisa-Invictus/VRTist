@@ -24,8 +24,8 @@ MonoBehaviour:
   uiVolume: 0
   rightHanded: 1
   forcePaletteOpen: 0
-  palettePositionOffset: {x: -0.0000000037252903, y: 0.0000000011140027, z: -0.00000000924636}
-  paletteRotationOffset: {x: 0, y: 0, z: 0, w: 1}
+  palettePositionOffset: {x: 0.000000078231096, y: 0.00000011137545, z: 0.00000015938028}
+  paletteRotationOffset: {x: 0, y: 0, z: 0, w: 1.0000001}
   pinnedPalette: 0
   dopeSheetPosition: {x: 0.51538986, y: 1.9379466, z: 0.85646135}
   dopeSheetRotation: {x: -0.154496, y: 0.39597854, z: -0.045458455, w: 0.9040274}
@@ -94,5 +94,5 @@ MonoBehaviour:
     m_PostInfinity: 2
     m_RotationOrder: 4
   interpolation: 2
-  assetBankDirectory: 
+  assetBankDirectory: C:\Users\amirabil\Documents\VRtist
   lobbyScenePath: 

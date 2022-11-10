@@ -67,7 +67,7 @@ namespace VRtist
         public GameObject interactingObject;
 
         public class DragObjectData
-        { 
+        {
             public GameObject target;
             public Matrix4x4 initialMouthpieceWorldToLocal, initialParentMatrixLocalToWorld, initialParentMatrixWorldToLocal;
             public Vector3 initialPosition, initialScale;
@@ -93,6 +93,9 @@ namespace VRtist
         private bool isSelectingCurve;
         private GameObject hoveredCurve;
 
+        public bool inPickerTool;
+        private bool isPickerActive;
+
         private UIButton GetPoseModeButton(PoseEditMode mode)
         {
             switch (mode)
@@ -114,7 +117,9 @@ namespace VRtist
 
         public void ShowPicker(bool state)
         {
+            if (!state) Picker.PickerTool.SelectEmpty();
             Picker.gameObject.SetActive(state);
+            isPickerActive = state;
         }
 
         protected override void Awake()
@@ -144,6 +149,12 @@ namespace VRtist
                 }
             }
             GlobalState.Instance.onGripWorldEvent.AddListener(OnGripWorld);
+            if (isPickerActive)
+            {
+                if (inPickerTool) inPickerTool = false;
+                else Picker.gameObject.SetActive(true);
+            }
+
         }
         protected override void OnDisable()
         {
@@ -161,6 +172,12 @@ namespace VRtist
                         directController[i].UseController(false);
                     }
                 }
+            }
+            if (!inPickerTool)
+            {
+                Picker.PickerTool.SelectEmpty();
+                Picker.gameObject.SetActive(false);
+
             }
         }
 

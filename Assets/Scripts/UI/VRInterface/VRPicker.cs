@@ -33,7 +33,6 @@ namespace VRtist
     {
         public VRPickerTool PickerTool;
         public GoalGizmo PickerGizmo;
-        public bool AutoSwitch;
         private bool locked;
         private bool OutAndLocked;
 
@@ -254,9 +253,7 @@ namespace VRtist
             PickerClone.transform.localScale = rigController.transform.localScale;
             PickerClone.tag = "Untagged";
 
-            BoxCollider cloneCollider = PickerClone.GetComponent<BoxCollider>();
-            cloneCollider.isTrigger = true;
-            BoxCollider pickerCollider = GetComponent<BoxCollider>();
+            PickerClone.GetComponent<BoxCollider>().enabled = false;
 
             float xRatio = 0.075f;// pickerCollider.size.x / cloneCollider.size.x;
             float yRatio = 0.075f;// pickerCollider.size.y / cloneCollider.size.y;
@@ -271,28 +268,6 @@ namespace VRtist
             body.useGravity = false;
             body.isKinematic = true;
             ResetTPose(UseTPose);
-        }
-
-        private void ComputeCollider()
-        {
-            Vector3 maxValues = Vector3.one * 0.5f;
-            Vector3 minValues = Vector3.one * 0.5f;
-            foreach (KeyValuePair<GameObject, GameObject> pair in CloneToTarget)
-            {
-                Vector3 localPosition = transform.InverseTransformPoint(pair.Key.transform.position);
-                maxValues.x = Mathf.Max(maxValues.x, localPosition.x);
-                maxValues.y = Mathf.Max(maxValues.y, localPosition.y);
-                maxValues.z = Mathf.Max(maxValues.z, localPosition.z);
-                minValues.x = Mathf.Min(minValues.x, localPosition.x);
-                minValues.y = Mathf.Min(minValues.y, localPosition.y);
-                minValues.z = Mathf.Min(minValues.z, localPosition.z);
-            }
-            Debug.Log("max values " + maxValues);
-            Debug.Log("min values " + minValues);
-
-            BoxCollider thisCollider = GetComponent<BoxCollider>();
-            thisCollider.center = new Vector3((maxValues.x + minValues.x) / 2f, (maxValues.y + minValues.y) / 2f, (maxValues.z + minValues.z) / 2f);
-            thisCollider.size = new Vector3(Mathf.Max(maxValues.x, -minValues.x) * 2f, Mathf.Max(maxValues.y, -minValues.y) * 2f, Mathf.Max(maxValues.z, -minValues.z) * 2f);
         }
 
         public void RecursiveMaping(Transform target, Transform clone)
@@ -337,30 +312,6 @@ namespace VRtist
             controllers.Clear();
             Target = null;
             PickerClone = null;
-        }
-
-        public void OnTriggerEnter(Collider other)
-        {
-            if (!AutoSwitch) return;
-
-            if (other.TryGetComponent<AnimationTrigger>(out AnimationTrigger animTrigger))
-            {
-                AutoSwitchOnTool();
-            }
-            if (other.TryGetComponent<SelectorTrigger>(out SelectorTrigger selectTrigger))
-            {
-                AutoSwitchOnTool();
-            }
-        }
-
-        public void OnTriggerExit(Collider other)
-        {
-            if (!AutoSwitch) return;
-
-            if (other.TryGetComponent<VRPickerSelector>(out VRPickerSelector picker))
-            {
-                AutoSwitchOffTool();
-            }
         }
 
         public void AutoSwitchOnTool()
