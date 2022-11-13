@@ -34,12 +34,31 @@ namespace VRtist
         internal bool isSelected;
         internal int startLayer;
 
+        private Matrix4x4 initialMatrix;
+        private Vector3 initialLocalPosition;
+        private Quaternion initialLocalRotation;
+        private Vector3 initialLocalScale;
+
         public void Start()
         {
             meshRenderer = GetComponentInChildren<MeshRenderer>();
             startLayer = gameObject.layer;
         }
 
+        public virtual void ResetPosition(bool applyToPair = false)
+        {
+            transform.localPosition = initialLocalPosition;
+            transform.localRotation = initialLocalRotation;
+            transform.localScale = initialLocalScale;
+            UpdateController(!applyToPair);
+        }
+
+        public virtual void SetStartPosition()
+        {
+            initialLocalPosition = transform.localPosition;
+            initialLocalRotation = transform.localRotation;
+            initialLocalScale = transform.localScale;
+        }
 
         public abstract void OnSelect();
         public abstract void OnDeselect();
@@ -54,6 +73,8 @@ namespace VRtist
 
         public abstract void StartHover();
         public abstract void EndHover();
+
+        public abstract void UpdateController(bool fromPair = false);
 
         public abstract List<JointController> GetTargets();
     }

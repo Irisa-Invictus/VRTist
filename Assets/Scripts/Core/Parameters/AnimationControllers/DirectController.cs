@@ -57,6 +57,10 @@ namespace VRtist
             gameObject.layer = startLayer;
         }
 
+        public override void UpdateController(bool fromPair = false)
+        {
+        }
+
         public override void OnGrab(Transform mouthpiece, bool isFK)
         {
             cmdGroup = new CommandGroup("Add Keyframe");

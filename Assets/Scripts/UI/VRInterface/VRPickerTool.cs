@@ -43,10 +43,6 @@ namespace VRtist
         private List<RigObjectController> selectedControllers = new List<RigObjectController>();
         private PoseManipulation poseManip;
 
-        public static UnityEvent<JointController> SelectedGoal = new UnityEvent<JointController>();
-        public static UnityEvent<JointController> UnselectedGoal = new UnityEvent<JointController>();
-        int incr = 0;
-
         private RigObjectController draggedController;
 
         protected override void DoUpdate()
@@ -102,6 +98,44 @@ namespace VRtist
         {
             selectedControllers.ForEach(x => UnselectController(x));
             selectedControllers.Clear();
+        }
+
+        public void ResetControllers()
+        {
+            List<Vector3> startPositions = new List<Vector3>();
+            List<Vector3> endPositions = new List<Vector3>();
+            List<Quaternion> startRotations = new List<Quaternion>();
+            List<Quaternion> endRotations = new List<Quaternion>();
+            List<Vector3> startScales = new List<Vector3>();
+            List<Vector3> endScales = new List<Vector3>();
+            if (selectedControllers.Count > 0)
+            {
+                selectedControllers.ForEach(x =>
+                {
+                    startPositions.Add(x.transform.localPosition);
+                    startRotations.Add(x.transform.localRotation);
+                    startScales.Add(x.transform.localScale);
+                    x.ResetPosition(true);
+                    endPositions.Add(x.transform.localPosition);
+                    endRotations.Add(x.transform.localRotation);
+                    endScales.Add(x.transform.localScale);
+                });
+                new CommandMoveControllers(selectedControllers, startPositions, startRotations, startScales, endPositions, endRotations, endScales).Submit();
+            }
+            else
+            {
+                Picker.controllers.ForEach(x =>
+                {
+                    startPositions.Add(x.transform.localPosition);
+                    startRotations.Add(x.transform.localRotation);
+                    startScales.Add(x.transform.localScale);
+                    x.ResetPosition(true);
+                    endPositions.Add(x.transform.localPosition);
+                    endRotations.Add(x.transform.localRotation);
+                    endScales.Add(x.transform.localScale);
+                });
+                new CommandMoveControllers(Picker.controllers, startPositions, startRotations, startScales, endPositions, endRotations, endScales).Submit();
+            }
         }
 
         #region Actuator

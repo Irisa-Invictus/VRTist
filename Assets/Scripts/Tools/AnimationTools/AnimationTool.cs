@@ -122,6 +122,21 @@ namespace VRtist
             isPickerActive = state;
         }
 
+        public void ResetPosition()
+        {
+            List<Vector3> startPosition = new List<Vector3>();
+            List<Quaternion> startRotation = new List<Quaternion>();
+            List<Vector3> startScale = new List<Vector3>();
+            List<Vector3> endPosition = new List<Vector3>();
+            List<Quaternion> endRotation = new List<Quaternion>();
+            List<Vector3> endScale = new List<Vector3>();
+            SelectedControllers.ForEach(x =>
+            {
+                x.ResetPosition();
+            });
+            new CommandMoveControllers(SelectedControllers, startPosition, startRotation, startScale, endPosition, endRotation, endScale).Submit();
+        }
+
         protected override void Awake()
         {
             base.Awake();

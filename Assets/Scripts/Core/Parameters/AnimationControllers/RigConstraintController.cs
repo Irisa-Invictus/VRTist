@@ -32,7 +32,6 @@ namespace VRtist
 {
     public class RigConstraintController : RigObjectController
     {
-
         public Range xTranslationRange;
         public Range yTranslationRange;
         public Range zTranslationRange;
@@ -53,26 +52,15 @@ namespace VRtist
         internal Matrix4x4 initialTransformMatrix;
         internal Matrix4x4 InitialTRS;
 
-        public List<GameObject> movedObjects = new List<GameObject>();
-        internal List<Vector3> startPositions = new List<Vector3>();
-        internal List<Quaternion> startRotations = new List<Quaternion>();
-        internal List<Vector3> startScales = new List<Vector3>();
-        internal List<Vector3> endPositions = new List<Vector3>();
-        internal List<Quaternion> endRotations = new List<Quaternion>();
-        internal List<Vector3> endScales = new List<Vector3>();
+        private Vector3 startPosition, endPosition;
+        private Quaternion startRotation, endRotation;
+        private Vector3 startScale, endScale;
 
         private CommandGroup cmdGroup;
 
-        private void ClearCommandData()
-        {
-            movedObjects = new List<GameObject>();
-            startPositions = new List<Vector3>();
-            startRotations = new List<Quaternion>();
-            startScales = new List<Vector3>();
-            endPositions = new List<Vector3>();
-            endRotations = new List<Quaternion>();
-            endScales = new List<Vector3>();
-        }
+        public RigObjectController pairedController;
+        public bool isPickerController;
+
 
         public override void StartHover()
         {
@@ -99,10 +87,10 @@ namespace VRtist
         public void DirectGrab(Transform controller)
         {
             InitMatrix(controller);
-            movedObjects.Add(this.gameObject);
-            startPositions.Add(this.transform.localPosition);
-            startRotations.Add(this.transform.localRotation);
-            startScales.Add(this.transform.localScale);
+
+            startPosition = transform.localPosition;
+            startRotation = transform.localRotation;
+            startScale = transform.localScale;
         }
         public void DirectDrag(Transform controller)
         {
@@ -117,28 +105,21 @@ namespace VRtist
         }
         public void DirectRelease()
         {
-            endPositions.Add(this.transform.localPosition);
-            endRotations.Add(this.transform.localRotation);
-            endScales.Add(this.transform.localScale);
-            new CommandMoveObjects(movedObjects, startPositions, startRotations, startScales, endPositions, endRotations, endScales).Submit();
+            endPosition = transform.localPosition;
+            endRotation = transform.localRotation;
+            endScale = transform.localScale;
 
-            ClearCommandData();
+            new CommandMoveObjects(new List<GameObject>() { gameObject }, new List<Vector3>() { startPosition }, new List<Quaternion>() { startRotation }, new List<Vector3>() { startScale }
+            , new List<Vector3>() { endPosition }, new List<Quaternion>() { endRotation }, new List<Vector3>() { endScale });
         }
 
         public override void OnGrab(Transform mouthpiece, bool data)
         {
             InitMatrix(mouthpiece);
-            movedObjects.Add(this.gameObject);
-            startPositions.Add(this.transform.localPosition);
-            startRotations.Add(this.transform.localRotation);
-            startScales.Add(this.transform.localScale);
-            foreach (Dada.URig.Descriptors.Constraint constraint in constraints)
-            {
-                movedObjects.Add(constraint.drivenObjectTransform.gameObject);
-                startPositions.Add(constraint.drivenObjectTransform.localPosition);
-                startRotations.Add(constraint.drivenObjectTransform.localRotation);
-                startScales.Add(constraint.drivenObjectTransform.localScale);
-            }
+
+            startPosition = transform.localPosition;
+            startRotation = transform.localRotation;
+            startScale = transform.localScale;
             cmdGroup = new CommandGroup("Add Keyframe");
         }
 
@@ -153,7 +134,13 @@ namespace VRtist
             transform.localRotation = controllerRotation;
             transform.localScale = controllerScale;
 
+            UpdateController();
+        }
+
+        public override void UpdateController(bool fromPair = false)
+        {
             ApplyConstraints();
+            if (pairedController != null && !fromPair) pairedController.UpdateController(true);
         }
 
         private void ApplyConstraints()
@@ -430,31 +417,18 @@ namespace VRtist
         public override void OnRelease()
         {
             if (cmdGroup == null) cmdGroup = new CommandGroup("Add Keyframe");
-            endPositions.Add(this.transform.localPosition);
-            endRotations.Add(this.transform.localRotation);
-            endScales.Add(this.transform.localScale);
-            foreach (Dada.URig.Descriptors.Constraint constraint in constraints)
-            {
-                endPositions.Add(constraint.drivenObjectTransform.localPosition);
-                endRotations.Add(constraint.drivenObjectTransform.localRotation);
-                endScales.Add(constraint.drivenObjectTransform.localScale);
-            }
-            new CommandMoveObjects(movedObjects, startPositions, startRotations, startScales, endPositions, endRotations, endScales).Submit();
+            endPosition = transform.localPosition;
+            endRotation = transform.localRotation;
+            endScale = transform.localScale;
+
+            new CommandMoveControllers(this, startPosition, startRotation, startScale, endPosition, endRotation, endScale);
             if (GlobalState.Animation.autoKeyEnabled)
             {
-                RigController rigController = null;
-                foreach (GameObject item in movedObjects)
-                {
-                    if (item.TryGetComponent(out JointController itemController) && itemController.RootController != rigController)
-                    {
-                        rigController = itemController.RootController;
-                        new CommandAddKeyframes(rigController.gameObject, true).Submit();
-                    }
-                }
+                new CommandAddKeyframes(gameObject, true).Submit();
             }
+
             cmdGroup.Submit();
             cmdGroup = null;
-            ClearCommandData();
         }
 
         private Vector3 acAxis;
@@ -466,18 +440,9 @@ namespace VRtist
         public override void OnGrabGizmo(Transform mouthpiece, GoalGizmo gizmo, GoalGizmo.GizmoTool tool, AnimationTool.Vector3Axis axis, bool data)
         {
             cmdGroup = new CommandGroup("Add Keyframe");
-            movedObjects.Add(this.gameObject);
-            startPositions.Add(this.transform.localPosition);
-            startRotations.Add(this.transform.localRotation);
-            startScales.Add(this.transform.localScale);
-            gizmoTransform = gizmo.transform;
-            foreach (Dada.URig.Descriptors.Constraint constraint in constraints)
-            {
-                movedObjects.Add(constraint.drivenObjectTransform.gameObject);
-                startPositions.Add(constraint.drivenObjectTransform.localPosition);
-                startRotations.Add(constraint.drivenObjectTransform.localRotation);
-                startScales.Add(constraint.drivenObjectTransform.localScale);
-            }
+            startPosition = transform.localPosition;
+            startRotation = transform.localRotation;
+            startScale = transform.localScale;
             gizmoTool = tool;
 
             switch (axis)
@@ -525,7 +490,7 @@ namespace VRtist
                 transform.localPosition = targetPosition;
             }
 
-            ApplyConstraints();
+            UpdateController();
         }
         public override void OnReleaseGizmo()
         {

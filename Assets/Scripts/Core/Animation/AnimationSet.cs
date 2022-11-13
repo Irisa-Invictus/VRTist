@@ -136,15 +136,8 @@ namespace VRtist
                 if (cameraAperture != -1)
                     controller.aperture = cameraAperture;
             }
-            if (blendShapes.Count > 0)
-            {
-                SkinnedMeshRenderer skinMesh = transform.GetComponent<SkinnedMeshRenderer>();
-                foreach (KeyValuePair<int, float> shape in blendShapes)
-                {
-                    if (shape.Value != -1)
-                        skinMesh.SetBlendShapeWeight(shape.Key, shape.Value);
-                }
-            }
+
+            if (transform.TryGetComponent(out RigObjectController rigObject)) rigObject.UpdateController();
         }
 
         /// <summary>

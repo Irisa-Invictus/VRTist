@@ -158,6 +158,7 @@ namespace Dada.URig
                     if (childTransform.TryGetComponent(out MeshRenderer renderer)) renderer.enabled = false;
                     if (childTransform.TryGetComponent(out Collider collider)) collider.enabled = false;
                     controller.gameObject.tag = "Controller";
+                    controller.SetStartPosition();
 
                     InitializeLimitRanges(controller);
                     foreach (JSONDescriptors.ControllerAttribute attributeDescriptor in objectDescriptor.attributes)
