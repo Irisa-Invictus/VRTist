@@ -57,7 +57,7 @@ namespace VRtist
             gameObject.layer = startLayer;
         }
 
-        public override void UpdateController(bool fromPair = false)
+        public override void UpdateController(bool applyToPair = true, bool applyToChild = true)
         {
         }
 

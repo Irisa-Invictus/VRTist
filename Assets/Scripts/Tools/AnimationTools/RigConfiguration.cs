@@ -78,6 +78,7 @@ namespace VRtist
             directController.LowerAngleBound = -Vector3.one * 360; ;
             directController.UpperAngleBound = Vector3.one * 360;
             directController.FreePosition = false;
+            directController.SetStartPosition();
             MeshCollider collider = current.gameObject.AddComponent<MeshCollider>();
             collider.convex = true;
             directController.gameObject.layer = 21;

@@ -108,34 +108,37 @@ namespace VRtist
             List<Quaternion> endRotations = new List<Quaternion>();
             List<Vector3> startScales = new List<Vector3>();
             List<Vector3> endScales = new List<Vector3>();
+            List<RigObjectController> originalControllers = new List<RigObjectController>();
             if (selectedControllers.Count > 0)
             {
                 selectedControllers.ForEach(x =>
                 {
-                    startPositions.Add(x.transform.localPosition);
-                    startRotations.Add(x.transform.localRotation);
-                    startScales.Add(x.transform.localScale);
-                    x.ResetPosition(true);
-                    endPositions.Add(x.transform.localPosition);
-                    endRotations.Add(x.transform.localRotation);
-                    endScales.Add(x.transform.localScale);
+                    RigObjectController original = x.pairedController;
+                    originalControllers.Add(original);
+                    startPositions.Add(original.transform.localPosition);
+                    startRotations.Add(original.transform.localRotation);
+                    startScales.Add(original.transform.localScale);
+                    x.ResetPosition();
+                    endPositions.Add(original.transform.localPosition);
+                    endRotations.Add(original.transform.localRotation);
+                    endScales.Add(original.transform.localScale);
                 });
-                new CommandMoveControllers(selectedControllers, startPositions, startRotations, startScales, endPositions, endRotations, endScales).Submit();
             }
             else
             {
                 Picker.controllers.ForEach(x =>
                 {
+                    originalControllers.Add(x.pairedController);
                     startPositions.Add(x.transform.localPosition);
                     startRotations.Add(x.transform.localRotation);
                     startScales.Add(x.transform.localScale);
-                    x.ResetPosition(true);
+                    x.ResetPosition();
                     endPositions.Add(x.transform.localPosition);
                     endRotations.Add(x.transform.localRotation);
                     endScales.Add(x.transform.localScale);
                 });
-                new CommandMoveControllers(Picker.controllers, startPositions, startRotations, startScales, endPositions, endRotations, endScales).Submit();
             }
+            new CommandMoveControllers(originalControllers, startPositions, startRotations, startScales, endPositions, endRotations, endScales).Submit();
         }
 
         #region Actuator
@@ -261,6 +264,7 @@ namespace VRtist
             ScaleValue = 1f;
             initialScale = Picker.PickerGizmo.transform.localScale;
         }
+
         public void GizmoDrag(Transform mouthpiece, Vector2 axis)
         {
             Matrix4x4 transformation = mouthpiece.localToWorldMatrix * initialMouthWorldToLocal;

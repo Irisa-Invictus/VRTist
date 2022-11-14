@@ -177,6 +177,7 @@ namespace VRtist
 
         public void ResetTPose(bool tPose)
         {
+            if (!tPose) return;
             foreach (RigConstraintController controller in controllers)
             {
                 controller.ResetPosition();

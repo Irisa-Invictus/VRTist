@@ -53,6 +53,7 @@ namespace VRtist
         private int importCount;
 
         public RigConfiguration rigConfiguration;
+        public float ImportScale = 1;
 
         // We consider that half of the total time is spent inside the assimp engine
         // A quarter of the total time is necessary to create meshes
@@ -490,7 +491,7 @@ namespace VRtist
             }
         }
 
-        private void AssignMeshes(Assimp.Node node, GameObject parent)
+        private void AssignMeshes(Assimp.Node node, GameObject parent, Matrix4x4 meshOffset)
         {
             if (node.MeshIndices.Count == 0)
                 return;
@@ -508,7 +509,7 @@ namespace VRtist
             foreach (int indice in node.MeshIndices)
             {
                 combine[i].mesh = meshes[indice].mesh;
-                combine[i].transform = Matrix4x4.identity;
+                combine[i].transform = meshOffset;
                 mats[i] = materials[meshes[indice].materialIndex];
                 i++;
             }
@@ -693,7 +694,6 @@ namespace VRtist
                 new Vector4(node.Transform.A3, node.Transform.B3, node.Transform.C3, node.Transform.D3),
                 new Vector4(node.Transform.A4, node.Transform.B4, node.Transform.C4, node.Transform.D4)
                 );
-
             cumulMatrix = cumulMatrix * nodeMatrix;
             if (node.Name.Contains("$AssimpFbx$") && node.HasChildren)
             {
@@ -705,7 +705,7 @@ namespace VRtist
             else
             {
                 Maths.DecomposeMatrix(cumulMatrix, out Vector3 cumulPosition, out Quaternion cumulRotation, out Vector3 cumulScale);
-                AssignMeshes(node, go);
+                AssignMeshes(node, go, Matrix4x4.identity);
                 if (node.Parent != null)
                 {
                     go.transform.localPosition = cumulPosition;
@@ -760,7 +760,7 @@ namespace VRtist
 
             node.Transform.Decompose(out Assimp.Vector3D scale1, out Assimp.Quaternion rot, out Assimp.Vector3D trans);
 
-            AssignMeshes(node, go);
+            AssignMeshes(node, go, Matrix4x4.identity);
 
             if (node.Parent != null)
             {

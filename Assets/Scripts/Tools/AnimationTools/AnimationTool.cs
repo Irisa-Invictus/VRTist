@@ -130,11 +130,43 @@ namespace VRtist
             List<Vector3> endPosition = new List<Vector3>();
             List<Quaternion> endRotation = new List<Quaternion>();
             List<Vector3> endScale = new List<Vector3>();
-            SelectedControllers.ForEach(x =>
+            if (SelectedControllers.Count > 0)
             {
-                x.ResetPosition();
-            });
-            new CommandMoveControllers(SelectedControllers, startPosition, startRotation, startScale, endPosition, endRotation, endScale).Submit();
+                SelectedControllers.ForEach(x =>
+                {
+                    startPosition.Add(x.transform.localPosition);
+                    startRotation.Add(x.transform.localRotation);
+                    startScale.Add(x.transform.localScale);
+                    x.ResetPosition();
+                    endPosition.Add(x.transform.localPosition);
+                    endRotation.Add(x.transform.localRotation);
+                    endScale.Add(x.transform.localScale);
+                });
+                new CommandMoveControllers(SelectedControllers, startPosition, startRotation, startScale, endPosition, endRotation, endScale).Submit();
+            }
+            else
+            {
+                List<RigObjectController> movedControllers = new List<RigObjectController>();
+                foreach (GameObject select in Selection.SelectedObjects)
+                {
+                    if (select.TryGetComponent<RigController>(out RigController controller))
+                    {
+                        RigObjectController[] rigControllers = controller.GetComponentsInChildren<RigObjectController>();
+                        for (int i = 0; i < rigControllers.Length; i++)
+                        {
+                            movedControllers.Add(rigControllers[i]);
+                            startPosition.Add(rigControllers[i].transform.localPosition);
+                            startRotation.Add(rigControllers[i].transform.localRotation);
+                            startScale.Add(rigControllers[i].transform.localScale);
+                            rigControllers[i].ResetPosition(applyToChild: false);
+                            endPosition.Add(rigControllers[i].transform.localPosition);
+                            endRotation.Add(rigControllers[i].transform.localRotation);
+                            endScale.Add(rigControllers[i].transform.localScale);
+                        }
+
+                    }
+                }
+            }
         }
 
         protected override void Awake()
@@ -192,7 +224,6 @@ namespace VRtist
             {
                 Picker.PickerTool.SelectEmpty();
                 Picker.gameObject.SetActive(false);
-
             }
         }
 

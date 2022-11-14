@@ -58,8 +58,7 @@ namespace VRtist
 
         private CommandGroup cmdGroup;
 
-        public RigObjectController pairedController;
-        public bool isPickerController;
+        
 
 
         public override void StartHover()
@@ -137,10 +136,24 @@ namespace VRtist
             UpdateController();
         }
 
-        public override void UpdateController(bool fromPair = false)
+        public override void UpdateController(bool applyToPair = true, bool applyToChild = true)
         {
             ApplyConstraints();
-            if (pairedController != null && !fromPair) pairedController.UpdateController(true);
+            if (pairedController != null && applyToPair)
+            {
+                pairedController.transform.localPosition = transform.localPosition;
+                pairedController.transform.localRotation = transform.localRotation;
+                pairedController.transform.localScale = transform.localScale;
+                pairedController.UpdateController(false, applyToChild);
+            }
+            if (applyToChild)
+            {
+                RigConstraintController[] childs = GetComponentsInChildren<RigConstraintController>();
+                foreach (RigConstraintController child in childs)
+                {
+                    child.UpdateController(applyToChild: false);
+                }
+            }
         }
 
         private void ApplyConstraints()
@@ -421,7 +434,7 @@ namespace VRtist
             endRotation = transform.localRotation;
             endScale = transform.localScale;
 
-            new CommandMoveControllers(this, startPosition, startRotation, startScale, endPosition, endRotation, endScale);
+            new CommandMoveControllers(this, startPosition, startRotation, startScale, endPosition, endRotation, endScale).Submit();
             if (GlobalState.Animation.autoKeyEnabled)
             {
                 new CommandAddKeyframes(gameObject, true).Submit();
