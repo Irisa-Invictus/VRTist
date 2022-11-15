@@ -44,6 +44,7 @@ namespace VRtist
         UIButton constantInterpolationButton = null;
         UIButton linearInterpolationButton = null;
         UIButton bezierInterpolationButton = null;
+        UICheckbox videoPlayerBox;
         Color constantInterpolationColor;
         Color linearInterpolationColor;
         Color bezierInterpolationColor;
@@ -62,6 +63,21 @@ namespace VRtist
 
         private GameObject keyframePrefab;
         private GameObject currentObject = null;
+
+        public GameObject VideoPlayer;
+
+        private bool showVideoPlayer;
+        public bool ShowVideoPlayer
+        {
+            get { return showVideoPlayer; }
+            set
+            {
+                showVideoPlayer = value;
+                if (videoPlayerBox == null) videoPlayerBox = mainPanel.Find("VideoPlayer").GetComponent<UICheckbox>();
+                VideoPlayer.SetActive(showVideoPlayer);
+                if (videoPlayerBox != null) videoPlayerBox.isChecked = showVideoPlayer;
+            }
+        }
 
         public class AnimKey
         {
@@ -86,6 +102,7 @@ namespace VRtist
                 currentRange = mainPanel.Find("Range").GetComponent<UIRange>();
                 currentFrameLabel = mainPanel.Find("CurrentFrameLabel").GetComponent<UILabel>();
                 titleBar = transform.parent.Find("TitleBar").GetComponent<UILabel>();
+                videoPlayerBox = mainPanel.Find("VideoPlayer").GetComponent<UICheckbox>();
                 keyframePrefab = Resources.Load<GameObject>("Prefabs/UI/DOPESHEET/Keyframe");
 
                 constantInterpolationButton = mainPanel.Find("Constant").GetComponent<UIButton>();
@@ -139,6 +156,11 @@ namespace VRtist
         {
             GlobalState.Settings.interpolation = Interpolation.Bezier;
             UpdateInterpolation();
+        }
+
+        public void OnShowVideoPlayer()
+        {
+            ShowVideoPlayer = !ShowVideoPlayer;
         }
 
         public void OnEditCurrentFrame()

@@ -177,10 +177,25 @@ namespace VRtist
 
         public void ResetTPose(bool tPose)
         {
-            if (!tPose) return;
+            if (!tPose)
+            {
+                controllers.ForEach(x =>
+                {
+                    if (x.isPickerController)
+                    {
+                        x.isTPose = false;
+                        x.CopiePairedController();
+                    }
+                });
+                return;
+            }
             foreach (RigConstraintController controller in controllers)
             {
-                controller.ResetPosition();
+                if (controller.isPickerController)
+                {
+                    controller.ResetPosition(applyToPair: false);
+                    controller.isTPose = true;
+                }
             }
         }
 
@@ -249,6 +264,7 @@ namespace VRtist
                 controllers.Add(controller);
                 controllers.Add(target.GetComponent<RigConstraintController>());
                 controller.isPickerController = true;
+                controller.isTPose = UseTPose;
                 RigConstraintController originalController = target.GetComponent<RigConstraintController>();
                 controller.pairedController = originalController;
                 originalController.pairedController = controller;

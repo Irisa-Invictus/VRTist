@@ -31,6 +31,7 @@ namespace VRtist
     {
         public RigObjectController pairedController;
         public bool isPickerController;
+        public bool isTPose;
 
         internal MeshRenderer meshRenderer;
         internal bool isHovered;

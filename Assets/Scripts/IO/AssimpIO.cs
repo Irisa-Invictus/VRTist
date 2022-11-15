@@ -130,7 +130,7 @@ namespace VRtist
                 var aScene = ctx.ImportFile(fileName,
                     Assimp.PostProcessSteps.Triangulate |
                     Assimp.PostProcessSteps.GenerateNormals |
-                    Assimp.PostProcessSteps.GenerateUVCoords);
+                    Assimp.PostProcessSteps.GenerateUVCoords | Assimp.PostProcessSteps.MakeLeftHanded);
                 CreateUnityDataFromAssimp(fileName, aScene, root).MoveNext();
                 Clear();
                 taskData.Remove(d);
@@ -645,7 +645,7 @@ namespace VRtist
                     for (int iVert = 0; iVert < blendShape.VertexCount; iVert++)
                     {
                         thisVector = blendShape.Vertices[iVert];
-                        unityVector = new Vector3(-thisVector.X, thisVector.Y, thisVector.Z);
+                        unityVector = new Vector3(thisVector.X, thisVector.Y, thisVector.Z);
                         deltaVerts[iVert] = unityVector - meshRenderer.sharedMesh.vertices[iVert];
                     }
                 }
@@ -872,7 +872,7 @@ namespace VRtist
                 objectRoot.name = Utils.CreateUniqueName(Path.GetFileNameWithoutExtension(fileName));
                 objectRoot.transform.parent = root;
                 objectRoot.transform.localPosition = Vector3.zero;
-                objectRoot.transform.localScale = new Vector3(-1, 1, 1);
+                objectRoot.transform.localScale = new Vector3(1, 1, 1);
             }
 
             importCount = 1;

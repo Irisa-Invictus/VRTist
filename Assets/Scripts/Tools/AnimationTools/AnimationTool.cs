@@ -163,7 +163,6 @@ namespace VRtist
                             endRotation.Add(rigControllers[i].transform.localRotation);
                             endScale.Add(rigControllers[i].transform.localScale);
                         }
-
                     }
                 }
             }

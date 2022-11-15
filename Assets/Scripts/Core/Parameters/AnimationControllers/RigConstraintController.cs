@@ -58,7 +58,7 @@ namespace VRtist
 
         private CommandGroup cmdGroup;
 
-        
+
 
 
         public override void StartHover()
@@ -124,22 +124,51 @@ namespace VRtist
 
         public override void OnDrag(Transform mouthpiece)
         {
+            if (isTPose) return;
             Matrix4x4 transformation = mouthpiece.localToWorldMatrix * initialMouthMatrix;
             Matrix4x4 transformed = InitialParentMatrixWorldToLocal *
                     transformation * InitialParentMatrix *
                     InitialTRS;
             Maths.DecomposeMatrix(transformed, out Vector3 controllerPosition, out Quaternion controllerRotation, out Vector3 controllerScale);
-            transform.localPosition = controllerPosition;
-            transform.localRotation = controllerRotation;
-            transform.localScale = controllerScale;
+            transform.localPosition = ClampPosition(controllerPosition);
+            transform.localRotation = ClampRotation(controllerRotation);
+            transform.localScale = ClampScale(controllerScale);
+
 
             UpdateController();
         }
 
+        private Vector3 ClampPosition(Vector3 target)
+        {
+            float x = Mathf.Clamp(target.x, xTranslationRange.minimum, xTranslationRange.maximum);
+            float y = Mathf.Clamp(target.y, yTranslationRange.minimum, yTranslationRange.maximum);
+            float z = Mathf.Clamp(target.z, zTranslationRange.minimum, zTranslationRange.maximum);
+            return new Vector3(x, y, z);
+        }
+
+        private Quaternion ClampRotation(Quaternion target)
+        {
+            Vector3 euler = target.eulerAngles;// Maths.ThreeAxisRotation(target);
+            euler.x = Mathf.Clamp(euler.x, xRotationRange.minimum, xRotationRange.maximum);
+            euler.y = Mathf.Clamp(euler.y, yRotationRange.minimum, yRotationRange.maximum);
+            euler.z = Mathf.Clamp(euler.z, zRotationRange.minimum, zRotationRange.maximum);
+
+            return Quaternion.Euler(euler);
+        }
+
+        private Vector3 ClampScale(Vector3 target)
+        {
+            float x = Mathf.Clamp(target.x, xScaleRange.minimum, xScaleRange.maximum);
+            float y = Mathf.Clamp(target.y, yScaleRange.minimum, yScaleRange.maximum);
+            float z = Mathf.Clamp(target.z, zScaleRange.minimum, zScaleRange.maximum);
+            return new Vector3(x, y, z);
+        }
+
         public override void UpdateController(bool applyToPair = true, bool applyToChild = true)
         {
+            if (isTPose) return;
             ApplyConstraints();
-            if (pairedController != null && applyToPair)
+            if (pairedController != null && applyToPair && !pairedController.isTPose)
             {
                 pairedController.transform.localPosition = transform.localPosition;
                 pairedController.transform.localRotation = transform.localRotation;
@@ -151,9 +180,18 @@ namespace VRtist
                 RigConstraintController[] childs = GetComponentsInChildren<RigConstraintController>();
                 foreach (RigConstraintController child in childs)
                 {
-                    child.UpdateController(applyToChild: false);
+                    child.UpdateController(applyToPair: applyToPair, applyToChild: false);
                 }
             }
+        }
+
+        public void CopiePairedController()
+        {
+            if (pairedController == null) return;
+            transform.localPosition = pairedController.transform.localPosition;
+            transform.localRotation = pairedController.transform.localRotation;
+            transform.localScale = pairedController.transform.localScale;
+            UpdateController(applyToPair: false, applyToChild: false);
         }
 
         private void ApplyConstraints()
@@ -215,17 +253,9 @@ namespace VRtist
         {
             Dada.URig.Descriptors.ParentConstraint constraintVariant = constraint.parent;
 
-            //Matrix4x4 worldMatrix = constraint.drivenObjectTransform.parent.worldToLocalMatrix * transform.localToWorldMatrix * constraintVariant.localToTargetMatrix;
             Matrix4x4 localMatrix = constraint.drivenObjectTransform.parent.worldToLocalMatrix * transform.localToWorldMatrix * constraintVariant.localTargetMatrix;
             Maths.DecomposeMatrix(localMatrix, out Vector3 localPosition, out Quaternion localRotation, out Vector3 localScale);
 
-            //constraint.drivenObjectTransform.localEulerAngles = Clamp(worldRotation.eulerAngles, constraintVariant.xRotationRange, constraintVariant.yRotationRange, constraintVariant.zRotationRange);
-            //constraint.drivenObjectTransform.localPosition = Clamp(worldPosition, constraintVariant.xTranslationRange, constraintVariant.yTranslationRange, constraintVariant.zTranslationRange);
-
-            //Dada.URig.Descriptors.ParentConstraint constraintVariant = constraint.parent;
-
-            //Matrix4x4 worldMatrix = constraintVariant.localToTargetMatrix * transform.localToWorldMatrix;
-            //Maths.DecomposeMatrix(worldMatrix, out Vector3 worldPosition, out Quaternion worldRotation, out Vector3 worldScale);
             Vector3 worldEulerAngles = localRotation.eulerAngles;
 
             constraint.drivenObjectTransform.localEulerAngles = Clamp(worldEulerAngles, constraintVariant.xTranslationTarget, constraintVariant.yTranslationTarget, constraintVariant.zTranslationTarget);
@@ -402,7 +432,7 @@ namespace VRtist
                 _ => throw new InvalidAttributeNameExeption(constraintVariant.attributeName),
             };
 
-            var targetValue = constraintVariant.target.Transform(value) * 100f;
+            float targetValue = constraintVariant.target.Transform(value);
 
             constraintVariant.target.skinnedMeshRenderer.SetBlendShapeWeight(constraintVariant.target.blendShapeIndex, targetValue);
         }
@@ -482,6 +512,7 @@ namespace VRtist
         }
         public override void OnDragGizmo(Transform mouthpiece)
         {
+            if (isTPose) return;
             if (gizmoTool == GoalGizmo.GizmoTool.Rotation)
             {
                 Vector3 projection = Vector3.ProjectOnPlane(mouthpiece.position - gizmoTransform.position, acAxis);

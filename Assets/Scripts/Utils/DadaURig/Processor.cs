@@ -247,7 +247,7 @@ namespace Dada.URig
                             {
                                 var targetDescriptorVariant = constraintDescriptorVariant.target.blendShape;
 
-                                var blendShapeName = targetDescriptorVariant.drivenNodeName + '.' + targetDescriptorVariant.drivenBlendShapeName;
+                                var blendShapeName = targetDescriptorVariant.drivenBlendShapeName;
                                 var found = false;
                                 foreach (var skinnedMeshRenderer in skinnedMeshRenderers)
                                 {
