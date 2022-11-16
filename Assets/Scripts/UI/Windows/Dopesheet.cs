@@ -206,6 +206,7 @@ namespace VRtist
 
                     Selection.onSelectionChanged.AddListener(OnSelectionChanged);
                     Selection.onAuxiliarySelectionChanged.AddListener(OnAuxiliaryChanged);
+                    Selection.OnControllerSelection.AddListener(UpdateControllerSelectionChanged);
 
                     GlobalState.Animation.onAddAnimation.AddListener(UpdateCurrentObjectAnimation);
                     GlobalState.Animation.onRemoveAnimation.AddListener(UpdateCurrentObjectAnimation);
@@ -224,6 +225,7 @@ namespace VRtist
 
                     Selection.onSelectionChanged.RemoveListener(OnSelectionChanged);
                     Selection.onAuxiliarySelectionChanged.RemoveListener(OnAuxiliaryChanged);
+                    Selection.OnControllerSelection.RemoveListener(UpdateControllerSelectionChanged);
 
                     GlobalState.Animation.onAddAnimation.RemoveListener(UpdateCurrentObjectAnimation);
                     GlobalState.Animation.onRemoveAnimation.RemoveListener(UpdateCurrentObjectAnimation);
@@ -278,7 +280,9 @@ namespace VRtist
         {
             if (property == AnimatableProperty.PositionX)
             {
-                UpdateCurrentObjectAnimation(gobject);
+                if (Selection.SelectedControllers.Count == 0)
+                    UpdateCurrentObjectAnimation(gobject);
+                else UpdateCurrentControllerAnimation(gobject);
             }
         }
         void UpdateCurrentObjectAnimation(GameObject gObject)
@@ -337,6 +341,64 @@ namespace VRtist
 
             UpdateKeyframes();
         }
+
+        void UpdateCurrentControllerAnimation(GameObject gObject)
+        {
+            if (null == currentObject || currentObject != gObject)
+                return;
+
+            Clear();
+
+            AnimationSet animationSet = GlobalState.Animation.GetObjectAnimation(gObject);
+            if (!gObject.TryGetComponent<RigController>(out RigController controller))
+            {
+                if (null == animationSet)
+                {
+                    UpdateControllerTrackName();
+                    return;
+                }
+
+                // Take only one curve (the first one) to add keys
+                foreach (AnimationKey key in animationSet.curves[0].keys)
+                {
+                    if (!keys.TryGetValue(key.frame, out List<AnimKey> keyList))
+                    {
+                        keyList = new List<AnimKey>();
+                        keys[key.frame] = keyList;
+                    }
+                    keyList.Add(new AnimKey(key.value, key.interpolation));
+                }
+            }
+            else
+            {
+                controller.GetKeyList(keys);
+            }
+
+            UpdateControllerTrackName();
+
+            Transform keyframes = transform.Find("MainPanel/Tracks/Summary/Keyframes");
+            foreach (var key in keys)
+            {
+                GameObject keyframe = GameObject.Instantiate(keyframePrefab, keyframes);
+                List<AnimKey> animKeys = key.Value;
+                AnimKey firstKey = animKeys[0];
+                switch (firstKey.interpolation)
+                {
+                    case Interpolation.Constant:
+                        keyframe.GetComponent<MeshRenderer>().material.SetColor("_UnlitColor", constantInterpolationColor);
+                        break;
+                    case Interpolation.Linear:
+                        keyframe.GetComponent<MeshRenderer>().material.SetColor("_UnlitColor", linearInterpolationColor);
+                        break;
+                    case Interpolation.Bezier:
+                        keyframe.GetComponent<MeshRenderer>().material.SetColor("_UnlitColor", bezierInterpolationColor);
+                        break;
+                }
+            }
+
+            UpdateKeyframes();
+        }
+
 
         void UpdateKeyframes()
         {
@@ -426,6 +488,19 @@ namespace VRtist
             UpdateCurrentObjectAnimation(gObject);
         }
 
+        protected void UpdateControllerSelectionChanged()
+        {
+            if (Selection.SelectedControllers.Count == 0)
+            {
+                UpdateSelectionChanged();
+                return;
+            }
+            Clear();
+            UpdateControllerTrackName();
+            currentObject = Selection.SelectedControllers[0].gameObject;
+            UpdateCurrentControllerAnimation(currentObject);
+        }
+
         protected virtual void OnSelectionChanged(HashSet<GameObject> previousSelectedObjects, HashSet<GameObject> currentSelectedObjects)
         {
             UpdateSelectionChanged();
@@ -477,6 +552,23 @@ namespace VRtist
             trackLabel.text = "";
         }
 
+        public void UpdateControllerTrackName()
+        {
+            TextMeshProUGUI trackLabel = transform.Find("MainPanel/Tracks/Summary/Label/Canvas/Text").GetComponent<TextMeshProUGUI>();
+            int count = Selection.SelectedControllers.Count;
+            if (count > 1)
+            {
+                trackLabel.text = count.ToString() + " Objects";
+                return;
+            }
+            foreach (RigObjectController obj in Selection.SelectedControllers)
+            {
+                trackLabel.text = obj.name;
+                return;
+            }
+            trackLabel.text = "";
+        }
+
         public void Clear()
         {
             Transform tracks = transform.Find("MainPanel/Tracks");
@@ -515,43 +607,82 @@ namespace VRtist
 
         public void OnAddKeyFrame()
         {
-            CommandGroup group = new CommandGroup("Add Keyframe");
-            try
+            if (Selection.SelectedControllers.Count == 0)
             {
-                foreach (GameObject item in Selection.SelectedObjects)
+                CommandGroup group = new CommandGroup("Add Keyframe");
+                try
                 {
-                    new CommandAddKeyframes(item, false).Submit();
+                    foreach (GameObject item in Selection.SelectedObjects)
+                    {
+                        new CommandAddKeyframes(item, false).Submit();
+                    }
+                }
+                finally
+                {
+                    group.Submit();
                 }
             }
-            finally
+            else
             {
-                group.Submit();
+                CommandGroup group = new CommandGroup("Add Keyframe");
+                try
+                {
+                    foreach (RigObjectController item in Selection.SelectedControllers)
+                    {
+                        new CommandAddKeyframes(item.gameObject, false).Submit();
+                    }
+                }
+                finally
+                {
+                    group.Submit();
+                }
             }
         }
 
         public void OnRemoveKeyFrame()
         {
-            CommandGroup group = new CommandGroup("Remove Keyframe");
-            try
+            if (Selection.SelectedControllers.Count == 0)
             {
-                foreach (GameObject gObject in Selection.SelectedObjects)
+                CommandGroup group = new CommandGroup("Remove Keyframe");
+                try
                 {
-                    if (gObject.TryGetComponent<RigController>(out RigController controller))
+                    foreach (GameObject gObject in Selection.SelectedObjects)
                     {
-                        new CommandRemoveRecursiveKeyframes(gObject).Submit();
-                    }
-                    else
-                    {
-                        if (GlobalState.Animation.ObjectHasKeyframeAt(gObject, GlobalState.Animation.CurrentFrame))
+                        if (gObject.TryGetComponent<RigController>(out RigController controller))
                         {
-                            new CommandRemoveKeyframes(gObject).Submit();
+                            new CommandRemoveRecursiveKeyframes(gObject).Submit();
+                        }
+                        else
+                        {
+                            if (GlobalState.Animation.ObjectHasKeyframeAt(gObject, GlobalState.Animation.CurrentFrame))
+                            {
+                                new CommandRemoveKeyframes(gObject).Submit();
+                            }
                         }
                     }
                 }
+                finally
+                {
+                    group.Submit();
+                }
             }
-            finally
+            else
             {
-                group.Submit();
+                CommandGroup group = new CommandGroup("Remove Keyframe");
+                try
+                {
+                    foreach (RigObjectController gObject in Selection.SelectedControllers)
+                    {
+                        if (GlobalState.Animation.ObjectHasKeyframeAt(gObject.gameObject, GlobalState.Animation.CurrentFrame))
+                        {
+                            new CommandRemoveKeyframes(gObject.gameObject).Submit();
+                        }
+                    }
+                }
+                finally
+                {
+                    group.Submit();
+                }
             }
         }
 

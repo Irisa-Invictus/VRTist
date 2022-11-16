@@ -59,6 +59,22 @@ namespace VRtist
 
         public override void UpdateController(bool applyToPair = true, bool applyToChild = true)
         {
+            if (isTPose) return;
+            if (pairedController != null && applyToPair && !pairedController.isTPose)
+            {
+                pairedController.transform.localPosition = transform.localPosition;
+                pairedController.transform.localRotation = transform.localRotation;
+                pairedController.transform.localScale = transform.localScale;
+                pairedController.UpdateController(false, applyToChild);
+            }
+            if (applyToChild)
+            {
+                DirectController[] childs = GetComponentsInChildren<DirectController>();
+                foreach (DirectController child in childs)
+                {
+                    child.UpdateController(applyToPair: applyToPair, applyToChild: false);
+                }
+            }
         }
 
         public override void OnGrab(Transform mouthpiece, bool isFK)
@@ -80,6 +96,7 @@ namespace VRtist
             poseManip.SetDestination(mouthpiece);
             poseManip.TrySolver();
             rigControllers.ForEach(x => x.DirectDrag(transform));
+            //UpdateController();
         }
 
         public override void OnRelease()
@@ -155,6 +172,7 @@ namespace VRtist
         public override void OnDragGizmo(Transform mouthpiece)
         {
             OnDrag(mouthpiece);
+            UpdateController();
         }
 
         public override void OnReleaseGizmo()

@@ -38,8 +38,6 @@ namespace VRtist
     /// </summary>
     public class GlobalState : MonoBehaviour
     {
-        public float dthetaRoot;
-
         public Settings settings;
         public NetworkSettings networkSettings;
 

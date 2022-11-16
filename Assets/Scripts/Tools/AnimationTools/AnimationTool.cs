@@ -76,7 +76,6 @@ namespace VRtist
         private DragObjectData draggedObject;
 
         private RigObjectController grabbedController;
-        private List<RigObjectController> SelectedControllers = new List<RigObjectController>();
 
         public class CurveData
         {
@@ -95,6 +94,13 @@ namespace VRtist
 
         public bool inPickerTool;
         private bool isPickerActive;
+
+        private bool showDirect = true;
+        public bool ShowDirect
+        {
+            get { return showDirect; }
+            set { showDirect = value; ShowDirectControllers(showDirect); }
+        }
 
         private UIButton GetPoseModeButton(PoseEditMode mode)
         {
@@ -130,9 +136,9 @@ namespace VRtist
             List<Vector3> endPosition = new List<Vector3>();
             List<Quaternion> endRotation = new List<Quaternion>();
             List<Vector3> endScale = new List<Vector3>();
-            if (SelectedControllers.Count > 0)
+            if (Selection.SelectedControllers.Count > 0)
             {
-                SelectedControllers.ForEach(x =>
+                Selection.SelectedControllers.ForEach(x =>
                 {
                     startPosition.Add(x.transform.localPosition);
                     startRotation.Add(x.transform.localRotation);
@@ -142,7 +148,7 @@ namespace VRtist
                     endRotation.Add(x.transform.localRotation);
                     endScale.Add(x.transform.localScale);
                 });
-                new CommandMoveControllers(SelectedControllers, startPosition, startRotation, startScale, endPosition, endRotation, endScale).Submit();
+                new CommandMoveControllers(Selection.SelectedControllers, startPosition, startRotation, startScale, endPosition, endRotation, endScale).Submit();
             }
             else
             {
@@ -183,17 +189,7 @@ namespace VRtist
         protected override void OnEnable()
         {
             base.OnEnable();
-            foreach (GameObject select in Selection.SelectedObjects)
-            {
-                if (select.TryGetComponent<RigController>(out RigController controller))
-                {
-                    DirectController[] directController = controller.GetComponentsInChildren<DirectController>();
-                    for (int i = 0; i < directController.Length; i++)
-                    {
-                        directController[i].UseController(true);
-                    }
-                }
-            }
+            ShowDirectControllers(ShowDirect);
             GlobalState.Instance.onGripWorldEvent.AddListener(OnGripWorld);
             if (isPickerActive)
             {
@@ -202,11 +198,33 @@ namespace VRtist
             }
 
         }
+
+        private void ShowDirectControllers(bool state)
+        {
+            foreach (GameObject select in Selection.SelectedObjects)
+            {
+                if (select.TryGetComponent(out RigController controller))
+                {
+                    DirectController[] directController = controller.GetComponentsInChildren<DirectController>();
+                    for (int i = 0; i < directController.Length; i++)
+                    {
+                        directController[i].UseController(state);
+                    }
+                }
+            }
+        }
+
+        public void SwitchDirectController()
+        {
+            ShowDirect = !ShowDirect;
+        }
+
         protected override void OnDisable()
         {
             base.OnDisable();
+            if (worldGrip || ToolsManager.Instance.IsInWindowTool) return;
 
-            if (!worldGrip) UnSelectControllers();
+            UnSelectControllers();
             foreach (GameObject select in Selection.SelectedObjects)
             {
                 if (select == null) continue;
@@ -223,6 +241,8 @@ namespace VRtist
             {
                 Picker.PickerTool.SelectEmpty();
                 Picker.gameObject.SetActive(false);
+                Selection.SelectedControllers.Clear();
+                Selection.OnControllerSelection.Invoke();
             }
         }
 
@@ -525,31 +545,34 @@ namespace VRtist
         internal void SelectController(GameObject gameObject)
         {
             RigObjectController hoveredController = gameObject.GetComponent<RigObjectController>();
-            if (SelectedControllers.Contains(hoveredController))
+            if (Selection.SelectedControllers.Contains(hoveredController))
             {
                 hoveredController.GetTargets().ForEach(x => CurveManager.UnSelectJoint(x));
                 hoveredController.OnDeselect();
                 RemoveGizmo(hoveredController);
-                SelectedControllers.Remove(hoveredController);
+                Selection.SelectedControllers.Remove(hoveredController);
+                Selection.OnControllerSelection.Invoke();
             }
             else
             {
                 hoveredController.OnSelect();
                 CreateGizmo(hoveredController);
-                SelectedControllers.Add(hoveredController);
+                Selection.SelectedControllers.Add(hoveredController);
+                Selection.OnControllerSelection.Invoke();
                 hoveredController.GetTargets().ForEach(x => CurveManager.SelectJoint(x));
             }
         }
         private void UnSelectControllers()
         {
             selectedCurve = null;
-            foreach (RigObjectController controller in SelectedControllers)
+            foreach (RigObjectController controller in Selection.SelectedControllers)
             {
                 controller.GetTargets().ForEach(x => CurveManager.UnSelectJoint(x));
                 controller.OnDeselect();
                 RemoveGizmo(controller);
             }
-            SelectedControllers.Clear();
+            Selection.SelectedControllers.Clear();
+            Selection.OnControllerSelection.Invoke();
         }
         #endregion
     }

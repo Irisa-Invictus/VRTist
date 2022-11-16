@@ -273,11 +273,15 @@ namespace VRtist
             {
                 joint.LinkJoint = target.GetComponent<JointController>();
                 target.GetComponent<JointController>().LinkJoint = joint;
+
             }
             if (clone.TryGetComponent(out DirectController dController))
             {
                 if (clone.TryGetComponent(out Renderer dRenderer)) dRenderer.enabled = false;
                 if (clone.TryGetComponent(out Collider dCollider)) dCollider.enabled = false;
+                DirectController targetDirect = target.GetComponent<DirectController>();
+                dController.pairedController = targetDirect;
+                targetDirect.pairedController = dController;
             }
             for (int i = 0; i < target.childCount; i++)
             {

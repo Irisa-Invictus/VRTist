@@ -86,7 +86,6 @@ namespace VRtist
         public void DirectGrab(Transform controller)
         {
             InitMatrix(controller);
-
             startPosition = transform.localPosition;
             startRotation = transform.localRotation;
             startScale = transform.localScale;
