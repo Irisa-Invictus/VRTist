@@ -451,7 +451,8 @@ namespace VRtist
             Vector3 upward = Vector3.Normalize(constraintVariant.upTransform.position - constraint.drivenObjectTransform.position);
             Vector3 side = Vector3.Cross(forward, upward).normalized;
             Vector3 actualUpward = Vector3.Cross(side, forward).normalized;
-            constraint.drivenObjectTransform.rotation = Quaternion.LookRotation(forward, actualUpward);
+            //constraint.drivenObjectTransform.rotation = Quaternion.LookRotation(forward, Vector3.up);
+            constraint.drivenObjectTransform.right = -forward;
         }
 
         #endregion
@@ -482,6 +483,7 @@ namespace VRtist
         public override void OnGrabGizmo(Transform mouthpiece, GoalGizmo gizmo, GoalGizmo.GizmoTool tool, AnimationTool.Vector3Axis axis, bool data)
         {
             cmdGroup = new CommandGroup("Add Keyframe");
+            gizmoTransform = gizmo.transform;
             startPosition = transform.localPosition;
             startRotation = transform.localRotation;
             startScale = transform.localScale;

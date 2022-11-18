@@ -128,6 +128,12 @@ namespace VRtist
             isPickerActive = state;
         }
 
+        public void MovePicker()
+        {
+            SelectionHelper selector = FindObjectOfType<SelectionHelper>();
+            if (selector != null) Picker.transform.position = selector.transform.position;
+        }
+
         public void ResetPosition()
         {
             List<Vector3> startPosition = new List<Vector3>();
@@ -158,12 +164,16 @@ namespace VRtist
                     if (select.TryGetComponent<RigController>(out RigController controller))
                     {
                         RigObjectController[] rigControllers = controller.GetComponentsInChildren<RigObjectController>();
+                        //some transforms can have two+ RigObjectController
                         for (int i = 0; i < rigControllers.Length; i++)
                         {
                             movedControllers.Add(rigControllers[i]);
                             startPosition.Add(rigControllers[i].transform.localPosition);
                             startRotation.Add(rigControllers[i].transform.localRotation);
                             startScale.Add(rigControllers[i].transform.localScale);
+                        }
+                        for (int i = 0; i < rigControllers.Length; i++)
+                        {
                             rigControllers[i].ResetPosition(applyToChild: false);
                             endPosition.Add(rigControllers[i].transform.localPosition);
                             endRotation.Add(rigControllers[i].transform.localRotation);
@@ -171,6 +181,7 @@ namespace VRtist
                         }
                     }
                 }
+                new CommandMoveControllers(movedControllers, startPosition, startRotation, startScale, endPosition, endRotation, endScale).Submit();
             }
         }
 

@@ -165,7 +165,7 @@ namespace VRtist
                     }
                 }
                 if (bounds.size.magnitude > 0)
-                    scale = new Vector3(1, 1, 1) * 0.1f; //(0.2f / bounds.size.magnitude) / GlobalState.WorldScale;  // 0.2: 20cm
+                    scale = Vector3.one; //(0.2f / bounds.size.magnitude) / GlobalState.WorldScale;  // 0.2: 20cm
 
                 AddToSelection(newObject);
                 SceneManager.SetObjectMatrix(newObject, Matrix4x4.TRS(t, Quaternion.identity, scale));

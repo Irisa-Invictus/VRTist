@@ -60,6 +60,10 @@ namespace Dada.URig
 
         private Transform GetTransformByPath(string[] path)
         {
+            if (path == null)
+            {
+                Debug.Log("empty path");
+            }
             if (!TryGetTransformByPath(path, root.transform, out Transform transform))
             {
                 foreach (Transform childs in root.transform)

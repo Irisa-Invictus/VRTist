@@ -18,7 +18,7 @@ namespace VRtist
 
         public CommandMoveControllers(List<RigObjectController> co, List<Vector3> bp, List<Quaternion> br, List<Vector3> bs, List<Vector3> ep, List<Quaternion> er, List<Vector3> es)
         {
-            controllers = co;
+            controllers = new List<RigObjectController>(co);
             beginPositions = bp;
             beginRotations = br;
             beginScales = bs;

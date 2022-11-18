@@ -85,13 +85,15 @@ namespace VRtist
             //UnselectedGoal.Invoke(controller.TargetController);
             controller.OnDeselect();
 
-            GameObject cloneTarget = Picker.CloneToTarget[controller.gameObject];
-            if (cloneTarget.TryGetComponent<RigObjectController>(out RigObjectController ctrl))
+            if (Picker.CloneToTarget.TryGetValue(controller.gameObject, out GameObject cloneTarget))
             {
-                if (ctrl.TryGetComponent(out MeshRenderer renderer)) renderer.enabled = false;
-                if (ctrl.TryGetComponent(out MeshCollider collider)) collider.enabled = false;
+                if (cloneTarget.TryGetComponent(out RigObjectController ctrl))
+                {
+                    if (ctrl.TryGetComponent(out MeshRenderer renderer)) renderer.enabled = false;
+                    if (ctrl.TryGetComponent(out MeshCollider collider)) collider.enabled = false;
+                }
+                if (Picker.PickerGizmo.isActiveAndEnabled && controller == Picker.PickerGizmo.Controller) Picker.PickerGizmo.gameObject.SetActive(false);
             }
-            if (Picker.PickerGizmo.isActiveAndEnabled && controller == Picker.PickerGizmo.Controller) Picker.PickerGizmo.gameObject.SetActive(false);
         }
 
         public void SelectEmpty()
