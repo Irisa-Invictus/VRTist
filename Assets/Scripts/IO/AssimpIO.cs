@@ -29,6 +29,7 @@ using System.IO;
 using System.Threading.Tasks;
 using Unity.Collections;
 using UnityEngine;
+using UnityEngine.InputSystem.Processors;
 
 namespace VRtist
 {
@@ -53,6 +54,7 @@ namespace VRtist
         private int importCount;
 
         public RigConfiguration rigConfiguration;
+        public float ImportScale = 1;
 
         // We consider that half of the total time is spent inside the assimp engine
         // A quarter of the total time is necessary to create meshes
@@ -126,10 +128,11 @@ namespace VRtist
             {
                 taskData.Add(d);
                 Assimp.AssimpContext ctx = new Assimp.AssimpContext();
+                Debug.Log("import sync");
                 var aScene = ctx.ImportFile(fileName,
                     Assimp.PostProcessSteps.Triangulate |
                     Assimp.PostProcessSteps.GenerateNormals |
-                    Assimp.PostProcessSteps.GenerateUVCoords);
+                    Assimp.PostProcessSteps.GenerateUVCoords | Assimp.PostProcessSteps.MakeLeftHanded | Assimp.PostProcessSteps.GlobalScale);
                 CreateUnityDataFromAssimp(fileName, aScene, root).MoveNext();
                 Clear();
                 taskData.Remove(d);
@@ -224,6 +227,7 @@ namespace VRtist
             meshCenter = Vector3.zero;
             meshSize = Vector3.zero;
             rootBone = null;
+            invers = Matrix4x4.identity;
             //textures = new Dictionary<string, Texture2D>();   
         }
 
@@ -490,7 +494,7 @@ namespace VRtist
             }
         }
 
-        private void AssignMeshes(Assimp.Node node, GameObject parent)
+        private void AssignMeshes(Assimp.Node node, GameObject parent, Matrix4x4 meshOffset)
         {
             if (node.MeshIndices.Count == 0)
                 return;
@@ -504,11 +508,12 @@ namespace VRtist
             Material[] mats = new Material[node.MeshIndices.Count];
             CombineInstance[] combine = new CombineInstance[node.MeshIndices.Count];
 
+
             int i = 0;
             foreach (int indice in node.MeshIndices)
             {
                 combine[i].mesh = meshes[indice].mesh;
-                combine[i].transform = Matrix4x4.identity;
+                combine[i].transform = meshOffset;
                 mats[i] = materials[meshes[indice].materialIndex];
                 i++;
             }
@@ -644,7 +649,7 @@ namespace VRtist
                     for (int iVert = 0; iVert < blendShape.VertexCount; iVert++)
                     {
                         thisVector = blendShape.Vertices[iVert];
-                        unityVector = new Vector3(-thisVector.X, thisVector.Y, thisVector.Z);
+                        unityVector = new Vector3(thisVector.X, thisVector.Y, thisVector.Z);
                         deltaVerts[iVert] = unityVector - meshRenderer.sharedMesh.vertices[iVert];
                     }
                 }
@@ -677,6 +682,7 @@ namespace VRtist
             MeshCollider collider = parent.AddComponent<MeshCollider>();
         }
 
+        Matrix4x4 invers = Matrix4x4.identity;
 
         private IEnumerator ImportHierarchy(Assimp.Node node, Transform parent, GameObject go, Matrix4x4 cumulMatrix, Quaternion preRotation)
         {
@@ -694,7 +700,15 @@ namespace VRtist
                 new Vector4(node.Transform.A4, node.Transform.B4, node.Transform.C4, node.Transform.D4)
                 );
 
+            if ((node.Name.Contains("ctrl") || node.Name.Contains("grp")) && node.Name.Contains("ScalingPivotInvers"))
+            {
+                invers = nodeMatrix;
+                Maths.DecomposeMatrix(invers, out Vector3 inversp, out Quaternion inversr, out Vector3 inverss);
+            }
+
             cumulMatrix = cumulMatrix * nodeMatrix;
+
+
             if (node.Name.Contains("$AssimpFbx$") && node.HasChildren)
             {
                 if (blocking)
@@ -704,11 +718,14 @@ namespace VRtist
             }
             else
             {
-                Maths.DecomposeMatrix(cumulMatrix, out Vector3 cumulPosition, out Quaternion cumulRotation, out Vector3 cumulScale);
-                AssignMeshes(node, go);
+                Maths.DecomposeMatrix(cumulMatrix * invers.inverse, out Vector3 cumulPosition, out Quaternion cumulRotation, out Vector3 cumulScale);
+                AssignMeshes(node, go, invers);
                 if (node.Parent != null)
                 {
-                    go.transform.localPosition = cumulPosition;
+                    Maths.DecomposeMatrix(invers, out Vector3 inversp, out Quaternion inversr, out Vector3 inverss);
+                    //inversp = cumulRotation * inversp;
+
+                    go.transform.localPosition = cumulPosition; // new Vector3(cumulPosition.x * inversp.x, cumulPosition.y * inversp.y, cumulPosition.z * inversp.z);
                     go.transform.localRotation = cumulRotation;
                     go.transform.localScale = cumulScale;
                     go.name = isHuman ? node.Name : Utils.CreateUniqueName(node.Name);
@@ -727,6 +744,7 @@ namespace VRtist
                     ImportAnimation(node, go, cumulRotation);
                 }
                 nodeMatrix = Matrix4x4.TRS(Vector3.zero, Quaternion.identity, Vector3.one);
+                if (invers != Matrix4x4.identity) nodeMatrix = invers;
                 importCount++;
                 foreach (Assimp.Node assimpChild in node.Children)
                 {
@@ -737,6 +755,7 @@ namespace VRtist
                     else
                         yield return StartCoroutine(ImportHierarchy(assimpChild, go.transform, child, nodeMatrix, Quaternion.identity));
                 }
+                //}
             }
         }
 
@@ -760,7 +779,7 @@ namespace VRtist
 
             node.Transform.Decompose(out Assimp.Vector3D scale1, out Assimp.Quaternion rot, out Assimp.Vector3D trans);
 
-            AssignMeshes(node, go);
+            AssignMeshes(node, go, Matrix4x4.identity);
 
             if (node.Parent != null)
             {
@@ -872,7 +891,7 @@ namespace VRtist
                 objectRoot.name = Utils.CreateUniqueName(Path.GetFileNameWithoutExtension(fileName));
                 objectRoot.transform.parent = root;
                 objectRoot.transform.localPosition = Vector3.zero;
-                objectRoot.transform.localScale = new Vector3(-1, 1, 1);
+                objectRoot.transform.localScale = new Vector3(1, 1, 1);
             }
 
             importCount = 1;
@@ -958,7 +977,7 @@ namespace VRtist
                     aScene = ctx.ImportFile(fileName,
                         Assimp.PostProcessSteps.Triangulate |
                         Assimp.PostProcessSteps.GenerateNormals |
-                        Assimp.PostProcessSteps.GenerateUVCoords);
+                        Assimp.PostProcessSteps.GenerateUVCoords | Assimp.PostProcessSteps.GlobalScale);
                 }
                 catch (Assimp.AssimpException e)
                 {

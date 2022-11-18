@@ -48,6 +48,7 @@ namespace VRtist
             if (isHovered && other.TryGetComponent<VRPickerSelector>(out VRPickerSelector selector))
             {
                 isHovered = false;
+                selector.StopHoverButton();
             }
         }
 

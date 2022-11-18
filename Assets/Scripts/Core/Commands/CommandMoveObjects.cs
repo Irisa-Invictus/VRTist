@@ -71,7 +71,6 @@ namespace VRtist
                 beginScales = new List<Vector3>();
                 endScales = new List<Vector3>();
             }
-
             objects.Add(gobject);
             beginPositions.Add(gobject.transform.localPosition);
             endPositions.Add(endPosition);

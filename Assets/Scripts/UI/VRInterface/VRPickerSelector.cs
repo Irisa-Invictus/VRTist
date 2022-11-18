@@ -73,7 +73,7 @@ namespace VRtist
             {
                 RemoveFromHovered(other.gameObject);
             }
-            if (other.gameObject == PickerTool.Picker.PickerGizmo)
+            if (other.gameObject == PickerTool.Picker.PickerGizmo.gameObject)
             {
                 RemoveFromHovered(other.gameObject);
             }
@@ -114,6 +114,13 @@ namespace VRtist
                 CheckForNull();
                 StartHover(hoveredTargets[0], HoveredTypes[0]);
             }
+            if (hoveredTargets.Count == 0) PickerTool.Picker.AutoSwitchOffTool();
+        }
+
+        public void StopHoverButton()
+        {
+            CheckForNull();
+            if (hoveredTargets.Count == 0) PickerTool.Picker.AutoSwitchOffTool();
         }
 
         private void StartHover(GameObject target, TargetType type)
@@ -260,6 +267,7 @@ namespace VRtist
                     break;
                 case TargetType.Base:
                     CurrentSelection = TargetType.Base;
+                    PickerTool.SelectEmpty();
                     break;
                 case TargetType.Controller:
                     CurrentSelection = TargetType.Controller;

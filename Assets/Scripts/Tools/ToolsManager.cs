@@ -31,7 +31,7 @@ namespace VRtist
     public class ToolsManager : MonoBehaviour
     {
         private static ToolsManager instance = null;
-        private static ToolsManager Instance
+        public static ToolsManager Instance
         {
             get
             {
@@ -66,6 +66,7 @@ namespace VRtist
         private GameObject previousTool = null;
 
         private bool isInWindowTool = false;
+        public bool IsInWindowTool { get { return isInWindowTool; } }
         private GameObject pushedTool = null;
 
         public static void PushWindowTool()

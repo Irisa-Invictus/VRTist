@@ -43,10 +43,6 @@ namespace VRtist
         private List<RigObjectController> selectedControllers = new List<RigObjectController>();
         private PoseManipulation poseManip;
 
-        public static UnityEvent<JointController> SelectedGoal = new UnityEvent<JointController>();
-        public static UnityEvent<JointController> UnselectedGoal = new UnityEvent<JointController>();
-        int incr = 0;
-
         private RigObjectController draggedController;
 
         protected override void DoUpdate()
@@ -89,19 +85,62 @@ namespace VRtist
             //UnselectedGoal.Invoke(controller.TargetController);
             controller.OnDeselect();
 
-            GameObject cloneTarget = Picker.CloneToTarget[controller.gameObject];
-            if (cloneTarget.TryGetComponent<RigObjectController>(out RigObjectController ctrl))
+            if (Picker.CloneToTarget.TryGetValue(controller.gameObject, out GameObject cloneTarget))
             {
-                if (ctrl.TryGetComponent(out MeshRenderer renderer)) renderer.enabled = false;
-                if (ctrl.TryGetComponent(out MeshCollider collider)) collider.enabled = false;
+                if (cloneTarget.TryGetComponent(out RigObjectController ctrl))
+                {
+                    if (ctrl.TryGetComponent(out MeshRenderer renderer)) renderer.enabled = false;
+                    if (ctrl.TryGetComponent(out MeshCollider collider)) collider.enabled = false;
+                }
+                if (Picker.PickerGizmo.isActiveAndEnabled && controller == Picker.PickerGizmo.Controller) Picker.PickerGizmo.gameObject.SetActive(false);
             }
-            if (Picker.PickerGizmo.isActiveAndEnabled && controller == Picker.PickerGizmo.Controller) Picker.PickerGizmo.gameObject.SetActive(false);
         }
 
         public void SelectEmpty()
         {
             selectedControllers.ForEach(x => UnselectController(x));
             selectedControllers.Clear();
+        }
+
+        public void ResetControllers()
+        {
+            List<Vector3> startPositions = new List<Vector3>();
+            List<Vector3> endPositions = new List<Vector3>();
+            List<Quaternion> startRotations = new List<Quaternion>();
+            List<Quaternion> endRotations = new List<Quaternion>();
+            List<Vector3> startScales = new List<Vector3>();
+            List<Vector3> endScales = new List<Vector3>();
+            List<RigObjectController> originalControllers = new List<RigObjectController>();
+            if (selectedControllers.Count > 0)
+            {
+                selectedControllers.ForEach(x =>
+                {
+                    RigObjectController original = x.pairedController;
+                    originalControllers.Add(original);
+                    startPositions.Add(original.transform.localPosition);
+                    startRotations.Add(original.transform.localRotation);
+                    startScales.Add(original.transform.localScale);
+                    x.ResetPosition();
+                    endPositions.Add(original.transform.localPosition);
+                    endRotations.Add(original.transform.localRotation);
+                    endScales.Add(original.transform.localScale);
+                });
+            }
+            else
+            {
+                Picker.controllers.ForEach(x =>
+                {
+                    originalControllers.Add(x.pairedController);
+                    startPositions.Add(x.transform.localPosition);
+                    startRotations.Add(x.transform.localRotation);
+                    startScales.Add(x.transform.localScale);
+                    x.ResetPosition();
+                    endPositions.Add(x.transform.localPosition);
+                    endRotations.Add(x.transform.localRotation);
+                    endScales.Add(x.transform.localScale);
+                });
+            }
+            new CommandMoveControllers(originalControllers, startPositions, startRotations, startScales, endPositions, endRotations, endScales).Submit();
         }
 
         #region Actuator
@@ -227,6 +266,7 @@ namespace VRtist
             ScaleValue = 1f;
             initialScale = Picker.PickerGizmo.transform.localScale;
         }
+
         public void GizmoDrag(Transform mouthpiece, Vector2 axis)
         {
             Matrix4x4 transformation = mouthpiece.localToWorldMatrix * initialMouthWorldToLocal;

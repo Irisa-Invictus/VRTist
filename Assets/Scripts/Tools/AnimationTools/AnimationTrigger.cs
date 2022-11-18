@@ -46,6 +46,12 @@ namespace VRtist
         #region hovering
         public void OnTriggerEnter(Collider other)
         {
+            if (other.transform.IsChildOf(animationTool.Picker.transform))
+            {
+                animationTool.inPickerTool = true;
+                animationTool.Picker.AutoSwitchOnTool();
+                return;
+            }
             if (other.gameObject.CompareTag("Controller"))
             {
                 AddToHovered(other.gameObject, TargetType.Controller);

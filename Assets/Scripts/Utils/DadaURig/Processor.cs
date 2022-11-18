@@ -60,6 +60,10 @@ namespace Dada.URig
 
         private Transform GetTransformByPath(string[] path)
         {
+            if (path == null)
+            {
+                Debug.Log("empty path");
+            }
             if (!TryGetTransformByPath(path, root.transform, out Transform transform))
             {
                 foreach (Transform childs in root.transform)
@@ -158,6 +162,7 @@ namespace Dada.URig
                     if (childTransform.TryGetComponent(out MeshRenderer renderer)) renderer.enabled = false;
                     if (childTransform.TryGetComponent(out Collider collider)) collider.enabled = false;
                     controller.gameObject.tag = "Controller";
+                    controller.SetStartPosition();
 
                     InitializeLimitRanges(controller);
                     foreach (JSONDescriptors.ControllerAttribute attributeDescriptor in objectDescriptor.attributes)
@@ -246,7 +251,7 @@ namespace Dada.URig
                             {
                                 var targetDescriptorVariant = constraintDescriptorVariant.target.blendShape;
 
-                                var blendShapeName = targetDescriptorVariant.drivenNodeName + '.' + targetDescriptorVariant.drivenBlendShapeName;
+                                var blendShapeName = targetDescriptorVariant.drivenBlendShapeName;
                                 var found = false;
                                 foreach (var skinnedMeshRenderer in skinnedMeshRenderers)
                                 {
