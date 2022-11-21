@@ -229,6 +229,7 @@ namespace VRtist
 
         private void CreatePickerClone(RigController rigController)
         {
+            ClearPickerClone();
             Target = rigController.gameObject;
             root = rigController.RootObject.gameObject;
 
@@ -294,12 +295,13 @@ namespace VRtist
             PickerTool.SelectEmpty();
             foreach (KeyValuePair<GameObject, GameObject> items in CloneToTarget)
             {
-                if (items.Value.TryGetComponent(out JointController joint)) joint.LinkJoint = null;
+                if (items.Value != null && items.Value.TryGetComponent(out JointController joint)) joint.LinkJoint = null;
                 Destroy(items.Key);
             }
             controllers.Clear();
             Target = null;
             PickerClone = null;
+            CloneToTarget.Clear();
         }
 
         public void AutoSwitchOnTool()

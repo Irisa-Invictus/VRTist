@@ -467,7 +467,14 @@ namespace VRtist
             new CommandMoveControllers(this, startPosition, startRotation, startScale, endPosition, endRotation, endScale).Submit();
             if (GlobalState.Animation.autoKeyEnabled)
             {
-                new CommandAddKeyframes(gameObject, true).Submit();
+                if (isPickerController)
+                {
+                    new CommandAddKeyframes(pairedController.gameObject, true).Submit();
+                }
+                else
+                {
+                    new CommandAddKeyframes(gameObject, true).Submit();
+                }
             }
 
             cmdGroup.Submit();

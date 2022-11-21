@@ -206,7 +206,8 @@ namespace VRtist
 
                     Selection.onSelectionChanged.AddListener(OnSelectionChanged);
                     Selection.onAuxiliarySelectionChanged.AddListener(OnAuxiliaryChanged);
-                    Selection.OnControllerSelection.AddListener(UpdateControllerSelectionChanged);
+                    Selection.OnControllerSelected.AddListener(UpdateControllerSelectionChanged);
+                    Selection.OnControllerUnselected.AddListener(UpdateControllerSelectionChanged);
 
                     GlobalState.Animation.onAddAnimation.AddListener(UpdateCurrentObjectAnimation);
                     GlobalState.Animation.onRemoveAnimation.AddListener(UpdateCurrentObjectAnimation);
@@ -225,7 +226,8 @@ namespace VRtist
 
                     Selection.onSelectionChanged.RemoveListener(OnSelectionChanged);
                     Selection.onAuxiliarySelectionChanged.RemoveListener(OnAuxiliaryChanged);
-                    Selection.OnControllerSelection.RemoveListener(UpdateControllerSelectionChanged);
+                    Selection.OnControllerSelected.RemoveListener(UpdateControllerSelectionChanged);
+                    Selection.OnControllerUnselected.RemoveListener(UpdateControllerSelectionChanged);
 
                     GlobalState.Animation.onAddAnimation.RemoveListener(UpdateCurrentObjectAnimation);
                     GlobalState.Animation.onRemoveAnimation.RemoveListener(UpdateCurrentObjectAnimation);
@@ -280,13 +282,16 @@ namespace VRtist
         {
             if (property == AnimatableProperty.PositionX)
             {
-                if (Selection.SelectedControllers.Count == 0)
-                    UpdateCurrentObjectAnimation(gobject);
-                else UpdateCurrentControllerAnimation(gobject);
+                UpdateCurrentObjectAnimation(gobject);
             }
         }
         void UpdateCurrentObjectAnimation(GameObject gObject)
         {
+            if (Selection.SelectedControllers.Count > 0)
+            {
+                UpdateCurrentControllerAnimation(gObject);
+                return;
+            }
             if (null == currentObject || currentObject != gObject)
                 return;
 
@@ -488,7 +493,7 @@ namespace VRtist
             UpdateCurrentObjectAnimation(gObject);
         }
 
-        protected void UpdateControllerSelectionChanged()
+        protected void UpdateControllerSelectionChanged(RigObjectController controller)
         {
             if (Selection.SelectedControllers.Count == 0)
             {

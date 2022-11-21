@@ -44,7 +44,7 @@ namespace VRtist
         // Empty
     }
 
-    public class ControllerSelectionChangedEvent : UnityEvent
+    public class ControllerSelectionChangedEvent : UnityEvent<RigObjectController>
     {
         // Empty
     }
@@ -86,7 +86,8 @@ namespace VRtist
         {
             get { return selectedControllers; }
         }
-        public static ControllerSelectionChangedEvent OnControllerSelection = new ControllerSelectionChangedEvent();
+        public static ControllerSelectionChangedEvent OnControllerSelected = new ControllerSelectionChangedEvent();
+        public static ControllerSelectionChangedEvent OnControllerUnselected = new ControllerSelectionChangedEvent();
 
         // Current hovered object (yellow outlined)
         static GameObject hoveredObject = null;

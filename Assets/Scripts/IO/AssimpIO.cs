@@ -21,6 +21,7 @@
  * SOFTWARE.
  */
 
+using Assimp.Configs;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -39,7 +40,7 @@ namespace VRtist
 
         private Assimp.Scene scene;
         private string directoryName;
-        private List<Material> materials = new List<Material>();
+        private List<UnityEngine.Material> materials = new List<UnityEngine.Material>();
         private List<SubMeshComponent> meshes = new List<SubMeshComponent>();
         private Dictionary<string, Texture2D> textures = new Dictionary<string, Texture2D>();
         private Dictionary<string, Transform> bones = new Dictionary<string, Transform>();
@@ -67,7 +68,7 @@ namespace VRtist
 
         private class SubMeshComponent
         {
-            public Mesh mesh;
+            public UnityEngine.Mesh mesh;
             public string name;
             public int materialIndex;
         }
@@ -128,11 +129,7 @@ namespace VRtist
             {
                 taskData.Add(d);
                 Assimp.AssimpContext ctx = new Assimp.AssimpContext();
-                Debug.Log("import sync");
-                var aScene = ctx.ImportFile(fileName,
-                    Assimp.PostProcessSteps.Triangulate |
-                    Assimp.PostProcessSteps.GenerateNormals |
-                    Assimp.PostProcessSteps.GenerateUVCoords | Assimp.PostProcessSteps.MakeLeftHanded | Assimp.PostProcessSteps.GlobalScale);
+                Assimp.Scene aScene = ImportFile(fileName, ctx);
                 CreateUnityDataFromAssimp(fileName, aScene, root).MoveNext();
                 Clear();
                 taskData.Remove(d);
@@ -143,6 +140,15 @@ namespace VRtist
                 unityDataInCoroutineCreated = false;
                 taskData.Add(d);
             }
+        }
+
+        private Assimp.Scene ImportFile(string fileName, Assimp.AssimpContext ctx)
+        {
+            return ctx.ImportFile(fileName,
+                Assimp.PostProcessSteps.Triangulate |
+                Assimp.PostProcessSteps.GenerateNormals |
+                Assimp.PostProcessSteps.GenerateUVCoords |
+                Assimp.PostProcessSteps.GlobalScale);
         }
 
         void Update()
@@ -700,16 +706,23 @@ namespace VRtist
                 new Vector4(node.Transform.A4, node.Transform.B4, node.Transform.C4, node.Transform.D4)
                 );
 
-            if ((node.Name.Contains("ctrl") || node.Name.Contains("grp")) && node.Name.Contains("ScalingPivotInvers"))
+            if (false && (node.Name.Contains("ctrl") || node.Name.Contains("grp")) && node.Name.Contains("inverse"))
             {
-                invers = nodeMatrix;
+                invers = invers * nodeMatrix;
                 Maths.DecomposeMatrix(invers, out Vector3 inversp, out Quaternion inversr, out Vector3 inverss);
+                Debug.Log(node.Name);
             }
 
             cumulMatrix = cumulMatrix * nodeMatrix;
+            string nodeInfo = "";
 
+            foreach (KeyValuePair<string, Assimp.Metadata.Entry> pair in node.Metadata)
+            {
+                nodeInfo += " " + node.Name + " " + pair.Key + " " + pair.Value.ToString() + " " + pair.Value.GetType() + " " + pair.Value.Data + '\n';
+            }
 
-            if (node.Name.Contains("$AssimpFbx$") && node.HasChildren)
+            Debug.Log(nodeInfo);
+            if (false && node.Name.Contains("$AssimpFbx$") && node.HasChildren)
             {
                 if (blocking)
                     ImportHierarchy(node.Children[0], parent, go, cumulMatrix, preRotation).MoveNext();
@@ -931,8 +944,8 @@ namespace VRtist
                 rigController.Collider = objectCollider;
                 rigController.RootObject = rootBone;
 
-                GenerateSkeleton(rootBone, rigController);
-                GenerateControllers(rigController.transform);
+                //GenerateSkeleton(rootBone, rigController);
+                //GenerateControllers(rigController.transform);
             }
 
             isHuman = false;
@@ -974,10 +987,7 @@ namespace VRtist
                 try
                 {
                     Assimp.AssimpContext ctx = new Assimp.AssimpContext();
-                    aScene = ctx.ImportFile(fileName,
-                        Assimp.PostProcessSteps.Triangulate |
-                        Assimp.PostProcessSteps.GenerateNormals |
-                        Assimp.PostProcessSteps.GenerateUVCoords | Assimp.PostProcessSteps.GlobalScale);
+                    aScene = ImportFile(fileName, ctx);
                 }
                 catch (Assimp.AssimpException e)
                 {
