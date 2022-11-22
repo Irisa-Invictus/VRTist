@@ -32,6 +32,10 @@ namespace VRtist
                 }
             }
             player.Prepare();
+            player.prepareCompleted += (e) =>
+            {
+                AnimationEngine.Instance.EndFrame = (int)player.frameCount;
+            };
             AnimationEngine.Instance.onAnimationStateEvent.AddListener(OnStateChange);
             AnimationEngine.Instance.onFrameEvent.AddListener(OnFrameChange);
         }
@@ -44,6 +48,7 @@ namespace VRtist
                 player.Play();
             }
         }
+
 
         public void Update()
         {

@@ -55,7 +55,7 @@ namespace VRtist
         private int importCount;
 
         public RigConfiguration rigConfiguration;
-        public float ImportScale = 1;
+        public float ImportScale = 0.2f;
 
         // We consider that half of the total time is spent inside the assimp engine
         // A quarter of the total time is necessary to create meshes
@@ -130,6 +130,7 @@ namespace VRtist
                 taskData.Add(d);
                 Assimp.AssimpContext ctx = new Assimp.AssimpContext();
                 Assimp.Scene aScene = ImportFile(fileName, ctx);
+
                 CreateUnityDataFromAssimp(fileName, aScene, root).MoveNext();
                 Clear();
                 taskData.Remove(d);
@@ -147,8 +148,7 @@ namespace VRtist
             return ctx.ImportFile(fileName,
                 Assimp.PostProcessSteps.Triangulate |
                 Assimp.PostProcessSteps.GenerateNormals |
-                Assimp.PostProcessSteps.GenerateUVCoords |
-                Assimp.PostProcessSteps.GlobalScale);
+                Assimp.PostProcessSteps.GenerateUVCoords);
         }
 
         void Update()
@@ -687,7 +687,6 @@ namespace VRtist
             meshRenderer.sharedMaterials = mats;
             MeshCollider collider = parent.AddComponent<MeshCollider>();
         }
-
         Matrix4x4 invers = Matrix4x4.identity;
 
         private IEnumerator ImportHierarchy(Assimp.Node node, Transform parent, GameObject go, Matrix4x4 cumulMatrix, Quaternion preRotation)
@@ -706,23 +705,22 @@ namespace VRtist
                 new Vector4(node.Transform.A4, node.Transform.B4, node.Transform.C4, node.Transform.D4)
                 );
 
-            if (false && (node.Name.Contains("ctrl") || node.Name.Contains("grp")) && node.Name.Contains("inverse"))
+            Maths.DecomposeMatrix(nodeMatrix, out Vector3 np, out Quaternion nr, out Vector3 ns);
+            //Debug.Log(node.Name + " " + np + " " + nr + " " + ns);
+
+            int metadataCount = node.Metadata.Count;
+
+
+            if ((node.Name.Contains("ctrl") || node.Name.Contains("grp")) && node.Name.Contains("ScalingPivotInverse"))
             {
-                invers = invers * nodeMatrix;
-                Maths.DecomposeMatrix(invers, out Vector3 inversp, out Quaternion inversr, out Vector3 inverss);
-                Debug.Log(node.Name);
+                invers = /*invers **/ nodeMatrix;
+                //Debug.Log(node.Name);
             }
 
             cumulMatrix = cumulMatrix * nodeMatrix;
-            string nodeInfo = "";
+            //if (node.Metadata.TryGetValue("ScalingMax", out Assimp.Metadata.Entry val)) Debug.Log(val.DataAs<Assimp.Vector3D>().Value.X);
 
-            foreach (KeyValuePair<string, Assimp.Metadata.Entry> pair in node.Metadata)
-            {
-                nodeInfo += " " + node.Name + " " + pair.Key + " " + pair.Value.ToString() + " " + pair.Value.GetType() + " " + pair.Value.Data + '\n';
-            }
-
-            Debug.Log(nodeInfo);
-            if (false && node.Name.Contains("$AssimpFbx$") && node.HasChildren)
+            if (metadataCount == 0)
             {
                 if (blocking)
                     ImportHierarchy(node.Children[0], parent, go, cumulMatrix, preRotation).MoveNext();
@@ -731,13 +729,27 @@ namespace VRtist
             }
             else
             {
-                Maths.DecomposeMatrix(cumulMatrix * invers.inverse, out Vector3 cumulPosition, out Quaternion cumulRotation, out Vector3 cumulScale);
+                string nodeInfo = node.Name + '\n';
+                foreach (KeyValuePair<string, Assimp.Metadata.Entry> pair in node.Metadata)
+                {
+                    nodeInfo += pair.Key + " " + pair.Value.ToString() + " " + pair.Value.GetType() + " " + pair.Value.Data + '\n';
+                }
+                //Debug.Log(nodeInfo);
+                Maths.DecomposeMatrix(cumulMatrix /** invers.inverse*/, out Vector3 cumulPosition, out Quaternion cumulRotation, out Vector3 cumulScale);
+                if (isHuman && node.Name.Contains("grp"))
+                //&& node.Metadata.TryGetValue(" IsNull", out Assimp.Metadata.Entry isNull) && !(bool)isNull.DataAs<bool>())
+                {
+                    cumulPosition *= 0.2f;
+                }
+                if (node.Metadata.TryGetValue("IsNull", out Assimp.Metadata.Entry isNull2) && (bool)isNull2.DataAs<bool>())
+                {
+                    invers = Matrix4x4.identity;
+                    //Debug.Log("isNullBone " + node.Name);
+                }
+
                 AssignMeshes(node, go, invers);
                 if (node.Parent != null)
                 {
-                    Maths.DecomposeMatrix(invers, out Vector3 inversp, out Quaternion inversr, out Vector3 inverss);
-                    //inversp = cumulRotation * inversp;
-
                     go.transform.localPosition = cumulPosition; // new Vector3(cumulPosition.x * inversp.x, cumulPosition.y * inversp.y, cumulPosition.z * inversp.z);
                     go.transform.localRotation = cumulRotation;
                     go.transform.localScale = cumulScale;
@@ -757,7 +769,7 @@ namespace VRtist
                     ImportAnimation(node, go, cumulRotation);
                 }
                 nodeMatrix = Matrix4x4.TRS(Vector3.zero, Quaternion.identity, Vector3.one);
-                if (invers != Matrix4x4.identity) nodeMatrix = invers;
+                //if (invers != Matrix4x4.identity) nodeMatrix = invers;
                 importCount++;
                 foreach (Assimp.Node assimpChild in node.Children)
                 {
@@ -778,6 +790,7 @@ namespace VRtist
                 go.transform.parent = parent;
 
             GlobalState.Instance.messageBox.ShowMessage("Importing Hierarchy : " + importCount);
+            
             // Do not use Assimp Decompose function, it does not work properly
             // use unity decomposition instead
             Matrix4x4 mat = new Matrix4x4(
@@ -944,8 +957,8 @@ namespace VRtist
                 rigController.Collider = objectCollider;
                 rigController.RootObject = rootBone;
 
-                //GenerateSkeleton(rootBone, rigController);
-                //GenerateControllers(rigController.transform);
+                GenerateSkeleton(rootBone, rigController);
+                GenerateControllers(rigController.transform);
             }
 
             isHuman = false;
@@ -988,6 +1001,7 @@ namespace VRtist
                 {
                     Assimp.AssimpContext ctx = new Assimp.AssimpContext();
                     aScene = ImportFile(fileName, ctx);
+                    //Debug.Log("ctx scale " + ctx.Scale);
                 }
                 catch (Assimp.AssimpException e)
                 {

@@ -454,6 +454,7 @@ namespace VRtist
             }
         }
 
+
         void UpdateTransformUI(GameObject gobject)
         {
             GameObject selected = null;
@@ -515,7 +516,7 @@ namespace VRtist
             InitUIPanel();
             UpdateGrid();
             Selection.onSelectionChanged.AddListener(UpdateGridFromSelection);
-            if (null != boundingBox) {boundingBox.SetActive(false); }
+            if (null != boundingBox) { boundingBox.SetActive(false); }
             UpdateUIOnSelectionChanged(null, null);
         }
 
@@ -531,7 +532,7 @@ namespace VRtist
             snapChangedEvent.RemoveListener(OnSnapChanged);
             Selection.onSelectionChanged.RemoveListener(UpdateGridFromSelection);
             if (null != grid) { grid.gameObject.SetActive(false); }
-            if (null != boundingBox) {  boundingBox.SetActive(false); }
+            if (null != boundingBox) { boundingBox.SetActive(false); }
         }
 
         public void OnDeleteSelection()

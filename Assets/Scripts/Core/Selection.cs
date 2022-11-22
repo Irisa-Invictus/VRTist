@@ -157,7 +157,8 @@ namespace VRtist
         {
             if (null == gObject)
                 return false;
-            return selectedObjects.Contains(gObject);
+            if (gObject.TryGetComponent(out RigObjectController controller)) return selectedControllers.Contains(controller);
+            else return selectedObjects.Contains(gObject);
         }
 
         public static bool HasSelectedObjects()

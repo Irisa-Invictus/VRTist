@@ -237,6 +237,7 @@ namespace VRtist
             bool triggerJustReleased = false;
             VRInput.GetInstantButtonEvent(VRInput.primaryController, CommonUsages.triggerButton, ref triggerJustClicked, ref triggerJustReleased);
 
+       
             // Project ray on the widget plane.
             Plane widgetPlane = new Plane(-transform.forward, transform.position);
             float enter;
@@ -330,7 +331,7 @@ namespace VRtist
                         {
                             deltaFrame--;
                             Transform child = transform.GetChild(closestIndex);
-                            Vector3 newChildPosition = child.localPosition + new Vector3(-localDeltaOneFrame, 0 , 0);
+                            Vector3 newChildPosition = child.localPosition + new Vector3(-localDeltaOneFrame, 0, 0);
                             localProjectedWidgetPosition.x = newChildPosition.x;
                             child.localPosition = newChildPosition;
                         }

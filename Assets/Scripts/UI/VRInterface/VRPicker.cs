@@ -240,9 +240,9 @@ namespace VRtist
 
             PickerClone.GetComponent<BoxCollider>().enabled = false;
 
-            float xRatio = 3;// pickerCollider.size.x / cloneCollider.size.x;
-            float yRatio = 3;// pickerCollider.size.y / cloneCollider.size.y;
-            float zRatio = 3;// pickerCollider.size.z / cloneCollider.size.z;
+            float xRatio = 0.075f;// pickerCollider.size.x / cloneCollider.size.x;
+            float yRatio = 0.075f;// pickerCollider.size.y / cloneCollider.size.y;
+            float zRatio = 0.075f;// pickerCollider.size.z / cloneCollider.size.z;
 
             PickerClone.transform.localPosition = Vector3.zero;// PickerClone.transform.TransformVector(cloneCollider.center) + pickerCollider.center;
             PickerClone.transform.localScale = new Vector3(-xRatio, yRatio, zRatio);
@@ -274,7 +274,6 @@ namespace VRtist
             {
                 joint.LinkJoint = target.GetComponent<JointController>();
                 target.GetComponent<JointController>().LinkJoint = joint;
-
             }
             if (clone.TryGetComponent(out DirectController dController))
             {

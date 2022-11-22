@@ -95,6 +95,9 @@ namespace VRtist
         public bool inPickerTool;
         private bool isPickerActive;
 
+        public bool IsAddingConstraint;
+        public UIButton ConstraintButton;
+
         private bool showDirect = true;
         public bool ShowDirect
         {
@@ -244,7 +247,13 @@ namespace VRtist
             GlobalState.Instance.onGripWorldEvent.RemoveListener(OnGripWorld);
             Selection.OnControllerSelected.RemoveListener(OnControllerSelected);
             Selection.OnControllerUnselected.RemoveListener(OnControllerUnselected);
+
+            IsAddingConstraint = false;
+            ConstraintButton.Checked = false;
+
             if (worldGrip || ToolsManager.Instance.IsInWindowTool || inPickerTool) return;
+
+            UnSelectControllers();
 
             //UnSelectControllers();
             foreach (GameObject select in Selection.SelectedObjects)
@@ -279,13 +288,11 @@ namespace VRtist
                 if (AxisValue != Vector2.zero)
                 {
                     float scaleFactor = 1f + GlobalState.Settings.scaleSpeed / 1000f;
-
                     float selectorRadius = mouthpiece.localScale.x;
                     if (AxisValue.y > deadzone) selectorRadius *= scaleFactor;
                     if (AxisValue.y < deadzone) selectorRadius /= scaleFactor;
                     selectorRadius = Mathf.Clamp(selectorRadius, 0.001f, 0.5f);
                     mouthpiece.localScale = Vector3.one * selectorRadius;
-
                 }
             }
         }
@@ -293,6 +300,21 @@ namespace VRtist
         internal void SelectEmpty()
         {
             UnSelectControllers();
+        }
+
+        public void SelectConstraint()
+        {
+            IsAddingConstraint = true;
+            ConstraintButton.Checked = true;
+        }
+        public void AddConstraint(GameObject target)
+        {
+            IsAddingConstraint = false;
+            ConstraintButton.Checked = false;
+            if (Selection.SelectedControllers.Count > 0)
+            {
+                new CommandAddConstraint(ConstraintType.Parent, target, Selection.SelectedControllers[0].gameObject).Submit();
+            }
         }
 
         #region Gizmo/Actuator
@@ -577,25 +599,8 @@ namespace VRtist
                     OnControllerSelected(directController);
                 }
             }
-
-            //RigObjectController hoveredController = gameObject.GetComponent<RigObjectController>();
-            //if (Selection.SelectedControllers.Contains(hoveredController))
-            //{
-            //    Selection.SelectedControllers.Remove(hoveredController);
-            //    Selection.OnControllerUnselected.Invoke(hoveredController);
-            //    //hoveredController.GetTargets().ForEach(x => CurveManager.UnSelectJoint(x));
-            //    //hoveredController.OnDeselect();
-            //    //RemoveGizmo(hoveredController);
-            //}
-            //else
-            //{
-            //    Selection.SelectedControllers.Add(hoveredController);
-            //    Selection.OnControllerSelected.Invoke(hoveredController);
-            //    //hoveredController.OnSelect();
-            //    //CreateGizmo(hoveredController);
-            //    //hoveredController.GetTargets().ForEach(x => CurveManager.SelectJoint(x));
-            //}
         }
+
         private void UnSelectControllers()
         {
             selectedCurve = null;
@@ -622,12 +627,10 @@ namespace VRtist
         {
             controller.OnSelect();
             CreateGizmo(controller);
-            controller.GetTargets().ForEach(x => CurveManager.SelectJoint(x));
         }
 
         private void OnControllerUnselected(RigObjectController controller)
         {
-            controller.GetTargets().ForEach(x => CurveManager.UnSelectJoint(x));
             controller.OnDeselect();
             RemoveGizmo(controller);
         }
