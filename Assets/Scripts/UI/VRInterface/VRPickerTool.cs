@@ -40,9 +40,6 @@ namespace VRtist
         private float ScaleValue;
         private Vector3 initialScale;
 
-        private List<RigObjectController> selectedControllers = new List<RigObjectController>();
-        private PoseManipulation poseManip;
-
         private RigObjectController draggedController;
 
         protected override void DoUpdate()
@@ -54,17 +51,17 @@ namespace VRtist
         {
             RigObjectController controller = target.GetComponent<RigObjectController>();
 
-            if (selectedControllers.Contains(controller))
+            if (Selection.SelectedControllers.Contains(controller.pairedController))
             {
                 UnselectController(controller);
-                selectedControllers.Remove(controller);
+                Selection.SelectedControllers.Remove(controller.pairedController);
+                Selection.OnControllerUnselected.Invoke(controller.pairedController);
                 return;
             }
-            //Gizmo.gameObject.SetActive(true);
-            //Gizmo.Init(controller, true);
-            //Gizmo.ChangeGizmo(GoalGizmo.GizmoTool.Position);
             controller.OnSelect();
-            selectedControllers.Add(controller);
+            controller.pairedController.OnSelect();
+            Selection.SelectedControllers.Add(controller.pairedController);
+            Selection.OnControllerSelected.Invoke(controller.pairedController);
 
             GameObject cloneTarget = Picker.CloneToTarget[controller.gameObject];
             if (cloneTarget.TryGetComponent<RigObjectController>(out RigObjectController ctrl))
@@ -74,17 +71,12 @@ namespace VRtist
             }
             Picker.PickerGizmo.gameObject.SetActive(true);
             Picker.PickerGizmo.FixedInitialize(controller);
-
-            //controller.OnSelect(Gizmo);
-            //SelectedGoal.Invoke(controller);
         }
 
         public void UnselectController(RigObjectController controller)
         {
-            //Gizmo.gameObject.SetActive(false);
-            //UnselectedGoal.Invoke(controller.TargetController);
             controller.OnDeselect();
-
+            controller.pairedController.OnDeselect();
             if (Picker.CloneToTarget.TryGetValue(controller.gameObject, out GameObject cloneTarget))
             {
                 if (cloneTarget.TryGetComponent(out RigObjectController ctrl))
@@ -98,9 +90,26 @@ namespace VRtist
 
         public void SelectEmpty()
         {
-            selectedControllers.ForEach(x => UnselectController(x));
-            selectedControllers.Clear();
+            List<RigObjectController> constraintControllers = new List<RigObjectController>();
+            Selection.SelectedControllers.ForEach(x =>
+            {
+                if (x is RigConstraintController)
+                {
+                    if (x.pairedController != null)
+                    {
+                        UnselectController(x.pairedController);
+                        constraintControllers.Add(x);
+                    }
+                }
+            });
+            constraintControllers.ForEach(x =>
+            {
+                Selection.SelectedControllers.Remove(x);
+                Selection.OnControllerUnselected.Invoke(x);
+            });
         }
+
+
 
         public void ResetControllers()
         {
@@ -111,9 +120,9 @@ namespace VRtist
             List<Vector3> startScales = new List<Vector3>();
             List<Vector3> endScales = new List<Vector3>();
             List<RigObjectController> originalControllers = new List<RigObjectController>();
-            if (selectedControllers.Count > 0)
+            if (Selection.SelectedControllers.Count > 0)
             {
-                selectedControllers.ForEach(x =>
+                Selection.SelectedControllers.ForEach(x =>
                 {
                     RigObjectController original = x.pairedController;
                     originalControllers.Add(original);

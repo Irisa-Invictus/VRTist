@@ -229,6 +229,7 @@ namespace VRtist
 
         private void CreatePickerClone(RigController rigController)
         {
+            ClearPickerClone();
             Target = rigController.gameObject;
             root = rigController.RootObject.gameObject;
 
@@ -239,9 +240,9 @@ namespace VRtist
 
             PickerClone.GetComponent<BoxCollider>().enabled = false;
 
-            float xRatio = 3;// pickerCollider.size.x / cloneCollider.size.x;
-            float yRatio = 3;// pickerCollider.size.y / cloneCollider.size.y;
-            float zRatio = 3;// pickerCollider.size.z / cloneCollider.size.z;
+            float xRatio = 0.075f;// pickerCollider.size.x / cloneCollider.size.x;
+            float yRatio = 0.075f;// pickerCollider.size.y / cloneCollider.size.y;
+            float zRatio = 0.075f;// pickerCollider.size.z / cloneCollider.size.z;
 
             PickerClone.transform.localPosition = Vector3.zero;// PickerClone.transform.TransformVector(cloneCollider.center) + pickerCollider.center;
             PickerClone.transform.localScale = new Vector3(-xRatio, yRatio, zRatio);
@@ -273,7 +274,6 @@ namespace VRtist
             {
                 joint.LinkJoint = target.GetComponent<JointController>();
                 target.GetComponent<JointController>().LinkJoint = joint;
-
             }
             if (clone.TryGetComponent(out DirectController dController))
             {
@@ -294,12 +294,13 @@ namespace VRtist
             PickerTool.SelectEmpty();
             foreach (KeyValuePair<GameObject, GameObject> items in CloneToTarget)
             {
-                if (items.Value.TryGetComponent(out JointController joint)) joint.LinkJoint = null;
+                if (items.Value != null && items.Value.TryGetComponent(out JointController joint)) joint.LinkJoint = null;
                 Destroy(items.Key);
             }
             controllers.Clear();
             Target = null;
             PickerClone = null;
+            CloneToTarget.Clear();
         }
 
         public void AutoSwitchOnTool()

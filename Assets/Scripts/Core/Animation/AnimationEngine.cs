@@ -346,7 +346,7 @@ namespace VRtist
             disabledAnimations.Clear();
             recordingObjects.Clear();
             oldAnimations.Clear();
-            fps = defaultFPS;
+            //fps = defaultFPS;
             StartFrame = 1;
             EndFrame = 250;
             CurrentFrame = 1;

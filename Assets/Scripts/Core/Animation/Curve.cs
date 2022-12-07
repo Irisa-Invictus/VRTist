@@ -590,6 +590,12 @@ namespace VRtist
                 value = float.NaN;
                 return false;
             }
+            int index = frame - GlobalState.Animation.StartFrame;
+            if (index < 0 || index >= cachedValues.Length)
+            {
+                Debug.Log(frame);
+            }
+
             value = cachedValues[frame - GlobalState.Animation.StartFrame];
             return value != float.NaN;
         }

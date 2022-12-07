@@ -29,6 +29,7 @@ using System.Collections.Generic;
 using TMPro;
 
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 namespace VRtist
 {
@@ -39,6 +40,7 @@ namespace VRtist
         [SerializeField] private UITimeBar timeBar = null;
         [SerializeField] private UILabel currentFrameLabel = null;
         [SerializeField] private UIRange currentRange = null;
+        private Transform keyframeTrack;
         private UILabel titleBar = null;
 
         UIButton constantInterpolationButton = null;
@@ -58,11 +60,18 @@ namespace VRtist
         private int localFirstFrame = 0;
         private int localLastFrame = 250;
 
+        private int selectionStartFrame;
+        private int selectionEndFrame;
+        private bool hasSelection;
+        private bool isSelecting;
+
         public int LocalFirstFrame { get { return localFirstFrame; } set { localFirstFrame = value; UpdateFirstFrame(); } }
         public int LocalLastFrame { get { return localLastFrame; } set { localLastFrame = value; UpdateLastFrame(); } }
 
         private GameObject keyframePrefab;
         private GameObject currentObject = null;
+        public GameObject StartSelectionObject;
+        public GameObject EndSelectionObject;
 
         public GameObject VideoPlayer;
 
@@ -96,6 +105,7 @@ namespace VRtist
         void Start()
         {
             mainPanel = transform.Find("MainPanel");
+            keyframeTrack = transform.Find("MainPanel/Tracks/Summary/Keyframes");
             if (mainPanel != null)
             {
                 timeBar = mainPanel.Find("TimeBar").GetComponent<UITimeBar>();
@@ -118,13 +128,26 @@ namespace VRtist
 
                 UpdateInterpolation();
             }
-
             GlobalState.Animation.onFrameEvent.AddListener(OnFrameChanged);
         }
 
         private void OnFrameChanged(int frame)
         {
             UpdateCurrentFrame();
+            if (isSelecting)
+            {
+                selectionStartFrame = Mathf.Min(selectionStartFrame, frame);
+                selectionEndFrame = Mathf.Max(selectionEndFrame, frame);
+                hasSelection = true;
+                StartSelectionObject.SetActive(hasSelection);
+                EndSelectionObject.SetActive(hasSelection);
+                if (hasSelection)
+                {
+                    UIKeyView track = keyframeTrack.gameObject.GetComponent<UIKeyView>();
+                    SetAtTime(track, selectionStartFrame, StartSelectionObject);
+                    SetAtTime(track, selectionEndFrame, EndSelectionObject);
+                }
+            }
         }
 
         private void OnRangeChanged(Vector2Int range)
@@ -206,7 +229,8 @@ namespace VRtist
 
                     Selection.onSelectionChanged.AddListener(OnSelectionChanged);
                     Selection.onAuxiliarySelectionChanged.AddListener(OnAuxiliaryChanged);
-                    Selection.OnControllerSelection.AddListener(UpdateControllerSelectionChanged);
+                    Selection.OnControllerSelected.AddListener(UpdateControllerSelectionChanged);
+                    Selection.OnControllerUnselected.AddListener(UpdateControllerSelectionChanged);
 
                     GlobalState.Animation.onAddAnimation.AddListener(UpdateCurrentObjectAnimation);
                     GlobalState.Animation.onRemoveAnimation.AddListener(UpdateCurrentObjectAnimation);
@@ -225,7 +249,8 @@ namespace VRtist
 
                     Selection.onSelectionChanged.RemoveListener(OnSelectionChanged);
                     Selection.onAuxiliarySelectionChanged.RemoveListener(OnAuxiliaryChanged);
-                    Selection.OnControllerSelection.RemoveListener(UpdateControllerSelectionChanged);
+                    Selection.OnControllerSelected.RemoveListener(UpdateControllerSelectionChanged);
+                    Selection.OnControllerUnselected.RemoveListener(UpdateControllerSelectionChanged);
 
                     GlobalState.Animation.onAddAnimation.RemoveListener(UpdateCurrentObjectAnimation);
                     GlobalState.Animation.onRemoveAnimation.RemoveListener(UpdateCurrentObjectAnimation);
@@ -234,12 +259,28 @@ namespace VRtist
                 }
             }
             listenerAdded = enable;
+
+            bool joystickJustPressed = false;
+            bool joystickJustReleased = false;
+            VRInput.GetInstantButtonEvent(VRInput.primaryController, UnityEngine.XR.CommonUsages.primary2DAxisClick, ref joystickJustPressed, ref joystickJustReleased);
+            if (joystickJustPressed)
+            {
+                isSelecting = true;
+                hasSelection = false;
+                selectionStartFrame = AnimationEngine.Instance.CurrentFrame;
+                selectionEndFrame = AnimationEngine.Instance.CurrentFrame;
+            }
+            if (joystickJustReleased)
+            {
+                isSelecting = false;
+                StartSelectionObject.SetActive(hasSelection);
+                EndSelectionObject.SetActive(hasSelection);
+            }
         }
 
         private void UpdateFirstFrame()
         {
             //currentRange.GlobalRange = new Vector2();
-
             if (timeBar != null)
             {
                 timeBar.MinValue = localFirstFrame; // updates knob position
@@ -280,13 +321,16 @@ namespace VRtist
         {
             if (property == AnimatableProperty.PositionX)
             {
-                if (Selection.SelectedControllers.Count == 0)
-                    UpdateCurrentObjectAnimation(gobject);
-                else UpdateCurrentControllerAnimation(gobject);
+                UpdateCurrentObjectAnimation(gobject);
             }
         }
         void UpdateCurrentObjectAnimation(GameObject gObject)
         {
+            if (Selection.SelectedControllers.Count > 0)
+            {
+                UpdateCurrentControllerAnimation(gObject);
+                return;
+            }
             if (null == currentObject || currentObject != gObject)
                 return;
 
@@ -319,10 +363,9 @@ namespace VRtist
 
             UpdateTrackName();
 
-            Transform keyframes = transform.Find("MainPanel/Tracks/Summary/Keyframes");
             foreach (var key in keys)
             {
-                GameObject keyframe = GameObject.Instantiate(keyframePrefab, keyframes);
+                GameObject keyframe = GameObject.Instantiate(keyframePrefab, keyframeTrack);
                 List<AnimKey> animKeys = key.Value;
                 AnimKey firstKey = animKeys[0];
                 switch (firstKey.interpolation)
@@ -376,10 +419,9 @@ namespace VRtist
 
             UpdateControllerTrackName();
 
-            Transform keyframes = transform.Find("MainPanel/Tracks/Summary/Keyframes");
             foreach (var key in keys)
             {
-                GameObject keyframe = GameObject.Instantiate(keyframePrefab, keyframes);
+                GameObject keyframe = GameObject.Instantiate(keyframePrefab, keyframeTrack);
                 List<AnimKey> animKeys = key.Value;
                 AnimKey firstKey = animKeys[0];
                 switch (firstKey.interpolation)
@@ -402,34 +444,41 @@ namespace VRtist
 
         void UpdateKeyframes()
         {
-            Transform keyframes = transform.Find("MainPanel/Tracks/Summary/Keyframes");
-            UIKeyView track = keyframes.gameObject.GetComponent<UIKeyView>();
+            UIKeyView track = keyframeTrack.gameObject.GetComponent<UIKeyView>();
             int i = 0;
             foreach (var key in keys)
             {
-                GameObject keyframe = keyframes.GetChild(i++).gameObject;
-
-                float time = key.Key;
-                float currentValue = (float)time;
-                float pct = (float)(currentValue - localFirstFrame) / (float)(localLastFrame - localFirstFrame);
-
-                float startX = 0.0f;
-                float endX = timeBar.width;
-                float posX = startX + pct * (endX - startX);
-
-                Vector3 knobPosition = new Vector3(posX, -0.5f * track.height, 0.0f);
-
-                if (time < LocalFirstFrame || time > LocalLastFrame)
-                {
-                    keyframe.SetActive(false); // clip out of range keyframes
-                }
-                else
-                {
-                    keyframe.SetActive(true);
-                }
-
-                keyframe.transform.localPosition = knobPosition;
+                GameObject keyframe = keyframeTrack.GetChild(i++).gameObject;
+                SetAtTime(track, key.Key, keyframe);
             }
+            if (hasSelection)
+            {
+                SetAtTime(track, selectionStartFrame, StartSelectionObject);
+                SetAtTime(track, selectionEndFrame, EndSelectionObject);
+            }
+        }
+
+        private void SetAtTime(UIKeyView track, float time, GameObject keyframe)
+        {
+            float currentValue = (float)time;
+            float pct = (float)(currentValue - localFirstFrame) / (float)(localLastFrame - localFirstFrame);
+
+            float startX = 0.0f;
+            float endX = timeBar.width;
+            float posX = startX + pct * (endX - startX);
+
+            Vector3 knobPosition = new Vector3(posX, -0.5f * track.height, 0.0f);
+
+            if (time < LocalFirstFrame || time > LocalLastFrame)
+            {
+                keyframe.SetActive(false); // clip out of range keyframes
+            }
+            else
+            {
+                keyframe.SetActive(true);
+            }
+
+            keyframe.transform.localPosition = knobPosition;
         }
 
         int GetKeyAtFrame(int index)
@@ -450,9 +499,19 @@ namespace VRtist
             CommandGroup group = new CommandGroup("Add Keyframe");
             try
             {
-                foreach (GameObject item in Selection.SelectedObjects)
+                if (Selection.SelectedControllers.Count == 0)
                 {
-                    new CommandMoveKeyframes(item, frame, frame + delta).Submit();
+                    foreach (GameObject item in Selection.SelectedObjects)
+                    {
+                        new CommandMoveKeyframes(item, frame, frame + delta).Submit();
+                    }
+                }
+                else
+                {
+                    foreach (RigObjectController controller in Selection.SelectedControllers)
+                    {
+                        new CommandMoveKeyframes(controller.gameObject, frame, frame + delta).Submit();
+                    }
                 }
             }
             finally
@@ -488,7 +547,7 @@ namespace VRtist
             UpdateCurrentObjectAnimation(gObject);
         }
 
-        protected void UpdateControllerSelectionChanged()
+        protected void UpdateControllerSelectionChanged(RigObjectController controller)
         {
             if (Selection.SelectedControllers.Count == 0)
             {
@@ -691,16 +750,28 @@ namespace VRtist
             CommandGroup group = new CommandGroup("Clear Animations");
             try
             {
-                foreach (GameObject gObject in Selection.SelectedObjects)
+                if (Selection.SelectedControllers.Count == 0)
                 {
-                    if (gObject.TryGetComponent<RigController>(out RigController controller))
+
+                    foreach (GameObject gObject in Selection.SelectedObjects)
                     {
-                        new CommandClearRecursiveAnimations(gObject).Submit();
+                        if (gObject.TryGetComponent<RigController>(out RigController controller))
+                        {
+                            new CommandClearRecursiveAnimations(gObject).Submit();
+                        }
+                        else
+                        {
+                            new CommandClearAnimations(gObject).Submit();
+                        }
                     }
-                    else
+                }
+                else
+                {
+                    foreach (RigObjectController controller in Selection.SelectedControllers)
                     {
-                        new CommandClearAnimations(gObject).Submit();
+                        new CommandClearAnimations(controller.gameObject).Submit();
                     }
+
                 }
             }
             finally
@@ -723,6 +794,27 @@ namespace VRtist
         public void OnSetStartOffset()
         {
             new CommandStartFrame(currentObject, GlobalState.Animation.CurrentFrame).Submit();
+        }
+
+        public void OnCopieKeyframes()
+        {
+            if (hasSelection)
+            {
+                if (Selection.SelectedControllers.Count == 0)
+                {
+                    if (Selection.SelectedObjects.Count > 0)
+                    {
+                        List<GameObject> objs = new List<GameObject>(Selection.SelectedObjects);
+                        new CommandCopieKeyframes(objs, selectionStartFrame, selectionEndFrame, AnimationEngine.Instance.CurrentFrame).Submit();
+                    }
+                }
+                else
+                {
+                    List<GameObject> ctrlObjs = new List<GameObject>();
+                    Selection.SelectedControllers.ForEach(x => ctrlObjs.Add(x.gameObject));
+                    new CommandCopieKeyframes(ctrlObjs, selectionStartFrame, selectionEndFrame, AnimationEngine.Instance.CurrentFrame).Submit();
+                }
+            }
         }
 
         private void UpdateKeyframesPosition(GameObject gObject)

@@ -262,6 +262,21 @@ namespace VRtist
         #region Trigger
         public void OnTriggerPressed()
         {
+            if (animationTool.IsAddingConstraint)
+            {
+                SphereCollider collider = GetComponent<SphereCollider>();
+                Collider[] contacts = Physics.OverlapSphere(transform.position, transform.lossyScale.x);
+                for (int i = 0; i < contacts.Length; i++)
+                {
+                    if (contacts[i].tag == "PhysicObject")
+                    {
+                        animationTool.AddConstraint(contacts[i].gameObject);
+                        break;
+                    }
+                }
+                return;
+            }
+
             triggerPressed = true;
             CheckForNull();
             if (HoveredTypes.Count == 0)
