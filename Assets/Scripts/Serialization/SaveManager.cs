@@ -235,8 +235,11 @@ namespace VRtist.Serialization
 
         public void Save(string projectName)
         {
+
+            Debug.Log("start Save");
             totalStopwatch = new System.Diagnostics.Stopwatch();
             totalStopwatch.Start();
+
 
             // Pre save
             stopwatch = System.Diagnostics.Stopwatch.StartNew();
@@ -254,25 +257,35 @@ namespace VRtist.Serialization
             stopwatch.Stop();
             LogElapsedTime($"Scene Traversal ({Saver.GetObjectsCount()} objects)", stopwatch);
 
+            Debug.Log("set shot manager");
             // Retrieve shot manager data
             SetShotManagerData();
 
+            Debug.Log("set anim");
             // Retrieve animation data
             SetAnimationsData();
 
+            Debug.Log("set constraint");
             // Set constraints data
             SetConstraintsData();
 
+            Debug.Log("set skybox");
             // Retrieve skybox
             Saver.SetSkyData(GlobalState.Instance.SkySettings);
 
+
+            Debug.Log("set player");
             // Set player data
             Saver.SetPlayerData(cameraRig);
 
+            Debug.Log("save scene");
             // Save scene on disk
             SaveScene();
+            Debug.Log("save mesh");
             Saver.SaveMeshes();
+            Debug.Log("save materials");
             Saver.SaveMaterials();
+            Debug.Log("save screenshot");
             StartCoroutine(SaveScreenshot());
 
             totalStopwatch.Stop();
@@ -281,6 +294,7 @@ namespace VRtist.Serialization
             SceneManager.sceneSavedEvent.Invoke();
             CommandManager.SetSceneDirty(false);
             GlobalState.Instance.messageBox.SetVisible(false);
+            Debug.Log("Finished");
         }
 
 
@@ -408,84 +422,172 @@ namespace VRtist.Serialization
             bool gizmoVisible = GlobalState.Settings.DisplayGizmos;
             bool errorLoading = false;
 
+
+            GlobalState.Instance.messageBox.ShowMessage("Loading scene, please wait...");
+            GlobalState.SetDisplayGizmos(true);
+
+            currentProjectName = projectName;
+            GlobalState.Settings.ProjectName = projectName;
+
+            // Clear current scene
+            SceneManager.ClearScene();
+
+
+            // ensure VRtist scene
+            VRtistScene scene = new VRtistScene();
+            SceneManager.SetSceneImpl(scene);
+            GlobalState.SetClientId(null);
+
             try
             {
-                GlobalState.Instance.messageBox.ShowMessage("Loading scene, please wait...");
-                GlobalState.SetDisplayGizmos(true);
-
-                currentProjectName = projectName;
-                GlobalState.Settings.ProjectName = projectName;
-
-                // Clear current scene
-                SceneManager.ClearScene();
-
-                // ensure VRtist scene
-                VRtistScene scene = new VRtistScene();
-                SceneManager.SetSceneImpl(scene);
-                GlobalState.SetClientId(null);
-
                 // Load data from file
                 string path = GetScenePath(projectName);
                 Loader.Load(path);
+            }
+            catch (Exception e)
+            {
+                LoadingError("data from file", e);
+                errorLoading = true;
+            }
 
+            try
+            {
                 // Position user
                 Loader.LoadPlayerData(cameraRig);
+            }
+            catch (Exception e)
+            {
+                LoadingError("Player data ", e);
+                errorLoading = true;
+            }
 
-                // Sky
-                GlobalState.Instance.SkySettings = Loader.GetSkySettings();
+            // Sky
+            GlobalState.Instance.SkySettings = Loader.GetSkySettings();
 
+            try
+            {
                 // Objects            
                 Loader.LoadObjects(rootTransform);
+            }
+            catch (Exception e)
+            {
+                LoadingError("Objects ", e);
+                errorLoading = true;
+            }
+
+            try
+            {
 
                 // Lights
                 Loader.LoadLights();
-
-                // Cameras
-                Loader.LoadCameras();
-
-                Loader.LoadSkinMeshes();
-
-
-                // Load animations & constraints
-                AnimationEngine.Instance.fps = Loader.GetFps();
-                AnimationEngine.Instance.StartFrame = Loader.GetStartFrame();
-                AnimationEngine.Instance.EndFrame = Loader.GetEndFrame();
-
-                Loader.LoadAnimations();
-
-                Loader.LoadRigs();
-
-                Loader.LoadConstraints();
-
-                Loader.LoadShots();
-                // Load shot manager
-
-
-                ShotManager.Instance.FireChanged();
-
-                AnimationEngine.Instance.CurrentFrame = Loader.GetCurrentFrame();
-
-                // Load camera snapshots
-                StartCoroutine(LoadCameraSnapshots());
             }
-            catch (Exception)
+            catch (Exception e)
             {
-                GlobalState.Instance.messageBox.ShowMessage("Error loading file", 5f);
+                LoadingError("Lights ", e);
                 errorLoading = true;
             }
-            finally
+
+            try
             {
-                saveFolder = defaultSaveFolder;
-                if (!gizmoVisible)
-                    GlobalState.SetDisplayGizmos(false);
-                if (!errorLoading)
-                {
-                    GlobalState.Instance.messageBox.SetVisible(false);
-                    SceneManager.sceneLoadedEvent.Invoke();
-                }
+                // Cameras
+                Loader.LoadCameras();
             }
+            catch (Exception e)
+            {
+                LoadingError("Cameras ", e);
+                errorLoading = true;
+            }
+
+            try
+            {
+                Loader.LoadSkinMeshes();
+
+            }
+            catch (Exception e)
+            {
+                LoadingError("Skin mehses", e);
+                errorLoading = true;
+            }
+
+
+            // Load animations & constraints
+            AnimationEngine.Instance.fps = Loader.GetFps();
+            AnimationEngine.Instance.StartFrame = Loader.GetStartFrame();
+            AnimationEngine.Instance.EndFrame = Loader.GetEndFrame();
+
+            try
+            {
+
+                Loader.LoadAnimations();
+            }
+            catch (Exception e)
+            {
+                LoadingError("Animations ", e);
+                errorLoading = true;
+            }
+            try
+            {
+
+                Loader.LoadRigs();
+            }
+            catch (Exception e)
+            {
+                LoadingError("Rigs ", e);
+                errorLoading = true;
+            }
+            try
+            {
+                Loader.LoadConstraints();
+            }
+            catch (Exception e)
+            {
+                LoadingError("Constraints ", e);
+                errorLoading = true;
+            }
+            try
+            {
+
+                Loader.LoadShots();
+            }
+            catch (Exception e)
+            {
+                LoadingError("Shots ", e);
+                errorLoading = true;
+            }
+            // Load shot manager
+
+
+            ShotManager.Instance.FireChanged();
+
+            AnimationEngine.Instance.CurrentFrame = Loader.GetCurrentFrame();
+
+            // Load camera snapshots
+            StartCoroutine(LoadCameraSnapshots());
+            //}
+            //catch (Exception e)
+            //{
+            //    GlobalState.Instance.messageBox.ShowMessage("Error loading file", 5f);
+            //    errorLoading = true;
+            //}
+            //finally
+            //{
+            saveFolder = defaultSaveFolder;
+            if (!gizmoVisible)
+                GlobalState.SetDisplayGizmos(false);
+            if (!errorLoading)
+            {
+                GlobalState.Instance.messageBox.SetVisible(false);
+                SceneManager.sceneLoadedEvent.Invoke();
+            }
+            //}
         }
 
+
+        private void LoadingError(string step, Exception e)
+        {
+            GlobalState.Instance.messageBox.ShowMessage("Error loading " + step, 5f);
+            Debug.Log("error loading " + step + "  " + e.Message);
+        }
 
         private IEnumerator LoadCameraSnapshots()
         {

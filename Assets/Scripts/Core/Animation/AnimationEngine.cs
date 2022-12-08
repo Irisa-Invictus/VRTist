@@ -153,7 +153,7 @@ namespace VRtist
             get { return currentFrame; }
             set
             {
-                currentFrame = Mathf.Clamp(value, startFrame, endFrame);
+                currentFrame = Mathf.Clamp(value, localFirstFrame, localLastFrame);
                 if (animationState != AnimationState.Playing && animationState != AnimationState.AnimationRecording)
                 {
                     EvaluateAnimations();
@@ -161,6 +161,9 @@ namespace VRtist
                 }
             }
         }
+
+        public int localFirstFrame = 0;
+        public int localLastFrame = 250;
 
         public bool autoKeyEnabled = false;
 
@@ -245,7 +248,7 @@ namespace VRtist
 
                 if (currentFrame != newFrame)
                 {
-                    if (newFrame > endFrame)
+                    if (newFrame > localLastFrame)
                     {
                         if (animationState == AnimationState.AnimationRecording)
                         {
@@ -255,8 +258,8 @@ namespace VRtist
                         }
                         else if (loop)
                         {
-                            newFrame = startFrame;
-                            playStartFrame = startFrame;
+                            newFrame = localFirstFrame;
+                            playStartFrame = localFirstFrame;
                             playStartTime = Time.time;
                         }
                     }
@@ -562,6 +565,12 @@ namespace VRtist
             {
                 Pause();
             }
+        }
+
+        public void TogglePlayePause()
+        {
+            if (animationState == AnimationState.Playing) OnTogglePlayPause(false);
+            else OnTogglePlayPause(true);
         }
 
         public void OnTogglePlayPause(bool play)

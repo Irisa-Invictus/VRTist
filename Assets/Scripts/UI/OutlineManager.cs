@@ -25,6 +25,7 @@ using System.Collections.Generic;
 
 using UnityEngine;
 using UnityEngine.Animations;
+using UnityEngine.Rendering.HighDefinition;
 
 namespace VRtist
 {
@@ -180,7 +181,6 @@ namespace VRtist
                     }
                 }
             }
-
             gObject.layer = LayerMask.NameToLayer(layerName);
             for (int i = 0; i < gObject.transform.childCount; i++)
             {

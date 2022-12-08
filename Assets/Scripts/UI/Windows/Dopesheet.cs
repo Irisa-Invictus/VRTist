@@ -57,16 +57,13 @@ namespace VRtist
         public IntChangedEvent onPreviousKeyframeEvent = new IntChangedEvent();
         public IntChangedEvent onNextKeyframeEvent = new IntChangedEvent();
 
-        private int localFirstFrame = 0;
-        private int localLastFrame = 250;
-
         private int selectionStartFrame;
         private int selectionEndFrame;
         private bool hasSelection;
         private bool isSelecting;
 
-        public int LocalFirstFrame { get { return localFirstFrame; } set { localFirstFrame = value; UpdateFirstFrame(); } }
-        public int LocalLastFrame { get { return localLastFrame; } set { localLastFrame = value; UpdateLastFrame(); } }
+        public int LocalFirstFrame { get { return AnimationEngine.Instance.localFirstFrame; } set { AnimationEngine.Instance.localFirstFrame = value; UpdateFirstFrame(); } }
+        public int LocalLastFrame { get { return AnimationEngine.Instance.localLastFrame; } set { AnimationEngine.Instance.localLastFrame = value; UpdateLastFrame(); } }
 
         private GameObject keyframePrefab;
         private GameObject currentObject = null;
@@ -123,8 +120,8 @@ namespace VRtist
                 ColorUtility.TryParseHtmlString("#FF2D5E", out bezierInterpolationColor);
 
                 currentRange.CurrentRange = new Vector2(GlobalState.Animation.StartFrame, GlobalState.Animation.EndFrame);
-                localFirstFrame = GlobalState.Animation.StartFrame;
-                localLastFrame = GlobalState.Animation.EndFrame;
+                LocalFirstFrame = GlobalState.Animation.StartFrame;
+                LocalLastFrame = GlobalState.Animation.EndFrame;
 
                 UpdateInterpolation();
             }
@@ -283,7 +280,7 @@ namespace VRtist
             //currentRange.GlobalRange = new Vector2();
             if (timeBar != null)
             {
-                timeBar.MinValue = localFirstFrame; // updates knob position
+                timeBar.MinValue = LocalFirstFrame; // updates knob position
             }
         }
 
@@ -291,7 +288,7 @@ namespace VRtist
         {
             if (timeBar != null)
             {
-                timeBar.MaxValue = localLastFrame; // updates knob position
+                timeBar.MaxValue = LocalLastFrame; // updates knob position
             }
         }
 
@@ -461,7 +458,7 @@ namespace VRtist
         private void SetAtTime(UIKeyView track, float time, GameObject keyframe)
         {
             float currentValue = (float)time;
-            float pct = (float)(currentValue - localFirstFrame) / (float)(localLastFrame - localFirstFrame);
+            float pct = (float)(currentValue - LocalFirstFrame) / (float)(LocalLastFrame - LocalFirstFrame);
 
             float startX = 0.0f;
             float endX = timeBar.width;

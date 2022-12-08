@@ -399,7 +399,7 @@ namespace VRtist
 
                     GameObject instance = SceneManager.InstantiateUnityPrefab(cameraPrefab);
                     Vector3 position = matrix.GetColumn(3);
-                    Quaternion rotation = Quaternion.AngleAxis(180, Vector3.forward) * Quaternion.LookRotation(matrix.GetColumn(2), matrix.GetColumn(1));
+                    Quaternion rotation =  Quaternion.AngleAxis(0, Vector3.forward) * Quaternion.LookRotation(-matrix.GetColumn(2), matrix.GetColumn(1));
                     Vector3 scale = new Vector3(matrix.GetColumn(0).magnitude, matrix.GetColumn(1).magnitude, matrix.GetColumn(2).magnitude);
 
                     CommandGroup undoGroup = new CommandGroup("Instantiate Camera");

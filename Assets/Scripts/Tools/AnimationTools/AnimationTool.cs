@@ -329,7 +329,6 @@ namespace VRtist
         internal void RemoveGizmo(RigObjectController controller)
         {
             GoalGizmo gizmo = gizmos.Find(x => x.Controller == controller);
-            Debug.Log("remove gizmo " + gizmo);
             if (gizmo != null)
             {
                 gizmos.Remove(gizmo);

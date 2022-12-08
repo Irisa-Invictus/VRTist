@@ -70,7 +70,8 @@ namespace VRtist
                 if (ctrl.TryGetComponent(out MeshCollider collider)) collider.enabled = true;
             }
             Picker.PickerGizmo.gameObject.SetActive(true);
-            Picker.PickerGizmo.FixedInitialize(controller);
+            if (Picker.UseTPose) Picker.PickerGizmo.AddSelected(controller.pairedController);
+            else Picker.PickerGizmo.AddSelected(controller);
         }
 
         public void UnselectController(RigObjectController controller)
@@ -84,7 +85,11 @@ namespace VRtist
                     if (ctrl.TryGetComponent(out MeshRenderer renderer)) renderer.enabled = false;
                     if (ctrl.TryGetComponent(out MeshCollider collider)) collider.enabled = false;
                 }
-                if (Picker.PickerGizmo.isActiveAndEnabled && controller == Picker.PickerGizmo.Controller) Picker.PickerGizmo.gameObject.SetActive(false);
+                if (Picker.PickerGizmo.isActiveAndEnabled)
+                {
+                    Picker.PickerGizmo.RemoveSelected(controller);
+                    if (controller == Picker.PickerGizmo.Controller) Picker.PickerGizmo.gameObject.SetActive(false);
+                }
             }
         }
 

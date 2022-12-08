@@ -130,7 +130,7 @@ namespace VRtist
                 // RESET SCALE -- Right Joystick Click
                 if (IsCompatibleWithResetScale(options.currentNavigationMode))
                 {
-                    HandleResetScale();
+                    //HandleResetScale();
                 }
 
                 // PALETTE POP -- Left Trigger
@@ -281,17 +281,18 @@ namespace VRtist
             VRInput.ButtonEvent(VRInput.secondaryController, CommonUsages.primary2DAxisClick,
             () =>
             {
-                if (Selection.SelectedObjects.Count == 0)
-                {
-                    ResetCameraClipPlanes();
-                    transform.localPosition = Vector3.zero;
-                    transform.localRotation = Quaternion.identity;
-                    transform.localScale = Vector3.one;
-                }
-                else
-                {
-                    FitToSelection();
-                }
+                GlobalState.Animation.TogglePlayePause();
+                //if (Selection.SelectedObjects.Count == 0)
+                //{
+                //    ResetCameraClipPlanes();
+                //    transform.localPosition = Vector3.zero;
+                //    transform.localRotation = Quaternion.identity;
+                //    transform.localScale = Vector3.one;
+                //}
+                //else
+                //{
+                //    FitToSelection();
+                //}
             });
         }
 

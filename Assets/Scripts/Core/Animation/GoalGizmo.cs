@@ -51,8 +51,11 @@ namespace VRtist
         public GameObject zPosition;
 
         public RigObjectController Controller;
+        public List<RigObjectController> Selections;
         private bool freePosition = false;
 
+
+        CommandGroup cmdGroup;
 
         public void OnEnable()
         {
@@ -92,7 +95,29 @@ namespace VRtist
             generatePositionCurves();
             generateRotationCurves();
             ChangeGizmo(GizmoTool.Rotation);
+        }
 
+        public void AddSelected(RigObjectController controller)
+        {
+            if (Controller != null) Selections.Add(Controller);
+            FixedInitialize(controller);
+        }
+
+        public void RemoveSelected(RigObjectController controller)
+        {
+            if (Controller = controller)
+            {
+                if (Selections.Count > 0)
+                {
+                    FixedInitialize(Selections[0]);
+                    Selections.RemoveAt(0);
+                }
+                else Controller = null;
+            }
+            else if (Selections.Contains(controller))
+            {
+                Selections.Remove(controller);
+            }
         }
 
         public void NextGizmo()
@@ -109,7 +134,7 @@ namespace VRtist
 
         public void RemoveGizmo()
         {
-
+            Selections.Clear();
         }
 
         public void StartHover(GameObject actuator)
@@ -131,21 +156,25 @@ namespace VRtist
 
         public void GrabGizmo(Transform mouthpiece, Transform actuator)
         {
+            cmdGroup = new CommandGroup("Add keyframe");
             AnimationTool.Vector3Axis axis = GetAcutatorAxis(actuator.gameObject);
             SelectedAxis(axis);
             if (currentGizmo == GizmoTool.Rotation)
             {
                 Controller.OnGrabGizmo(mouthpiece, this, CurrentGizmo, axis, false);
+                Selections.ForEach(x => x.OnGrabGizmo(mouthpiece, this, CurrentGizmo, axis, false));
             }
             else
             {
                 Controller.OnGrabGizmo(mouthpiece, this, currentGizmo, axis, true);
+                Selections.ForEach(x => x.OnGrabGizmo(mouthpiece, this, CurrentGizmo, axis, true));
             }
         }
 
         public void DragGizmo(Transform mouthpiece)
         {
             Controller.OnDragGizmo(mouthpiece);
+            Selections.ForEach(x => x.OnDragGizmo(mouthpiece));
             transform.rotation = Controller.transform.rotation;
             if (!freePosition) transform.localPosition = Controller.transform.localPosition;
         }
@@ -153,6 +182,9 @@ namespace VRtist
         public void ReleaseGizmo()
         {
             Controller.OnReleaseGizmo();
+            Selections.ForEach(x => x.OnReleaseGizmo());
+            cmdGroup.Submit();
+            cmdGroup = null;
             UnSelectAxis();
         }
 

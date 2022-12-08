@@ -44,7 +44,7 @@ namespace VRtist
         public Range yScaleRange;
         public Range zScaleRange;
 
-        public Dada.URig.Descriptors.Constraint[] constraints;
+        public Dada.URig.Descriptors.Constraint[] constraints = new Dada.URig.Descriptors.Constraint[0];
 
         internal Matrix4x4 InitialParentMatrixWorldToLocal;
         internal Matrix4x4 InitialParentMatrix;
@@ -184,14 +184,7 @@ namespace VRtist
             }
         }
 
-        public void CopiePairedController()
-        {
-            if (pairedController == null) return;
-            transform.localPosition = pairedController.transform.localPosition;
-            transform.localRotation = pairedController.transform.localRotation;
-            transform.localScale = pairedController.transform.localScale;
-            UpdateController(applyToPair: false, applyToChild: false);
-        }
+
 
         private void ApplyConstraints()
         {
@@ -337,7 +330,8 @@ namespace VRtist
 
             constraint.drivenObjectTransform.position = position;
             constraint.drivenObjectTransform.eulerAngles = eulerAngles;
-            constraint.drivenObjectTransform.localScale = scale.ElementwiseDivide(constraint.drivenObjectTransform.parent.lossyScale);
+            Vector3 divScale = scale.ElementwiseDivide(constraint.drivenObjectTransform.parent.lossyScale);
+            if (divScale.x != float.NaN) constraint.drivenObjectTransform.localScale = scale.ElementwiseDivide(constraint.drivenObjectTransform.parent.lossyScale);
         }
 
         private void CopyLocalAttributeToTransformAttributeConstraint(Dada.URig.Descriptors.Constraint constraint)
@@ -489,7 +483,6 @@ namespace VRtist
 
         public override void OnGrabGizmo(Transform mouthpiece, GoalGizmo gizmo, GoalGizmo.GizmoTool tool, AnimationTool.Vector3Axis axis, bool data)
         {
-            cmdGroup = new CommandGroup("Add Keyframe");
             gizmoTransform = gizmo.transform;
             startPosition = transform.localPosition;
             startRotation = transform.localRotation;
@@ -546,7 +539,22 @@ namespace VRtist
         }
         public override void OnReleaseGizmo()
         {
-            OnRelease();
+            endPosition = transform.localPosition;
+            endRotation = transform.localRotation;
+            endScale = transform.localScale;
+
+            new CommandMoveControllers(this, startPosition, startRotation, startScale, endPosition, endRotation, endScale).Submit();
+            if (GlobalState.Animation.autoKeyEnabled)
+            {
+                if (isPickerController)
+                {
+                    new CommandAddKeyframes(pairedController.gameObject, true).Submit();
+                }
+                else
+                {
+                    new CommandAddKeyframes(gameObject, true).Submit();
+                }
+            }
         }
 
         public void MoveController()
