@@ -58,6 +58,7 @@ namespace VRtist.Serialization.V2
             // Check for import
             if (data.isImported)
             {
+                Debug.Log(data.name);
                 try
                 {
                     importedParent = new GameObject("__VRtist_tmp_load__").transform;
