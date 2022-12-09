@@ -49,6 +49,7 @@ namespace VRtist
         private GameObject Target;
         public Dictionary<GameObject, GameObject> CloneToTarget = new Dictionary<GameObject, GameObject>();
         public List<RigConstraintController> controllers = new List<RigConstraintController>();
+        public List<DirectController> directController = new List<DirectController>();
         public Material Invisible;
         public GameObject BoxControllerBase;
         public GameObject ControllerBase;
@@ -187,9 +188,25 @@ namespace VRtist
                         x.CopiePairedController();
                     }
                 });
+                directController.ForEach(x =>
+                {
+                    if (x.isPickerController)
+                    {
+                        x.isTPose = false;
+                        x.CopiePairedController();
+                    }
+                });
                 return;
             }
             foreach (RigConstraintController controller in controllers)
+            {
+                if (controller.isPickerController)
+                {
+                    controller.ResetPosition(applyToPair: false);
+                    controller.isTPose = true;
+                }
+            }
+            foreach (DirectController controller in directController)
             {
                 if (controller.isPickerController)
                 {
@@ -280,6 +297,8 @@ namespace VRtist
                 if (clone.TryGetComponent(out Renderer dRenderer)) dRenderer.enabled = false;
                 if (clone.TryGetComponent(out Collider dCollider)) dCollider.enabled = false;
                 DirectController targetDirect = target.GetComponent<DirectController>();
+                directController.Add(dController);
+                dController.isPickerController = true;
                 dController.pairedController = targetDirect;
                 targetDirect.pairedController = dController;
             }
@@ -298,6 +317,7 @@ namespace VRtist
                 Destroy(items.Key);
             }
             controllers.Clear();
+            directController.Clear();
             Target = null;
             PickerClone = null;
             CloneToTarget.Clear();

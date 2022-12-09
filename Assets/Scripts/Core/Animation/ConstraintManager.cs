@@ -43,6 +43,8 @@ namespace VRtist
         public GameObject gobject;
         public Transform target;
         public ConstraintType constraintType;
+        public Vector3 positionOffset;
+        public Vector3 rotationOffset;
         public GameObject lineGameObject = null;
         public LineRenderer lineRenderer = null;
     }
@@ -196,12 +198,88 @@ namespace VRtist
                 case ConstraintType.LookAt: AddLookAtConstraint(source, target, index); break;
             }
         }
+
+        public static void AddConstraint(GameObject source, GameObject target, ConstraintType type, Vector3 posOffset, Vector3 rotOffset, int index = -1)
+        {
+            switch (type)
+            {
+                case ConstraintType.Parent: AddParentConstraint(source, target, posOffset, rotOffset, index); break;
+                case ConstraintType.LookAt: AddLookAtConstraint(source, target, index); break;
+            }
+        }
+
         public static void InsertConstraint(int index, Constraint constraint)
         {
             AddConstraint(constraint.gobject, constraint.target.gameObject, constraint.constraintType, index);
         }
 
         public static void AddParentConstraint(GameObject gobject, GameObject target, int index = -1)
+        {
+            ParentConstraint constraint = gobject.GetComponent<ParentConstraint>();
+            Constraint newConstraint = new Constraint { gobject = gobject, target = target.transform, constraintType = ConstraintType.Parent };
+            if (null == constraint)
+            {
+                constraint = gobject.AddComponent<ParentConstraint>();
+                ParametersController parametersController = gobject.GetComponent<ParametersController>();
+                if (null == parametersController)
+                {
+                    gobject.AddComponent<ParametersController>();
+                }
+                if (index == -1)
+                    constraints.Add(newConstraint);
+                else
+                    constraints.Insert(index, newConstraint);
+                ParametersController targetParametersController = target.GetComponent<ParametersController>();
+                if (null == targetParametersController)
+                {
+                    targetParametersController = target.AddComponent<ParametersController>();
+                }
+                targetParametersController.AddConstraintHolder(gobject);
+            }
+            else
+            {
+                // update visual target for LineRenderer
+                foreach (Constraint c in constraints)
+                {
+                    if (c.gobject == gobject && c.constraintType == ConstraintType.Parent)
+                    {
+                        c.target = target.transform;
+                        newConstraint = c;
+                        break;
+                    }
+                }
+            }
+
+            ConstraintSource source;
+            if (constraint.sourceCount == 0)
+            {
+                source = new ConstraintSource();
+                constraint.AddSource(source);
+            }
+            else
+            {
+                source = constraint.GetSource(0);
+            }
+            source.sourceTransform = target.transform;
+            source.weight = 1f;
+            constraint.SetSource(0, source);
+
+            constraint.translationAtRest = gobject.transform.localPosition;
+            constraint.rotationAtRest = gobject.transform.localRotation.eulerAngles;
+
+            Vector3 offset = Vector3.Scale(target.transform.InverseTransformPoint(gobject.transform.position), target.transform.lossyScale);
+            constraint.SetTranslationOffset(0, offset);
+            newConstraint.positionOffset = offset;
+
+            Quaternion quat = Quaternion.Inverse(target.transform.rotation) * gobject.transform.rotation;
+            constraint.SetRotationOffset(0, quat.eulerAngles);
+            newConstraint.rotationOffset = quat.eulerAngles;
+            constraint.constraintActive = true;
+
+            GlobalState.FireObjectConstraint(gobject);
+        }
+
+        public static void AddParentConstraint(GameObject gobject, GameObject target, Vector3 positionOffset, Vector3 rotationOffset, int index = -1)
         {
             ParentConstraint constraint = gobject.GetComponent<ParentConstraint>();
             if (null == constraint)
@@ -212,7 +290,7 @@ namespace VRtist
                 {
                     gobject.AddComponent<ParametersController>();
                 }
-                Constraint newConstraint = new Constraint { gobject = gobject, target = target.transform, constraintType = ConstraintType.Parent };
+                Constraint newConstraint = new Constraint { gobject = gobject, target = target.transform, constraintType = ConstraintType.Parent, positionOffset = positionOffset, rotationOffset = rotationOffset };
                 if (index == -1)
                     constraints.Add(newConstraint);
                 else
@@ -254,11 +332,9 @@ namespace VRtist
             constraint.translationAtRest = gobject.transform.localPosition;
             constraint.rotationAtRest = gobject.transform.localRotation.eulerAngles;
 
-            Vector3 offset = Vector3.Scale(target.transform.InverseTransformPoint(gobject.transform.position), target.transform.lossyScale);
-            constraint.SetTranslationOffset(0, offset);
+            constraint.SetTranslationOffset(0, positionOffset);
 
-            Quaternion quat = Quaternion.Inverse(target.transform.rotation) * gobject.transform.rotation;
-            constraint.SetRotationOffset(0, quat.eulerAngles);
+            constraint.SetRotationOffset(0, rotationOffset);
 
             constraint.constraintActive = true;
 

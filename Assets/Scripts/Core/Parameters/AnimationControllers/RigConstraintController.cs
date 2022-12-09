@@ -184,14 +184,7 @@ namespace VRtist
             }
         }
 
-        public void CopiePairedController()
-        {
-            if (pairedController == null) return;
-            transform.localPosition = pairedController.transform.localPosition;
-            transform.localRotation = pairedController.transform.localRotation;
-            transform.localScale = pairedController.transform.localScale;
-            UpdateController(applyToPair: false, applyToChild: false);
-        }
+        
 
         private void ApplyConstraints()
         {

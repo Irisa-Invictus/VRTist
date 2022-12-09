@@ -67,6 +67,15 @@ namespace VRtist
             initialLocalScale = transform.localScale;
         }
 
+        public void CopiePairedController()
+        {
+            if (pairedController == null) return;
+            transform.localPosition = pairedController.transform.localPosition;
+            transform.localRotation = pairedController.transform.localRotation;
+            transform.localScale = pairedController.transform.localScale;
+            UpdateController(applyToPair: false, applyToChild: false);
+        }
+
         public abstract void OnSelect();
         public abstract void OnDeselect();
         public abstract void OnGrab(Transform mouthpiece, bool data);

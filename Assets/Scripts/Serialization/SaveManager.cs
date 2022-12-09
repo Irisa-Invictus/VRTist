@@ -238,6 +238,7 @@ namespace VRtist.Serialization
             totalStopwatch = new System.Diagnostics.Stopwatch();
             totalStopwatch.Start();
 
+
             // Pre save
             stopwatch = System.Diagnostics.Stopwatch.StartNew();
 
@@ -418,6 +419,7 @@ namespace VRtist.Serialization
 
                 // Clear current scene
                 SceneManager.ClearScene();
+
 
                 // ensure VRtist scene
                 VRtistScene scene = new VRtistScene();
