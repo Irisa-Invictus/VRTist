@@ -151,7 +151,6 @@ namespace Dada.URig
             string text = reader.ReadToEnd();
             JSONDescriptors.Rig rigDescriptor = JsonConvert.DeserializeObject<JSONDescriptors.Rig>(text);
 
-
             if (rigDescriptor.controllers != null)
             {
                 foreach (var objectDescriptor in rigDescriptor.controllers)

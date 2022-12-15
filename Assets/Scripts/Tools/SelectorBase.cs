@@ -22,7 +22,7 @@
  */
 
 using System.Collections.Generic;
-
+using UnityEditor.EditorTools;
 using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.XR;
@@ -278,6 +278,7 @@ namespace VRtist
 
         virtual protected void ClearSelectionOnVoidTrigger()
         {
+            if (ToolsManager.CurrentToolName() == "Window") return;
             // Clear selection on trigger click on nothing
             VRInput.ButtonEvent(VRInput.primaryController, CommonUsages.trigger, () =>
             {
