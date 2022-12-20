@@ -118,6 +118,8 @@ namespace VRtist
             {
                 Selections.Remove(controller);
             }
+
+            if (Selections.Count == 0) gameObject.SetActive(false);
         }
 
         public void NextGizmo()

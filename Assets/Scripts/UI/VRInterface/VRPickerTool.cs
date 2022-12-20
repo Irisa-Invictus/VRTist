@@ -104,6 +104,11 @@ namespace VRtist
                     {
                         UnselectController(x.pairedController);
                         constraintControllers.Add(x);
+                        if (Picker.PickerGizmo.isActiveAndEnabled)
+                        {
+                            Picker.PickerGizmo.RemoveSelected(x);
+                            Picker.PickerGizmo.RemoveSelected(x.pairedController);
+                        }
                     }
                 }
             });

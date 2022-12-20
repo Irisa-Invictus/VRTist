@@ -36,6 +36,7 @@ namespace VRtist
         [SerializeField] private NavigationOptions navigation;
         public Anim3DCurveManager CurveManager;
         public VRPicker Picker;
+        public Transform pickerMouthpiece;
 
         public Transform controlPanel;
 
@@ -293,6 +294,7 @@ namespace VRtist
                     if (AxisValue.y < deadzone) selectorRadius /= scaleFactor;
                     selectorRadius = Mathf.Clamp(selectorRadius, 0.001f, 0.5f);
                     mouthpiece.localScale = Vector3.one * selectorRadius;
+                    pickerMouthpiece.localScale = Vector3.one * selectorRadius;
                 }
             }
         }

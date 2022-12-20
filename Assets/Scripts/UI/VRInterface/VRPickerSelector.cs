@@ -294,7 +294,7 @@ namespace VRtist
             if (navigation.CanUseControls(NavigationMode.UsedControls.RIGHT_JOYSTICK))
             {
                 axisValues = VRInput.GetValue(VRInput.primaryController, CommonUsages.primary2DAxis);
-                if (axisValues.magnitude > 0.5f && CurrentSelection == TargetType.none && CurrentDragged == TargetType.none) PickerTool.Picker.RotateClone(axisValues);
+                if (axisValues.magnitude > 0.5f && !gripPressed && HoveredTypes.Count > 0 && HoveredTypes[0] == TargetType.Base) PickerTool.Picker.RotateClone(axisValues);
             }
         }
 

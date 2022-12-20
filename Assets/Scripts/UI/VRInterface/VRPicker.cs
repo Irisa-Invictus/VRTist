@@ -339,7 +339,7 @@ namespace VRtist
                 OutAndLocked = true;
                 return;
             }
-            ToolsUIManager.Instance.ChangeTool(previousTool);
+            ToolsUIManager.Instance.ChangeTool("Animation");
             OutAndLocked = false;
         }
 
