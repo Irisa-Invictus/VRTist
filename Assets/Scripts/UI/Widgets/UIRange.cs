@@ -918,8 +918,8 @@ namespace VRtist
                             if (localProjectedWidgetPosition.x < startX)
                                 localProjectedWidgetPosition.x = startX;
 
-                            if (localProjectedWidgetPosition.x > currentMaxPosX - 3.0f * knobRadius)
-                                localProjectedWidgetPosition.x = currentMaxPosX - 3.0f * knobRadius;
+                            if (localProjectedWidgetPosition.x > currentMaxPosX - knobRadius / 2f)
+                                localProjectedWidgetPosition.x = currentMaxPosX - knobRadius / 2f;
 
                             // SET
 
@@ -950,8 +950,8 @@ namespace VRtist
 
                     case RangeWidgetPart.RightKnob:
                         {
-                            if (localProjectedWidgetPosition.x < currentMinPosX + 3.0f * knobRadius)
-                                localProjectedWidgetPosition.x = currentMinPosX + 3.0f * knobRadius;
+                            if (localProjectedWidgetPosition.x < currentMinPosX + knobRadius / 2f)
+                                localProjectedWidgetPosition.x = currentMinPosX + knobRadius / 2f;
 
                             if (localProjectedWidgetPosition.x > endX)
                                 localProjectedWidgetPosition.x = endX;
