@@ -149,10 +149,10 @@ namespace VRtist
             while (null != parent && parent != RightHanded)
             {
                 controller = parent.GetComponent<ParametersController>();
+                if (controller is RigController) continue;
                 if (null != controller && controller.isImported)
                 {
                     controller.isImported = false;
-                    controller.importPath = null;
                     return;
                 }
                 parent = parent.parent;

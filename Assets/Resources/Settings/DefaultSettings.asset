@@ -15,7 +15,7 @@ MonoBehaviour:
   version: 1
   displayGizmos: 1
   displayLocators: 1
-  displayWorldGrid: 1
+  displayWorldGrid: 0
   displayAvatars: 1
   displayFPS: 0
   curveForwardOffset: 0
@@ -24,16 +24,15 @@ MonoBehaviour:
   uiVolume: 0
   rightHanded: 1
   forcePaletteOpen: 0
-  palettePositionOffset: {x: -0.0000001357745, y: -0.00000015204473, z: 0.00000020647963}
-  paletteRotationOffset: {x: -0.000000027627607, y: 0.000000025540624, z: -0.000000009645476,
-    w: 1.0000002}
+  palettePositionOffset: {x: 0.000000022546576, y: 0.00000014937831, z: 0.00000018776664}
+  paletteRotationOffset: {x: 0, y: 0, z: 0, w: 1.0000002}
   pinnedPalette: 0
-  dopeSheetPosition: {x: -0.63329256, y: 1.4697504, z: -0.05386706}
-  dopeSheetRotation: {x: -0.15318327, y: -0.67217946, z: -0.10746678, w: 0.71635234}
+  dopeSheetPosition: {x: -0.20102341, y: 1.4449209, z: -0.4797466}
+  dopeSheetRotation: {x: -0.2056639, y: 0.104210556, z: 0.049000952, w: 0.9718238}
   dopeSheetVisible: 1
   shotManagerPosition: {x: 0, y: 0, z: 0}
   shotManagerRotation: {x: 0.2588191, y: 0, z: 0, w: 0.9659258}
-  shotManagerVisible: 1
+  shotManagerVisible: 0
   cameraPreviewPosition: {x: 0, y: 0, z: 0}
   cameraPreviewRotation: {x: 0.2588191, y: 0, z: 0, w: 0.9659258}
   cameraPreviewVisible: 1
@@ -47,9 +46,9 @@ MonoBehaviour:
   consolePosition: {x: 0.0898, y: 1.674, z: 0.2262}
   consoleRotation: {x: 0.2588191, y: 0, z: 0, w: 0.9659258}
   sky:
-    topColor: {r: 0.83137256, g: 0.83137256, b: 0.83137256, a: 1}
-    middleColor: {r: 1, g: 1, b: 1, a: 1}
-    bottomColor: {r: 1, g: 1, b: 1, a: 1}
+    topColor: {r: 0.49740723, g: 0.49740723, b: 0.49740723, a: 1}
+    middleColor: {r: 0.54176617, g: 0.526234, b: 0.526234, a: 1}
+    bottomColor: {r: 0.48130903, g: 0.48130903, b: 0.48130903, a: 1}
   skies:
   - topColor: {r: 0.83137256, g: 0.83137256, b: 0.83137256, a: 1}
     middleColor: {r: 0.7647059, g: 0.7647059, b: 0.7647059, a: 1}
@@ -58,9 +57,9 @@ MonoBehaviour:
   videoOutputResolution:
     width: 1920
     height: 1080
-  videoOutputDirectory: 
-  snapshotsDirectory: 
-  exportDirectory: 
+  videoOutputDirectory: D:\VRtistData
+  snapshotsDirectory: D:\VRtistData
+  exportDirectory: D:\VRtistData
   scaleSpeed: 50
   raySliderDrag: 95
   rayHueDrag: 85

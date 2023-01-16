@@ -57,7 +57,7 @@ namespace VRtist
         CameraFocal,
         CameraFocus,
         CameraAperture,
-        BlendShape,
+        //BlendShape,
         Unknown
     }
 

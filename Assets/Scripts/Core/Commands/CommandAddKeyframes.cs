@@ -98,15 +98,15 @@ namespace VRtist
                     new CommandAddKeyframe(target.gameObject, AnimatableProperty.ScaleZ, frame, target.localScale.z, interpolation, false).Submit();
                 }
 
-                SkinnedMeshRenderer[] skinMeshes = skinController.GetComponentsInChildren<SkinnedMeshRenderer>();
-                for (int j = 0; j < skinMeshes.Length; j++)
-                {
-                    SkinnedMeshRenderer mesh = skinMeshes[j];
-                    for (int s = 0; s < mesh.sharedMesh.blendShapeCount; s++)
-                    {
-                        new CommandAddKeyframe(mesh.gameObject, AnimatableProperty.BlendShape, frame, mesh.GetBlendShapeWeight(s), interpolation, updateCurve).Submit();
-                    }
-                }
+                //SkinnedMeshRenderer[] skinMeshes = skinController.GetComponentsInChildren<SkinnedMeshRenderer>();
+                //for (int j = 0; j < skinMeshes.Length; j++)
+                //{
+                //    SkinnedMeshRenderer mesh = skinMeshes[j];
+                //    for (int s = 0; s < mesh.sharedMesh.blendShapeCount; s++)
+                //    {
+                //        new CommandAddKeyframe(mesh.gameObject, AnimatableProperty.BlendShape, frame, mesh.GetBlendShapeWeight(s), interpolation, updateCurve).Submit();
+                //    }
+                //}
 
             }
         }

@@ -51,7 +51,7 @@ namespace VRtist
 
             if (null != lightController) { CreateLightCurves(); }
             else if (null != cameraController) { CreateCameraCurves(); }
-            else if (null != skinMesh) { CreateBlendshapeCurves(skinMesh); }
+            //else if (null != skinMesh) { CreateBlendshapeCurves(skinMesh); }
             else { CreateTransformCurves(); }
         }
 
@@ -111,7 +111,7 @@ namespace VRtist
                     case AnimatableProperty.CameraFocus: cameraFocus = value; break;
                     case AnimatableProperty.CameraAperture: cameraAperture = value; break;
 
-                    case AnimatableProperty.BlendShape: blendShapes[curve.BlendShapeIndex] = value; break;
+                    //case AnimatableProperty.BlendShape: blendShapes[curve.BlendShapeIndex] = value; break;
                 }
             }
 
@@ -232,15 +232,15 @@ namespace VRtist
             curves.Add(AnimatableProperty.CameraAperture, new Curve(AnimatableProperty.CameraAperture));
         }
 
-        private void CreateBlendshapeCurves(SkinnedMeshRenderer skinRenderer)
-        {
-            CreatePositionRotationCurves();
-            int shapeCount = skinRenderer.sharedMesh.blendShapeCount;
-            for (int i = 0; i < shapeCount; i++)
-            {
-                curves.Add(AnimatableProperty.BlendShape, new Curve(AnimatableProperty.BlendShape, i));
-            }
-        }
+        //private void CreateBlendshapeCurves(SkinnedMeshRenderer skinRenderer)
+        //{
+        //    CreatePositionRotationCurves();
+        //    int shapeCount = skinRenderer.sharedMesh.blendShapeCount;
+        //    for (int i = 0; i < shapeCount; i++)
+        //    {
+        //        curves.Add(AnimatableProperty.BlendShape, new Curve(AnimatableProperty.BlendShape, i));
+        //    }
+        //}
 
         public void ComputeCache()
         {

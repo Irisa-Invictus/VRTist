@@ -281,12 +281,35 @@ namespace VRtist.Serialization
             Debug.Log("save scene");
             // Save scene on disk
             SaveScene();
-            Debug.Log("save mesh");
-            Saver.SaveMeshes();
-            Debug.Log("save materials");
-            Saver.SaveMaterials();
-            Debug.Log("save screenshot");
-            StartCoroutine(SaveScreenshot());
+
+            try
+            {
+                Debug.Log("save mesh");
+                Saver.SaveMeshes();
+            }
+            catch (Exception e)
+            {
+                SavingError("Meshes ", e);
+            }
+            try
+            {
+                Debug.Log("save materials");
+                Saver.SaveMaterials();
+            }
+            catch (Exception e)
+            {
+                SavingError("Materials ", e);
+            }
+
+            try
+            {
+                Debug.Log("save screenshot");
+                StartCoroutine(SaveScreenshot());
+            }
+            catch (Exception e)
+            {
+                SavingError("Screenshot ", e);
+            }
 
             totalStopwatch.Stop();
             LogElapsedTime("Total Time", totalStopwatch);
@@ -587,6 +610,12 @@ namespace VRtist.Serialization
         {
             GlobalState.Instance.messageBox.ShowMessage("Error loading " + step, 5f);
             Debug.Log("error loading " + step + "  " + e.Message);
+        }
+
+        private void SavingError(string step, Exception e)
+        {
+            GlobalState.Instance.messageBox.ShowMessage("Error saving " + step, 5f);
+            Debug.Log("error saving " + step + " " + e.Message);
         }
 
         private IEnumerator LoadCameraSnapshots()
