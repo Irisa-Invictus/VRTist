@@ -69,7 +69,7 @@ namespace VRtist
 
         Material rulerMaterial;
         Transform planeTransform;
-        void Start()
+        void Awake()
         {
             planeTransform = transform.Find("TimeTicks/Plane");
             rulerMaterial = planeTransform.GetComponent<MeshRenderer>().sharedMaterial;

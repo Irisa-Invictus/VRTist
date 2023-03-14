@@ -102,10 +102,6 @@ namespace VRtist
             IsInLobby = true;  // hide tooltips
 
             OnChangeNavigationMode("BiManual");
-
-            rightHanded = world.Find("Avatars");
-
-            StartCoroutine(SendPlayerTransform());
         }
 
         void Update()
@@ -151,22 +147,7 @@ namespace VRtist
             }
         }
 
-        IEnumerator SendPlayerTransform()
-        {
-            while (true)
-            {
-                // Send position and orientation
-                Vector3 forward = vrCamera.forward;
-                if (vrCamera.position != previousPosition || previousForward != forward)
-                {
-                    previousPosition = vrCamera.position;
-                    previousForward = forward;
-
-                    SceneManager.SendUserInfo(vrCamera.position, vrCamera.forward, vrCamera.up, vrCamera.right);
-                }
-                yield return new WaitForSeconds(1f / 15f);
-            }
-        }
+     
 
         private void HandleControllers()
         {

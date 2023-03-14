@@ -90,9 +90,6 @@ namespace VRtist
         private void Start()
         {
             // tmp
-            // mixer.SetFloat("Volume_Master", -25.0f);
-
-            GlobalState.Instance.onConnected.AddListener(OnConnected);
 
             displayOptionsButton = panel.Find("DisplayOptionsButton").GetComponent<UIButton>();
             soundsOptionsButton = panel.Find("SoundsOptionsButton").GetComponent<UIButton>();
@@ -140,7 +137,6 @@ namespace VRtist
             SceneManager.sceneSavedEvent.AddListener(() => StartCoroutine(ShowSaveLoadInfo("Project saved", 2)));
             SceneManager.sceneLoadedEvent.AddListener(() =>
             {
-                OnConnected();
                 StartCoroutine(ShowSaveLoadInfo("Project loaded", 2));
             });
 
@@ -160,7 +156,6 @@ namespace VRtist
         {
             OnDisplayGizmos(GlobalState.Settings.DisplayGizmos);
             OnDisplayLocators(GlobalState.Settings.DisplayLocators);
-            OnDisplayAvatars(GlobalState.Settings.DisplayAvatars);
             OnShowConsoleWindow(GlobalState.Settings.ConsoleVisible);
 
             worldGrid.SetActive(GlobalState.Settings.DisplayWorldGrid);
@@ -231,14 +226,6 @@ namespace VRtist
             projectNameLabel.Text = GlobalState.Settings.ProjectName;
         }
 
-        private void OnConnected()
-        {
-            versionLabel.Text = $"<color=#0079FF>VRtist Version</color>: {Version.VersionString}\n" +
-                $"<color=#0079FF>Sync Version</color>: {Version.syncVersion}\n\n" +
-                $"<color=#0079FF>Client ID</color>: {GlobalState.networkUser.id}\n" +
-                $"<color=#0079FF>Scene Type</color>: {SceneManager.GetSceneType()}";
-        }
-
         public void OnReset()
         {
             GlobalState.Settings.Reset();
@@ -262,11 +249,6 @@ namespace VRtist
         public void OnDisplayLocators(bool show)
         {
             GlobalState.SetDisplayLocators(show);
-        }
-
-        public void OnDisplayAvatars(bool show)
-        {
-            GlobalState.SetDisplayAvatars(show);
         }
 
         public void OnDisplayWorldGrid(bool show)
@@ -402,12 +384,6 @@ namespace VRtist
 
         public void OnQuickSaveProject()
         {
-            if (GlobalState.Instance.mixerConnected)
-            {
-                OnRemoteSave();
-                return;
-            }
-
             if (SceneManager.firstSave)
             {
                 SceneManager.firstSave = false;
@@ -453,11 +429,6 @@ namespace VRtist
             saveInfoLabel.gameObject.SetActive(true);
             yield return new WaitForSecondsRealtime(seconds);
             saveInfoLabel.gameObject.SetActive(false);
-        }
-
-        public void OnRemoteSave()
-        {
-            SceneManager.RemoteSave();
         }
 
         public void OnSetResolution(string resStr)

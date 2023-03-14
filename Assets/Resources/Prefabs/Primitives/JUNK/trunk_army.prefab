@@ -13,7 +13,7 @@ GameObject:
   - component: {fileID: 9031425169297665057}
   - component: {fileID: 8279441674399932895}
   m_Layer: 0
-  m_Name: TRUNK_ARMY
+  m_Name: trunk_army
   m_TagString: PhysicObject
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0

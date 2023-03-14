@@ -82,7 +82,6 @@ namespace VRtist
             UpdateCurvesWidth();
         }
 
-
         void UpdateCurvesWidth()
         {
             foreach (GameObject curve in curves.Values)
@@ -181,6 +180,13 @@ namespace VRtist
         void UpdateCurve(GameObject gObject)
         {
             AddCurve(gObject);
+            Selection.SelectedControllers.ForEach(x =>
+            {
+                if (x.gameObject != gObject && x.transform.IsChildOf(gObject.transform))
+                {
+                    AddCurve(x.gameObject);
+                }
+            });
         }
 
 

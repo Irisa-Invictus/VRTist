@@ -432,7 +432,6 @@ namespace VRtist
                 if (selectedCurve.hasSelection && frame > selectedCurve.StartSelection && frame < selectedCurve.EndSelection)
                 {
                     draggedCurve.manipulation = new CurveManipulation(target, frame, selectedCurve.StartSelection, selectedCurve.EndSelection, mouthpiece, PoseMode);
-
                 }
                 else
                 {

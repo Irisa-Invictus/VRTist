@@ -19,47 +19,45 @@ MonoBehaviour:
   displayAvatars: 1
   displayFPS: 0
   curveForwardOffset: 0
-  masterVolume: 0
-  ambientVolume: -35
-  uiVolume: 0
+  masterVolume: -80
+  ambientVolume: -80
+  uiVolume: 20
   rightHanded: 1
   forcePaletteOpen: 0
-  palettePositionOffset: {x: 0.000000022546576, y: 0.00000014937831, z: 0.00000018776664}
-  paletteRotationOffset: {x: 0, y: 0, z: 0, w: 1.0000002}
+  palettePositionOffset: {x: -0.0000000037252903, y: -0.000000041593108, z: -0.00000005341491}
+  paletteRotationOffset: {x: -0.00000012401516, y: -0.000000026583578, z: 0.000000045534577,
+    w: 1}
   pinnedPalette: 0
-  dopeSheetPosition: {x: -0.20102341, y: 1.4449209, z: -0.4797466}
-  dopeSheetRotation: {x: -0.2056639, y: 0.104210556, z: 0.049000952, w: 0.9718238}
+  dopeSheetPosition: {x: 0.5391502, y: 2.2544308, z: 0.63232046}
+  dopeSheetRotation: {x: -0.20250373, y: 0.44115892, z: -0.04489593, w: 0.8731297}
   dopeSheetVisible: 1
   shotManagerPosition: {x: 0, y: 0, z: 0}
   shotManagerRotation: {x: 0.2588191, y: 0, z: 0, w: 0.9659258}
   shotManagerVisible: 0
-  cameraPreviewPosition: {x: 0, y: 0, z: 0}
-  cameraPreviewRotation: {x: 0.2588191, y: 0, z: 0, w: 0.9659258}
+  cameraPreviewPosition: {x: -0.022972638, y: 1.7386199, z: 2.1961868}
+  cameraPreviewRotation: {x: 0.015608637, y: 0.81867695, z: 0.030221758, w: 0.5732461}
   cameraPreviewVisible: 1
-  cameraFeedbackDirection: {x: 0, y: 0, z: 1}
+  cameraFeedbackDirection: {x: 0.3357751, y: 0.018401418, z: 0.94176245}
   cameraFeedbackScaleValue: 1
   cameraFeedbackMaxScaleValue: 1.7
   cameraFeedbackMinScaleValue: 0.4
   cameraFeedbackVisible: 0
-  cameraDamping: 40.293858
+  cameraDamping: 21.065893
   consoleVisible: 0
   consolePosition: {x: 0.0898, y: 1.674, z: 0.2262}
   consoleRotation: {x: 0.2588191, y: 0, z: 0, w: 0.9659258}
   sky:
-    topColor: {r: 0.49740723, g: 0.49740723, b: 0.49740723, a: 1}
-    middleColor: {r: 0.54176617, g: 0.526234, b: 0.526234, a: 1}
-    bottomColor: {r: 0.48130903, g: 0.48130903, b: 0.48130903, a: 1}
-  skies:
-  - topColor: {r: 0.83137256, g: 0.83137256, b: 0.83137256, a: 1}
-    middleColor: {r: 0.7647059, g: 0.7647059, b: 0.7647059, a: 1}
-    bottomColor: {r: 0.44313726, g: 0.44313726, b: 0.44313726, a: 1}
-  castShadows: 0
+    topColor: {r: 1, g: 1, b: 1, a: 1}
+    middleColor: {r: 0.5653603, g: 0.8141985, b: 0.7995174, a: 1}
+    bottomColor: {r: 1, g: 1, b: 1, a: 1}
+  skies: []
+  castShadows: 1
   videoOutputResolution:
     width: 1920
     height: 1080
-  videoOutputDirectory: D:\VRtistData
-  snapshotsDirectory: D:\VRtistData
-  exportDirectory: D:\VRtistData
+  videoOutputDirectory: 
+  snapshotsDirectory: 
+  exportDirectory: 
   scaleSpeed: 50
   raySliderDrag: 95
   rayHueDrag: 85
@@ -97,5 +95,5 @@ MonoBehaviour:
     m_PostInfinity: 2
     m_RotationOrder: 4
   interpolation: 2
-  assetBankDirectory: D:\VRtistData
+  assetBankDirectory: C:\Users\amirabil\Documents\VRtist
   lobbyScenePath: 

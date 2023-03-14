@@ -459,7 +459,6 @@ namespace VRtist.Serialization
             // ensure VRtist scene
             VRtistScene scene = new VRtistScene();
             SceneManager.SetSceneImpl(scene);
-            GlobalState.SetClientId(null);
 
             try
             {
@@ -500,7 +499,6 @@ namespace VRtist.Serialization
 
             try
             {
-
                 // Lights
                 Loader.LoadLights();
             }

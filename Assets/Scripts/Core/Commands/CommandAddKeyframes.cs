@@ -34,6 +34,7 @@ namespace VRtist
     public class CommandAddKeyframes : CommandGroup
     {
         readonly GameObject gObject;
+        readonly List<GameObject> gObjects = new List<GameObject>();
         public CommandAddKeyframes(GameObject obj, bool updateCurve = true) : base("Add Keyframes")
         {
             gObject = obj;
@@ -132,6 +133,7 @@ namespace VRtist
         public CommandAddKeyframes(GameObject obj, List<GameObject> objs, int frame, int startFrame, int endFrame, List<Dictionary<AnimatableProperty, List<AnimationKey>>> newKeys)
         {
             gObject = obj;
+            gObjects = objs;
             for (int l = 0; l < objs.Count; l++)
             {
                 GameObject go = objs[l];
@@ -157,18 +159,27 @@ namespace VRtist
         public override void Undo()
         {
             base.Undo();
-            GlobalState.Animation.onChangeCurve.Invoke(gObject, AnimatableProperty.PositionX);
+            if (gObjects.Count > 0)
+                gObjects.ForEach(x => GlobalState.Animation.onChangeCurve.Invoke(x, AnimatableProperty.PositionX));
+            else
+                GlobalState.Animation.onChangeCurve.Invoke(gObject, AnimatableProperty.PositionX);
         }
 
         public override void Redo()
         {
             base.Redo();
-            GlobalState.Animation.onChangeCurve.Invoke(gObject, AnimatableProperty.PositionX);
+            if (gObjects.Count > 0)
+                gObjects.ForEach(x => GlobalState.Animation.onChangeCurve.Invoke(x, AnimatableProperty.PositionX));
+            else
+                GlobalState.Animation.onChangeCurve.Invoke(gObject, AnimatableProperty.PositionX);
         }
         public override void Submit()
         {
             base.Submit();
-            GlobalState.Animation.onChangeCurve.Invoke(gObject, AnimatableProperty.PositionX);
+            if (gObjects.Count > 0)
+                gObjects.ForEach(x => GlobalState.Animation.onChangeCurve.Invoke(x, AnimatableProperty.PositionX));
+            else
+                GlobalState.Animation.onChangeCurve.Invoke(gObject, AnimatableProperty.PositionX);
         }
 
     }

@@ -120,7 +120,6 @@ namespace VRtist
         }
 
 
-
         public void ResetControllers()
         {
             List<Vector3> startPositions = new List<Vector3>();

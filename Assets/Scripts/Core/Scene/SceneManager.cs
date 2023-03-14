@@ -48,7 +48,6 @@ namespace VRtist
                     instance = new SceneManager();
                     VRtistScene scene = new VRtistScene();
                     SetSceneImpl(scene);
-                    GlobalState.SetClientId(null);
                 }
                 return instance;
             }
@@ -149,7 +148,7 @@ namespace VRtist
             while (null != parent && parent != RightHanded)
             {
                 controller = parent.GetComponent<ParametersController>();
-                if (controller is RigController) continue;
+                if (controller is RigController) break;
                 if (null != controller && controller.isImported)
                 {
                     controller.isImported = false;
@@ -368,24 +367,6 @@ namespace VRtist
         public static void ListImportableObjects()
         {
             Instance.scene.ListImportableObjects();
-        }
-
-        // User
-        public static void SendUserInfo(Vector3 cameraPosition, Vector3 cameraForward, Vector3 cameraUp, Vector3 cameraRight)
-        {
-            Vector3 target = cameraPosition + cameraForward * 2f;
-
-            GlobalState.networkUser.position = RightHanded.InverseTransformPoint(cameraPosition);
-            GlobalState.networkUser.target = RightHanded.InverseTransformPoint(target);
-
-            Instance.scene.SendUserInfo(cameraPosition, cameraForward, cameraUp, cameraRight);
-        }
-
-        public static void RemoteSave()
-        {
-            CommandManager.SetSceneDirty(false);
-            sceneSavedEvent.Invoke();
-            Instance.scene.RemoteSave();
         }
 
         // helper functions

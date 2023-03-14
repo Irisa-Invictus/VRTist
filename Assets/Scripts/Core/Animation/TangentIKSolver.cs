@@ -61,6 +61,7 @@ namespace VRtist
         public List<AnimationKey> nextKeys;
 
 
+
         double[]
            lowerBound,
            upperBound;
@@ -84,6 +85,15 @@ namespace VRtist
 
             previousKeys = new List<AnimationKey>();
             nextKeys = new List<AnimationKey>();
+        }
+
+        private GameObject CreateDebugSphere(Color color, Transform root)
+        {
+            GameObject sphere = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            sphere.transform.parent = root;
+            sphere.transform.localScale = Vector3.one * 0.25f;
+            sphere.GetComponent<MeshRenderer>().material.color = color;
+            return sphere;
         }
 
         public bool Setup()
@@ -112,7 +122,6 @@ namespace VRtist
                 nextKeys.Add(anim.GetCurve(AnimatableProperty.RotationX).keys[nextKeyIndex]);
                 nextKeys.Add(anim.GetCurve(AnimatableProperty.RotationY).keys[nextKeyIndex]);
                 nextKeys.Add(anim.GetCurve(AnimatableProperty.RotationZ).keys[nextKeyIndex]);
-
             });
 
             double[] theta = GetAllTangents();
@@ -156,8 +165,11 @@ namespace VRtist
                     TT_T[j - 2, j] = -1d;
                 }
             }
-            double wm = 2d;
+            //Target strength
+            double wm = 3d;
+            //Tangent stiffness
             double wb = 1;
+            //Continuity 
             double wd = 1d;
 
             double[,] Q_opt = Maths.Add(Maths.Add(Maths.Multiply(2d * wm, Maths.Multiply(Maths.Transpose(Js), Js)), Maths.Add(Maths.Multiply(2d * wd, DT_D), Maths.Multiply(2d * wb, TT_T))), Maths.Multiply((double)Mathf.Pow(10, -6), Maths.Identity(valueCount)));
@@ -398,33 +410,37 @@ namespace VRtist
         {
             Matrix4x4 trsMatrix = Matrix4x4.identity;
 
-            for (int i = 0; i < animations.Count; i++)
-            {
-                trsMatrix = trsMatrix * GetBoneMatrix(animations[i], frame);
-            }
-
+            //for (int i = 0; i < animations.Count; i++)
+            //{
+            //    trsMatrix = trsMatrix * GetBoneMatrix(animations[i], frame);
+            //}
+            trsMatrix = trsMatrix * GetBoneMatrix(animations[0], frame);
+            trsMatrix = trsMatrix * GetBoneMatrix(animations[1], frame);
             return trsMatrix;
         }
 
-        private Matrix4x4 GetBoneMatrix(AnimationSet anim, int frame)
+        private Matrix4x4 GetBoneMatrix(AnimationSet anim, int frame, bool usepose = true)
         {
             if (null == anim) return Matrix4x4.identity;
             Vector3 position = Vector3.zero;
-            Curve posx = anim.GetCurve(AnimatableProperty.PositionX);
-            Curve posy = anim.GetCurve(AnimatableProperty.PositionY);
-            Curve posz = anim.GetCurve(AnimatableProperty.PositionZ);
-            if (null != posx && null != posy && null != posz)
+            if (usepose)
             {
-                if (posx.Evaluate(frame, out float px) && posy.Evaluate(frame, out float py) && posz.Evaluate(frame, out float pz))
+                Curve posx = anim.GetCurve(AnimatableProperty.PositionX);
+                Curve posy = anim.GetCurve(AnimatableProperty.PositionY);
+                Curve posz = anim.GetCurve(AnimatableProperty.PositionZ);
+                if (null != posx && null != posy && null != posz)
                 {
-                    position = new Vector3(px, py, pz);
+                    if (posx.Evaluate(frame, out float px) && posy.Evaluate(frame, out float py) && posz.Evaluate(frame, out float pz))
+                    {
+                        position = new Vector3(px, py, pz);
+                    }
                 }
             }
             Quaternion rotation = Quaternion.identity;
             Curve rotx = anim.GetCurve(AnimatableProperty.RotationX);
             Curve roty = anim.GetCurve(AnimatableProperty.RotationY);
             Curve rotz = anim.GetCurve(AnimatableProperty.RotationZ);
-            if (null != posx && null != roty && null != rotz)
+            if (null != rotx && null != roty && null != rotz)
             {
                 if (rotx.Evaluate(frame, out float rx) && roty.Evaluate(frame, out float ry) && rotz.Evaluate(frame, out float rz))
                 {
@@ -444,7 +460,6 @@ namespace VRtist
             }
             return Matrix4x4.TRS(position, rotation, scale);
         }
-
     }
 
 }

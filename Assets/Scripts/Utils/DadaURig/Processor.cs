@@ -156,7 +156,6 @@ namespace Dada.URig
                 foreach (var objectDescriptor in rigDescriptor.controllers)
                 {
                     var childTransform = GetTransformByPath(objectDescriptor.path);
-                    Debug.Log(childTransform);
                     VRtist.RigConstraintController controller = childTransform.gameObject.AddComponent<VRtist.RigConstraintController>();
                     if (childTransform.TryGetComponent(out MeshRenderer renderer)) renderer.enabled = false;
                     if (childTransform.TryGetComponent(out Collider collider)) collider.enabled = false;

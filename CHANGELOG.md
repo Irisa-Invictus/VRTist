@@ -1,3 +1,12 @@
+# 0.2.0
+
+##Features
+ - Removed physics tool
+ - Added Animation tool
+ - Added Rigged character import
+ - Removed Mixer integration
+ - Added VRPicker for character using URigs
+
 # 0.1.2
 
 ## Features

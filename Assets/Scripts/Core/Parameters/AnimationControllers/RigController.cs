@@ -39,13 +39,19 @@ namespace VRtist
         public void Start()
         {
             GlobalState.Animation.onFrameEvent.AddListener(RefreshCollider);
+            GlobalState.ObjectMovingEvent.AddListener(RefreshCollider);
             RefreshCollider(GlobalState.Animation.CurrentFrame);
         }
 
         public void RefreshCollider(int frame)
         {
-            Collider.center = RootObject.localPosition + SkinMesh.localBounds.center;
+            Collider.center = RootObject.localPosition;
             Collider.size = SkinMesh.localBounds.size;
+        }
+
+        public void RefreshCollider(GameObject gobject)
+        {
+            if (gobject.transform.IsChildOf(transform)) RefreshCollider(0);
         }
 
         public void OnDisable()

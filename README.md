@@ -85,3 +85,7 @@ The original code is Copyright (C) 2021 Ubisoft.
 All code of the VRtist project is under the MIT license.
 
 All 3D models (FBX files or Unity prefabs) are licensed under the Creative Commons Attribution-NonCommercial-NoDerivatives 4.0 International License. To view a copy of this license, visit http://creativecommons.org/licenses/by-nc-nd/4.0/ or send a letter to Creative Commons, PO Box 1866, Mountain View, CA 94042, USA.
+
+## Acknowledgements
+
+This work is part of the INVICTUS project that has received funding from the European Union’s Horizon 2020 research and innovation programme under grant agreement No 952147. 

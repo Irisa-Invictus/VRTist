@@ -34,7 +34,7 @@ namespace VRtist
 
         public List<Transform> PathToRoot = new List<Transform>();
         public List<AnimationSet> AnimToRoot = new List<AnimationSet>();
-        public AnimationSet Animation;
+        public AnimationSet Animation { get { return GlobalState.Animation.GetObjectAnimation(gameObject); } }
         public RigController RootController;
         public bool ShowCurve = false;
         public Color color;
@@ -74,13 +74,11 @@ namespace VRtist
 
                 AnimToRoot.Add(anim);
             });
-            Animation = GlobalState.Animation.GetObjectAnimation(this.gameObject);
             RootController = controller;
         }
 
         public Vector3 FramePosition(int frame)
         {
-            if (null == Animation) Animation = GlobalState.Animation.GetObjectAnimation(this.gameObject);
             if (null == Animation) return Vector3.zero;
 
             AnimationSet rootAnimation = GlobalState.Animation.GetObjectAnimation(RootController.gameObject);
@@ -104,14 +102,12 @@ namespace VRtist
         /// </summary>
         public Matrix4x4 MatrixAtFrame(int frame)
         {
-            Animation = GlobalState.Animation.GetObjectAnimation(this.gameObject);
             if (null == Animation) return Matrix4x4.identity;
 
             AnimationSet rootAnimation = GlobalState.Animation.GetObjectAnimation(RootController.gameObject);
             Matrix4x4 trsMatrix = RootController.transform.parent.localToWorldMatrix;
             if (null != rootAnimation) trsMatrix = trsMatrix * rootAnimation.GetTRSMatrix(frame);
             else trsMatrix = trsMatrix * Matrix4x4.TRS(RootController.transform.localPosition, RootController.transform.localRotation, RootController.transform.localScale);
-
 
             for (int i = 0; i < PathToRoot.Count; i++)
             {
@@ -123,7 +119,6 @@ namespace VRtist
 
         public Matrix4x4 ParentMatrixAtFrame(int frame)
         {
-            if (null == Animation) Animation = GlobalState.Animation.GetObjectAnimation(this.gameObject);
             if (null == Animation) return Matrix4x4.identity;
 
             AnimationSet rootAnimation = GlobalState.Animation.GetObjectAnimation(RootController.gameObject);
@@ -138,17 +133,17 @@ namespace VRtist
             return trsMatrix;
         }
 
-        public void CheckAnimations()
-        {
-            AnimToRoot.Clear();
-            PathToRoot.ForEach(x =>
-            {
-                AnimationSet anim = GlobalState.Animation.GetOrCreateObjectAnimation(x.gameObject);
-                AnimToRoot.Add(anim);
-                if (x.TryGetComponent(out JointController joint)) joint.Animation = anim;
-            });
-            Animation = GlobalState.Animation.GetObjectAnimation(gameObject);
-        }
+        //public void CheckAnimations()
+        //{
+        //    AnimToRoot.Clear();
+        //    PathToRoot.ForEach(x =>
+        //    {
+        //        AnimationSet anim = GlobalState.Animation.GetOrCreateObjectAnimation(x.gameObject);
+        //        AnimToRoot.Add(anim);
+        //        if (x.TryGetComponent(out JointController joint)) joint.Animation = anim;
+        //    });
+        //    Animation = GlobalState.Animation.GetObjectAnimation(gameObject);
+        //}
 
         public AnimationSet GetParentAnim()
         {

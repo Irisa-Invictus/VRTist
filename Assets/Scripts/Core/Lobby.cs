@@ -116,44 +116,44 @@ namespace VRtist
             // Load the lobby
             if (projectName is null)
             {
-                Transform lobbyGeometryRoot = transform.Find("Environment");
+                //Transform lobbyGeometryRoot = transform.Find("Environment");
 
-                string lobbyName = "Lobby";
-                string lobbyPath = "VRtist_data/";
+                //string lobbyName = "Lobby";
+                //string lobbyPath = "VRtist_data/";
 
-                // DEBUG
-                //GlobalState.Instance.settings.lobbyScenePath = "Lobby";
-                // DEBUG
+                //// DEBUG
+                ////GlobalState.Instance.settings.lobbyScenePath = "Lobby";
+                //// DEBUG
 
-                if (null != GlobalState.Instance.settings.lobbyScenePath && GlobalState.Instance.settings.lobbyScenePath.Length > 0)
-                {
-                    lobbyPath = null;
-                    lobbyName = GlobalState.Instance.settings.lobbyScenePath;
-                    Debug.Log($"Loading user custom lobby scene {lobbyName}");
-                }
+                //if (null != GlobalState.Instance.settings.lobbyScenePath && GlobalState.Instance.settings.lobbyScenePath.Length > 0)
+                //{
+                //    lobbyPath = null;
+                //    lobbyName = GlobalState.Instance.settings.lobbyScenePath;
+                //    Debug.Log($"Loading user custom lobby scene {lobbyName}");
+                //}
 
-                string lobbyFullPath = lobbyName;
-                if (null != lobbyPath)
-                    lobbyFullPath = lobbyPath + lobbyName;
+                //string lobbyFullPath = lobbyName;
+                //if (null != lobbyPath)
+                //    lobbyFullPath = lobbyPath + lobbyName;
 
-                if (null == lobbyPath || Directory.Exists(lobbyFullPath))
-                {
-                    // Load scene
-                    Debug.Log($"Loading lobby scene {lobbyFullPath}");
-                    SaveManager.Instance.Load(lobbyName, lobbyPath);
-                    for (int i = SceneManager.RightHanded.childCount - 1; i >= 0; --i)
-                    {
-                        Transform child = SceneManager.RightHanded.GetChild(i);
-                        if (child.gameObject.activeSelf)
-                            child.SetParent(lobbyGeometryRoot, false);
-                    }
+                //if (null == lobbyPath || Directory.Exists(lobbyFullPath))
+                //{
+                //    // Load scene
+                //    Debug.Log($"Loading lobby scene {lobbyFullPath}");
+                //    SaveManager.Instance.Load(lobbyName, lobbyPath);
+                //    for (int i = SceneManager.RightHanded.childCount - 1; i >= 0; --i)
+                //    {
+                //        Transform child = SceneManager.RightHanded.GetChild(i);
+                //        if (child.gameObject.activeSelf)
+                //            child.SetParent(lobbyGeometryRoot, false);
+                //    }
 
-                    // Set sky
-                    Utils.FindLobbyVolume().profile.TryGet(out GradientSky sky);
-                    sky.top.value = GlobalState.Instance.SkySettings.topColor;
-                    sky.middle.value = GlobalState.Instance.SkySettings.middleColor;
-                    sky.bottom.value = GlobalState.Instance.SkySettings.bottomColor;
-                }
+                //    // Set sky
+                //    Utils.FindLobbyVolume().profile.TryGet(out GradientSky sky);
+                //    sky.top.value = GlobalState.Instance.SkySettings.topColor;
+                //    sky.middle.value = GlobalState.Instance.SkySettings.middleColor;
+                //    sky.bottom.value = GlobalState.Instance.SkySettings.bottomColor;
+                //}
 
                 OnSetVisible(start: true);
             }

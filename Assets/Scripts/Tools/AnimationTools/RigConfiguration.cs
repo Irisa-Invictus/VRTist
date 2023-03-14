@@ -25,7 +25,6 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.NetworkInformation;
-using UnityEditor.UI;
 using UnityEngine;
 namespace VRtist
 {

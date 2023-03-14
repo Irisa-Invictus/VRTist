@@ -81,7 +81,7 @@ namespace VRtist
             transform.parent = controller.transform.parent;
             transform.localPosition = controller.transform.localPosition;
             transform.localRotation = controller.transform.localRotation;
-            transform.localScale = controller.transform.localScale * 0.01f;
+            transform.localScale = Vector3.one;
             generatePositionCurves();
             generateRotationCurves();
             ChangeGizmo(GizmoTool.Rotation);

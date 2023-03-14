@@ -39,7 +39,6 @@ namespace VRtist
     public class GlobalState : MonoBehaviour
     {
         public Settings settings;
-        public NetworkSettings networkSettings;
 
         [Header("Parameters")]
         public PlayerController playerController;
@@ -51,15 +50,6 @@ namespace VRtist
 
         public static Settings Settings { get { return Instance.settings; } }
         public static AnimationEngine Animation { get { return AnimationEngine.Instance; } }
-
-        // Connected users
-        public bool mixerConnected = false;
-        public UnityEvent onConnected = new UnityEvent();
-        public static User networkUser = new User();
-        private readonly Dictionary<string, User> connectedUsers = new Dictionary<string, User>();
-        private readonly Dictionary<string, AvatarController> connectedAvatars = new Dictionary<string, AvatarController>();
-        private GameObject avatarPrefab;
-        private Transform avatarsContainer;
 
         // Selection gripped
         public bool selectionGripped = false;
@@ -192,12 +182,7 @@ namespace VRtist
             instance = Instance;
 
             settings.Load();
-            networkSettings.Load();
 
-            // Get network settings
-            networkUser.name = networkSettings.userName;
-            if (null == networkUser.name || networkUser.name.Length == 0)
-                networkUser.name = "VRtist";
 
             // Sky
             GlobalState.Instance.SkySettings = settings.sky;
@@ -226,9 +211,6 @@ namespace VRtist
             {
                 cameraFeedback.SetActive(settings.cameraFeedbackVisible);
             }
-
-            avatarPrefab = Resources.Load<GameObject>("Prefabs/VR Avatar");
-            avatarsContainer = world.Find("Avatars");
         }
 
         private void UpdateFps()
@@ -288,19 +270,12 @@ namespace VRtist
             SetGizmosVisible(FindObjectsOfType<LightController>(), value);
             SetGizmosVisible(FindObjectsOfType<CameraController>(), value);
             SetGizmosVisible(FindObjectsOfType<ConstraintLineController>(), value);
-            SetDisplayAvatars(value);
         }
 
         public static void SetDisplayLocators(bool value)
         {
             Settings.DisplayLocators = value;
             SetGizmosVisible(FindObjectsOfType<LocatorController>(), value);
-        }
-
-        public static void SetDisplayAvatars(bool value)
-        {
-            Settings.DisplayAvatars = value;
-            SetGizmosVisible(FindObjectsOfType<AvatarController>(), value);
         }
 
         public static void SetGizmoVisible(GameObject gObject, bool value)
@@ -349,61 +324,6 @@ namespace VRtist
         public void OnCameraDamping(float value)
         {
             settings.cameraDamping = value;
-        }
-
-        // Connected users
-        public static void SetClientId(string id)
-        {
-            if (null == id || id.Length == 0)
-            {
-                Instance.mixerConnected = false;
-                networkUser.id = "";
-            }
-            else
-            {
-                Instance.mixerConnected = true;
-                networkUser.id = id;
-                Instance.onConnected.Invoke();
-                RemoveConnectedUser(id); // remove itself from connected users
-            }
-        }
-
-        public static bool HasConnectedUser(string userId)
-        {
-            return Instance.connectedUsers.ContainsKey(userId);
-        }
-
-        public static void AddConnectedUser(User user)
-        {
-            Instance.connectedUsers[user.id] = user;
-            GameObject avatar = Instantiate(Instance.avatarPrefab, Instance.avatarsContainer);
-            avatar.name = $"{user.name} {user.id}";
-            AvatarController controller = avatar.GetComponent<AvatarController>();
-            controller.SetUser(user);
-            Instance.connectedAvatars[user.id] = controller;
-        }
-
-        public static void RemoveConnectedUser(string userId)
-        {
-            if (Instance.connectedUsers.ContainsKey(userId))
-            {
-                Instance.connectedUsers.Remove(userId);
-                GameObject.Destroy(Instance.connectedAvatars[userId].gameObject);
-                Instance.connectedAvatars.Remove(userId);
-            }
-        }
-
-        public static User GetConnectedUser(string userId)
-        {
-            return Instance.connectedUsers[userId];
-        }
-
-        public static void UpdateConnectedUser(User user)
-        {
-            if (Instance.connectedAvatars.ContainsKey(user.id))
-            {
-                Instance.connectedAvatars[user.id].SetUser(user);
-            }
         }
 
         #region VRControllers

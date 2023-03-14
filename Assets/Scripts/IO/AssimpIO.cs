@@ -554,30 +554,33 @@ namespace VRtist
             List<Matrix4x4[]> bindPoses = new List<Matrix4x4[]>();
             List<Assimp.MeshAnimationAttachment> blendMeshes = new List<Assimp.MeshAnimationAttachment>();
             //Debug.Log(node.Name + " / " + parent.name);
+            int totalVertexCount = 0;
 
             int previousVertexCount = 0;
             for (int iMesh = 0; iMesh < node.MeshIndices.Count; iMesh++)
             {
                 Assimp.Mesh currentMesh = scene.Meshes[node.MeshIndices[iMesh]];
+                //TODO: filter bones with no vertex weight
+                totalVertexCount += currentMesh.VertexCount;
                 meshBones.Add(currentMesh.Bones);
                 bonesArray.Add(new Transform[currentMesh.BoneCount]);
                 bindPoses.Add(new Matrix4x4[currentMesh.BoneCount]);
 
                 for (int iBone = 0; iBone < bonesArray[iMesh].Length; iBone++)
                 {
-                    Assimp.Bone currentBones = meshBones[iMesh][iBone];
-                    if (!bones.ContainsKey(currentBones.Name))
+                    Assimp.Bone currentBone = meshBones[iMesh][iBone];
+                    if (!bones.ContainsKey(currentBone.Name))
                     {
-                        Debug.Log("missing bone " + currentBones.Name);
+                        Debug.Log("missing bone " + currentBone.Name);
                         continue;
                     }
-                    bonesArray[iMesh][iBone] = bones[currentBones.Name];
+                    bonesArray[iMesh][iBone] = bones[currentBone.Name];
                     bindPoses[iMesh][iBone] = bonesArray[iMesh][iBone].worldToLocalMatrix;
 
-                    for (int iVertex = 0; iVertex < currentBones.VertexWeightCount; iVertex++)
+                    for (int iVertex = 0; iVertex < currentBone.VertexWeightCount; iVertex++)
                     {
-                        int vertexIndex = currentBones.VertexWeights[iVertex].VertexID + previousVertexCount;
-                        float weight = currentBones.VertexWeights[iVertex].Weight;
+                        int vertexIndex = currentBone.VertexWeights[iVertex].VertexID + previousVertexCount;
+                        float weight = currentBone.VertexWeights[iVertex].Weight;
                         BoneWeight1 boneWeight = new BoneWeight1() { boneIndex = iBone, weight = weight };
                         if (!VertexBonesWeights.ContainsKey(vertexIndex)) VertexBonesWeights.Add(vertexIndex, new List<BoneWeight1>());
                         VertexBonesWeights[vertexIndex].Add(boneWeight);
@@ -600,25 +603,28 @@ namespace VRtist
             List<Matrix4x4> bindPosesFlat = new List<Matrix4x4>();
             bindPoses.ForEach(x => bindPosesFlat.AddRange(x));
             List<BoneWeight> bonesWeightsFlat = new List<BoneWeight>();
-            byte[] bonesPerVertes = new byte[VertexBonesWeights.Count];
+            byte[] bonesPerVertes = new byte[totalVertexCount];
             List<BoneWeight1> bw = new List<BoneWeight1>();
             for (int i = 0; i < VertexBonesWeights.Count; i++)
             {
-                bonesPerVertes[i] = (byte)VertexBonesWeights[i].Count;
-                VertexBonesWeights[i].Sort((x, y) =>
+                if (VertexBonesWeights.TryGetValue(i, out List<BoneWeight1> boneWeights))
                 {
-                    if (x == null)
+                    bonesPerVertes[i] = (byte)boneWeights.Count;
+                    boneWeights.Sort((x, y) =>
                     {
-                        if (y == null) return 0;
-                        else return -1;
-                    }
-                    else
-                    {
-                        if (y == null) return 1;
-                        else return -x.weight.CompareTo(y.weight);
-                    }
-                });
-                bw.AddRange(VertexBonesWeights[i]);
+                        if (x == null)
+                        {
+                            if (y == null) return 0;
+                            else return -1;
+                        }
+                        else
+                        {
+                            if (y == null) return 1;
+                            else return -x.weight.CompareTo(y.weight);
+                        }
+                    });
+                    bw.AddRange(boneWeights);
+                }
             }
             Transform root = null;
             for (int i = 0; i < bonesArrayFlat.Count; i++)
@@ -636,11 +642,13 @@ namespace VRtist
             meshRenderer.sharedMesh.name = meshes[node.MeshIndices[0]].name;
             meshRenderer.sharedMaterials = mats;
             meshRenderer.rootBone = root;
-            if (meshRenderer.sharedMesh.bounds.size.magnitude > meshSize.magnitude)
+            meshRenderer.sharedMesh.RecalculateBounds();
+            if (bodyMesh == null) bodyMesh = meshRenderer;
+            else if (bodyMesh.bounds.size.magnitude < meshRenderer.sharedMesh.bounds.size.magnitude) bodyMesh = meshRenderer;
+            if (bodyMesh.sharedMesh.bounds.size.magnitude > meshSize.magnitude)
             {
                 meshCenter = meshRenderer.bounds.center;
                 meshSize = meshRenderer.bounds.size;
-                bodyMesh = meshRenderer;
             }
 
             foreach (Assimp.MeshAnimationAttachment blendShape in blendMeshes)
@@ -689,6 +697,9 @@ namespace VRtist
         }
         Matrix4x4 invers = Matrix4x4.identity;
 
+        /// <summary>
+        /// import scene hierarchy, try to fix import errors due to assimp creating pivot objects.
+        /// </summary>
         private IEnumerator ImportHierarchy(Assimp.Node node, Transform parent, GameObject go, Matrix4x4 cumulMatrix, Quaternion preRotation)
         {
             if (parent != null && parent != go.transform)
@@ -706,21 +717,18 @@ namespace VRtist
                 );
 
             Maths.DecomposeMatrix(nodeMatrix, out Vector3 np, out Quaternion nr, out Vector3 ns);
-            //Debug.Log(node.Name + " " + np + " " + nr + " " + ns);
 
             int metadataCount = node.Metadata.Count;
 
 
             if ((node.Name.Contains("ctrl") || node.Name.Contains("grp")) && node.Name.Contains("ScalingPivotInverse"))
             {
-                invers = /*invers **/ nodeMatrix;
-                //Debug.Log(node.Name);
+                invers = nodeMatrix;
             }
 
             cumulMatrix = cumulMatrix * nodeMatrix;
-            //if (node.Metadata.TryGetValue("ScalingMax", out Assimp.Metadata.Entry val)) Debug.Log(val.DataAs<Assimp.Vector3D>().Value.X);
 
-            if (metadataCount == 0)
+            if (!node.Name.Contains("Root") && metadataCount == 0)
             {
                 if (blocking)
                     ImportHierarchy(node.Children[0], parent, go, cumulMatrix, preRotation).MoveNext();
@@ -729,28 +737,20 @@ namespace VRtist
             }
             else
             {
-                string nodeInfo = node.Name + '\n';
-                foreach (KeyValuePair<string, Assimp.Metadata.Entry> pair in node.Metadata)
-                {
-                    nodeInfo += pair.Key + " " + pair.Value.ToString() + " " + pair.Value.GetType() + " " + pair.Value.Data + '\n';
-                }
-                //Debug.Log(nodeInfo);
                 Maths.DecomposeMatrix(cumulMatrix /** invers.inverse*/, out Vector3 cumulPosition, out Quaternion cumulRotation, out Vector3 cumulScale);
                 if (isHuman && node.Name.Contains("grp"))
-                //&& node.Metadata.TryGetValue(" IsNull", out Assimp.Metadata.Entry isNull) && !(bool)isNull.DataAs<bool>())
                 {
                     cumulPosition *= 0.2f;
                 }
                 if (node.Metadata.TryGetValue("IsNull", out Assimp.Metadata.Entry isNull2) && (bool)isNull2.DataAs<bool>())
                 {
                     invers = Matrix4x4.identity;
-                    //Debug.Log("isNullBone " + node.Name);
                 }
 
                 AssignMeshes(node, go, invers);
                 if (node.Parent != null)
                 {
-                    go.transform.localPosition = cumulPosition; // new Vector3(cumulPosition.x * inversp.x, cumulPosition.y * inversp.y, cumulPosition.z * inversp.z);
+                    go.transform.localPosition = cumulPosition;
                     go.transform.localRotation = cumulRotation;
                     go.transform.localScale = cumulScale;
                     go.name = isHuman ? node.Name : Utils.CreateUniqueName(node.Name);
@@ -783,63 +783,6 @@ namespace VRtist
                 //}
             }
         }
-
-        private IEnumerator ImportHierarchy(Assimp.Node node, Transform parent, GameObject go)
-        {
-            if (parent != null && parent != go.transform)
-                go.transform.parent = parent;
-
-            GlobalState.Instance.messageBox.ShowMessage("Importing Hierarchy : " + importCount);
-            
-            // Do not use Assimp Decompose function, it does not work properly
-            // use unity decomposition instead
-            Matrix4x4 mat = new Matrix4x4(
-                new Vector4(node.Transform.A1, node.Transform.B1, node.Transform.C1, node.Transform.D1),
-                new Vector4(node.Transform.A2, node.Transform.B2, node.Transform.C2, node.Transform.D2),
-                new Vector4(node.Transform.A3, node.Transform.B3, node.Transform.C3, node.Transform.D3),
-                new Vector4(node.Transform.A4, node.Transform.B4, node.Transform.C4, node.Transform.D4)
-                );
-            Vector3 position, scale;
-            Quaternion rotation;
-            Maths.DecomposeMatrix(mat, out position, out rotation, out scale);
-
-            node.Transform.Decompose(out Assimp.Vector3D scale1, out Assimp.Quaternion rot, out Assimp.Vector3D trans);
-
-            AssignMeshes(node, go, Matrix4x4.identity);
-
-            if (node.Parent != null)
-            {
-                go.transform.localPosition = position;
-                go.transform.localRotation = rotation;
-                go.transform.localScale = scale;
-                go.name = isHuman ? node.Name : Utils.CreateUniqueName(node.Name);
-                if (isHuman)
-                {
-                    if (bones.ContainsKey(node.Name))
-                    {
-                        bones[node.Name] = go.transform;
-                    }
-                    if (node.Name.Contains("Hips")) rootBone = go.transform;
-                }
-            }
-
-
-            if (scene.HasAnimations)
-            {
-                ImportAnimation(node, go, Quaternion.identity);
-            }
-
-            importCount++;
-            foreach (Assimp.Node assimpChild in node.Children)
-            {
-                GameObject child = new GameObject();
-                if (blocking)
-                    ImportHierarchy(assimpChild, go.transform, child).MoveNext();
-                else
-                    yield return StartCoroutine(ImportHierarchy(assimpChild, go.transform, child));
-            }
-        }
-
 
         private void ImportAnimation(Assimp.Node node, GameObject go, Quaternion cumulRotation)
         {

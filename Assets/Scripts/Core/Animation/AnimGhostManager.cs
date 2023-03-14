@@ -65,7 +65,6 @@ namespace VRtist
                 {
                     Sphere = GameObject.CreatePrimitive(PrimitiveType.Sphere);
                     Sphere.GetComponent<MeshRenderer>().material.color = controller.color;
-                    controller.CheckAnimations();
                 }
                 else
                     Sphere = new GameObject();

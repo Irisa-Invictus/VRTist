@@ -37,6 +37,9 @@ namespace VRtist
 
         public struct ObjectData
         {
+            /// <summary>
+            /// Store copy of animation to apply single update on release (for undo/redo)
+            /// </summary>
             public AnimationSet Animation;
             public Matrix4x4 InitialParentMatrixLocalToWorld;
             public Matrix4x4 InitialParentMatrixWorldToLocal;
@@ -53,22 +56,38 @@ namespace VRtist
 
         public struct HumanData
         {
+            /// <summary>
+            /// Target being moved
+            /// </summary>
             public JointController Controller;
+            /// <summary>
+            /// Parent hierarchy being affected until joint target
+            /// </summary>
             public List<JointController> Hierarchy;
+            /// <summary>
+            /// Store copy of animations to apply single update on release (for undo/redo)
+            /// </summary>
             public List<AnimationSet> JointAnimations;
+            /// <summary>
+            /// Target object animation
+            /// </summary>
             public AnimationSet ObjectAnimation;
+            /// <summary>
+            /// Position of the joint in relation of first object in hierarchy
+            /// </summary>
             public Matrix4x4 InitFrameMatrix;
             public TangentIKSolver Solver;
+            /// <summary>
+            /// Object's root
+            /// </summary>
             public Transform rootTransform;
         }
         private HumanData humanData;
 
-
+        /// <summary>
+        /// Initial mouthpiece world to local
+        /// </summary>
         private Matrix4x4 initialMouthMatrix;
-
-        private double continuity;
-        private Transform _mouthpiece;
-        private AnimationTool.PoseEditMode _poseMode;
 
         private bool isRig;
 
@@ -76,15 +95,14 @@ namespace VRtist
         {
             Target = target;
             Frame = frame;
-            _mouthpiece = mouthpiece;
-            _poseMode = poseMode;
             initialMouthMatrix = mouthpiece.worldToLocalMatrix;
 
-            if (target.TryGetComponent(out JointController jointController))
+            //If target doesn't have a parent joint (root joint) then should behave like a non-rig object
+            if (target.TryGetComponent(out JointController jointController) && jointController.TryGetParentJoint(out JointController parent))
             {
                 isRig = true;
-                if (poseMode == AnimationTool.PoseEditMode.FK) RigFKZone(jointController, frame, startSelection, endSelection, mouthpiece);
-                else RigIKZone(jointController, frame, startSelection, endSelection, mouthpiece);
+                if (poseMode == AnimationTool.PoseEditMode.FK) RigFKZone(jointController, parent, frame, startSelection, endSelection);
+                else RigIKZone(jointController, parent, frame, startSelection, endSelection);
             }
             else
             {
@@ -97,15 +115,14 @@ namespace VRtist
         {
             Target = target;
             Frame = frame;
-            _mouthpiece = mouthpiece;
-            _poseMode = poseMode;
             initialMouthMatrix = mouthpiece.worldToLocalMatrix;
-            if (target.TryGetComponent(out JointController jointController))
+            //If target doesn't have a parent joint (root joint) then should behave like a non-rig object
+            if (target.TryGetComponent(out JointController jointController) && jointController.TryGetParentJoint(out JointController parent))
             {
                 isRig = true;
 
-                if (poseMode == AnimationTool.PoseEditMode.FK) RigFKPoint(jointController, frame, mouthpiece);
-                else RigIKPoint(jointController, frame, mouthpiece);
+                if (poseMode == AnimationTool.PoseEditMode.FK) RigFKPoint(jointController, parent, frame);
+                else RigIKPoint(jointController, parent, frame);
             }
             else
             {
@@ -185,139 +202,140 @@ namespace VRtist
                new AnimationKey(frame, scaz));
 
         }
-        private void RigFKPoint(JointController joint, int frame, Transform mouthpiece)
+        /// <summary>
+        ///  Set start frame and end frame with previous and next keyframe from frame, then call RigFk
+        /// </summary>
+        private void RigFKPoint(JointController joint, JointController parent, int frame)
         {
-            List<JointController> controllerHierarchy = new List<JointController>();
-            List<AnimationSet> animations = new List<AnimationSet>();
 
             startFrame = joint.Animation.GetCurve(AnimatableProperty.RotationX).GetPreviousKey(frame).frame;
             endFrame = joint.Animation.GetCurve(AnimatableProperty.RotationX).GetNextKey(frame).frame;
 
-            if (joint.TryGetParentJoint(out JointController parent))
-            {
-                controllerHierarchy.Add(parent);
-                animations.Add(new AnimationSet(parent.Animation));
-            }
-            Transform rTransform = controllerHierarchy.Count > 0 ? controllerHierarchy[0].Parent : joint.transform.parent;
-            humanData = new HumanData()
-            {
-                Controller = joint,
-                ObjectAnimation = new AnimationSet(joint.Animation),
-                Hierarchy = controllerHierarchy,
-                InitFrameMatrix = joint.MatrixAtFrame(frame),
-                JointAnimations = animations,
-                rootTransform = rTransform
-            };
+            RigFK(joint, parent, frame);
         }
-        private void RigIKPoint(JointController joint, int frame, Transform mouthpiece)
+
+        /// <summary>
+        /// Copy start frame and end frame, then call RigFk
+        /// </summary>
+        private void RigFKZone(JointController joint, JointController parent, int frame, int startFrame, int endFrame)
         {
-            List<JointController> controllerHierarchy = new List<JointController>();
-            List<AnimationSet> animations = new List<AnimationSet>();
-
-            startFrame = joint.Animation.GetCurve(AnimatableProperty.RotationX).GetPreviousKey(frame).frame;
-            endFrame = joint.Animation.GetCurve(AnimatableProperty.RotationX).GetNextKey(frame).frame;
-
-            if (joint.TryGetParentJoint(out JointController parent))
-            {
-                if (parent.TryGetParentJoint(out JointController grandPa))
-                {
-                    controllerHierarchy.Add(grandPa);
-                    animations.Add(new AnimationSet(grandPa.Animation));
-                }
-                controllerHierarchy.Add(parent);
-                animations.Add(new AnimationSet(parent.Animation));
-            }
-
-            Transform rTransform = controllerHierarchy.Count > 0 ? controllerHierarchy[0].Parent : joint.transform.parent;
-
-            humanData = new HumanData()
-            {
-                Controller = joint,
-                ObjectAnimation = new AnimationSet(joint.Animation),
-                Hierarchy = controllerHierarchy,
-                InitFrameMatrix = joint.MatrixAtFrame(frame),
-                JointAnimations = animations,
-                rootTransform = rTransform
-            };
-        }
-        private void RigFKZone(JointController joint, int frame, int startFrame, int endFrame, Transform mouthpiece)
-        {
-            List<JointController> controllerHierarchy = new List<JointController>();
-            List<AnimationSet> animations = new List<AnimationSet>();
-
             this.startFrame = startFrame;
             this.endFrame = endFrame;
-
-            if (joint.TryGetParentJoint(out JointController parent))
-            {
-                controllerHierarchy.Add(parent);
-                animations.Add(new AnimationSet(parent.Animation));
-            }
-            Transform rTransform = controllerHierarchy.Count > 0 ? controllerHierarchy[0].Parent : joint.transform.parent;
-            humanData = new HumanData()
-            {
-                Controller = joint,
-                ObjectAnimation = new AnimationSet(joint.Animation),
-                Hierarchy = controllerHierarchy,
-                InitFrameMatrix = joint.MatrixAtFrame(frame),
-                JointAnimations = animations,
-                rootTransform = rTransform
-            };
+            RigFK(joint, parent, frame);
         }
-        private void RigIKZone(JointController joint, int frame, int startFrame, int endFrame, Transform mouthpiece)
+
+        /// <summary>
+        /// Initialize HumanData for FK
+        /// </summary>
+        private void RigFK(JointController joint, JointController parent, int frame)
         {
             List<JointController> controllerHierarchy = new List<JointController>();
             List<AnimationSet> animations = new List<AnimationSet>();
 
-            this.startFrame = startFrame;
-            this.endFrame = endFrame;
-
-            if (joint.TryGetParentJoint(out JointController parent))
+            controllerHierarchy.Add(parent);
+            animations.Add(new AnimationSet(parent.Animation));
+            Matrix4x4 baseMatrix = Matrix4x4.identity;
+            if (parent.TryGetParentJoint(out JointController baseController))
             {
-                if (parent.TryGetParentJoint(out JointController grandPa))
-                {
-                    controllerHierarchy.Add(grandPa);
-                    animations.Add(new AnimationSet(grandPa.Animation));
-                }
-                controllerHierarchy.Add(parent);
-                animations.Add(new AnimationSet(parent.Animation));
-            }
-
-            Transform rTransform = controllerHierarchy.Count > 0 ? controllerHierarchy[0].Parent : joint.transform.parent;
-
-            humanData = new HumanData()
-            {
-                Controller = joint,
-                ObjectAnimation = new AnimationSet(joint.Animation),
-                Hierarchy = controllerHierarchy,
-                InitFrameMatrix = joint.MatrixAtFrame(frame),
-                JointAnimations = animations,
-                rootTransform = rTransform
-            };
-        }
-
-
-        internal void DragCurve(Transform mouthpiece)
-        {
-            //TODO: add scale
-            Matrix4x4 transformation = mouthpiece.localToWorldMatrix * initialMouthMatrix;
-            if (isRig)
-            {
-                Matrix4x4 target = transformation * humanData.InitFrameMatrix;
-                Matrix4x4 localTarget = humanData.rootTransform.TryGetComponent(out JointController parentJoint) ? parentJoint.MatrixAtFrame(Frame).inverse : humanData.rootTransform.localToWorldMatrix.inverse;
-                //Debug.Log("object name " + humanData.ObjectAnimation.transform.name);
-                //Debug.Log("object befor " + humanData.ObjectAnimation.GetCurve(AnimatableProperty.RotationX).keys[0].outTangent);
-
-                Maths.DecomposeMatrix(localTarget * target, out Vector3 targetPos, out Quaternion targetRot, out Vector3 targetScale);
-
-
-                TangentIKSolver solver = new TangentIKSolver(humanData.Controller, targetPos, targetRot, Frame, startFrame, endFrame, humanData.Hierarchy, localTarget);
-                solver.Setup();
-                humanData.Solver = solver;
-                GlobalState.Animation.onChangeCurve.Invoke(humanData.Controller.gameObject, AnimatableProperty.PositionX);
+                baseMatrix = Matrix4x4.Inverse(baseController.MatrixAtFrame(frame));
             }
             else
             {
+                baseMatrix = parent.transform.parent.worldToLocalMatrix;
+            }
+
+            humanData = new HumanData()
+            {
+                Controller = joint,
+                ObjectAnimation = new AnimationSet(joint.Animation),
+                Hierarchy = controllerHierarchy,
+                InitFrameMatrix = baseMatrix,
+                JointAnimations = animations,
+                rootTransform = joint.RootController.transform
+            };
+        }
+
+        #region IKManip
+        /// <summary>
+        /// Set start frame and end frame with previous and next keyframe from frame, then call RigIK
+        /// </summary>
+        private void RigIKPoint(JointController joint, JointController parent, int frame)
+        {
+            startFrame = joint.Animation.GetCurve(AnimatableProperty.RotationX).GetPreviousKey(frame).frame;
+            endFrame = joint.Animation.GetCurve(AnimatableProperty.RotationX).GetNextKey(frame).frame;
+            RigIK(joint, parent, frame);
+        }
+
+        /// <summary>
+        /// Copy start frame and end frame, then call RigIk
+        /// </summary>
+        private void RigIKZone(JointController joint, JointController parent, int frame, int startFrame, int endFrame)
+        {
+            this.startFrame = startFrame;
+            this.endFrame = endFrame;
+            RigIK(joint, parent, frame);
+        }
+
+        /// <summary>
+        /// Initialize HumanData for IK
+        /// </summary>
+        private void RigIK(JointController joint, JointController parent, int frame)
+        {
+            List<JointController> controllerHierarchy = new List<JointController>();
+            List<AnimationSet> animations = new List<AnimationSet>();
+            if (parent.TryGetParentJoint(out JointController grandPa))
+            {
+                controllerHierarchy.Add(grandPa);
+                animations.Add(new AnimationSet(grandPa.Animation));
+            }
+            controllerHierarchy.Add(parent);
+            animations.Add(new AnimationSet(parent.Animation));
+
+            Transform rTransform = controllerHierarchy.Count > 0 ? controllerHierarchy[0].Parent : joint.transform.parent;
+
+            Matrix4x4 baseMatrix = Matrix4x4.identity;
+            if (controllerHierarchy[0].TryGetParentJoint(out JointController baseController))
+            {
+                baseMatrix = Matrix4x4.Inverse(baseController.MatrixAtFrame(frame));
+            }
+            else
+            {
+                baseMatrix = parent.transform.parent.worldToLocalMatrix;
+            }
+
+            humanData = new HumanData()
+            {
+                Controller = joint,
+                ObjectAnimation = new AnimationSet(joint.Animation),
+                Hierarchy = controllerHierarchy,
+                InitFrameMatrix = baseMatrix,
+                JointAnimations = animations,
+                rootTransform = rTransform
+            };
+        }
+        #endregion
+
+        /// <summary>
+        /// Move the curve using tangent solvers to follow mouthpiece
+        /// </summary>
+        internal void DragCurve(Transform mouthpiece)
+        {
+            //TODO: add scale
+            Matrix4x4 mouthpieceWorldPosition = Matrix4x4.TRS(mouthpiece.position, mouthpiece.rotation, mouthpiece.lossyScale);
+            if (isRig)
+            {
+                Matrix4x4 target = humanData.InitFrameMatrix * mouthpieceWorldPosition;
+                Maths.DecomposeMatrix(target, out Vector3 targetPos, out Quaternion targetRot, out Vector3 targetScale);
+
+                TangentIKSolver solver = new TangentIKSolver(humanData.Controller, targetPos, targetRot, Frame, startFrame, endFrame, humanData.Hierarchy, target);
+                solver.Setup();
+                humanData.Solver = solver;
+                GlobalState.Animation.onChangeCurve.Invoke(humanData.Controller.gameObject, AnimatableProperty.PositionX);
+                humanData.Hierarchy.ForEach(x => GlobalState.Animation.onChangeCurve.Invoke(x.gameObject, AnimatableProperty.PositionX));
+            }
+            else
+            {
+                Matrix4x4 transformation = mouthpiece.localToWorldMatrix * initialMouthMatrix;
                 Matrix4x4 transformed = objectData.InitialParentMatrixWorldToLocal *
                 transformation * objectData.InitialParentMatrixLocalToWorld *
                 objectData.InitialTRS;
@@ -333,6 +351,9 @@ namespace VRtist
             }
         }
 
+        /// <summary>
+        /// Stop moving the curve and update keyframes with current curve values 
+        /// </summary>
         internal void ReleaseCurve()
         {
             if (isRig)
@@ -340,28 +361,28 @@ namespace VRtist
                 List<GameObject> objectList = new List<GameObject>();
                 List<Dictionary<AnimatableProperty, List<AnimationKey>>> keyframesLists = new List<Dictionary<AnimatableProperty, List<AnimationKey>>>();
 
-                for (int iHier = 0; iHier < humanData.Hierarchy.Count; iHier++)
+                for (int iHierarchy = 0; iHierarchy < humanData.Hierarchy.Count; iHierarchy++)
                 {
-                    if (null == humanData.Controller.AnimToRoot[iHier]) continue;
+                    if (null == humanData.Controller.AnimToRoot[iHierarchy]) continue;
                     keyframesLists.Add(new Dictionary<AnimatableProperty, List<AnimationKey>>());
-                    for (int pIndex = 0; pIndex < 3; pIndex++)
+                    for (int iProperty = 0; iProperty < 3; iProperty++)
                     {
-                        AnimatableProperty property = (AnimatableProperty)pIndex + 3;
+                        AnimatableProperty property = (AnimatableProperty)iProperty + 3;
                         List<AnimationKey> keys = new List<AnimationKey>();
-                        int curveIndex = iHier * 3 + pIndex;
+                        int curveIndex = iHierarchy * 3 + iProperty;
                         keys.Add(humanData.Solver.previousKeys[curveIndex]);
                         keys.Add(humanData.Solver.nextKeys[curveIndex]);
                         keyframesLists[keyframesLists.Count - 1].Add(property, keys);
                     }
-                    GlobalState.Animation.SetObjectAnimations(humanData.Hierarchy[iHier].gameObject, humanData.JointAnimations[iHier]);
-                    objectList.Add(humanData.Hierarchy[iHier].gameObject);
+                    GlobalState.Animation.SetObjectAnimations(humanData.Hierarchy[iHierarchy].gameObject, humanData.JointAnimations[iHierarchy]);
+                    objectList.Add(humanData.Hierarchy[iHierarchy].gameObject);
                 }
                 keyframesLists.Add(new Dictionary<AnimatableProperty, List<AnimationKey>>());
-                for (int pIndex = 0; pIndex < 3; pIndex++)
+                for (int iProperty = 0; iProperty < 3; iProperty++)
                 {
-                    AnimatableProperty property = (AnimatableProperty)pIndex + 3;
+                    AnimatableProperty property = (AnimatableProperty)iProperty + 3;
                     List<AnimationKey> keys = new List<AnimationKey>();
-                    int curveIndex = humanData.Hierarchy.Count * 3 + pIndex;
+                    int curveIndex = humanData.Hierarchy.Count * 3 + iProperty;
                     keys.Add(humanData.Solver.previousKeys[curveIndex]);
                     keys.Add(humanData.Solver.nextKeys[curveIndex]);
                     keyframesLists[keyframesLists.Count - 1].Add(property, keys);
@@ -382,15 +403,15 @@ namespace VRtist
                 GlobalState.Animation.SetObjectAnimations(Target, objectData.Animation);
                 CommandGroup group = new CommandGroup("Add Keyframe");
                 Dictionary<AnimatableProperty, List<AnimationKey>> keyList = new Dictionary<AnimatableProperty, List<AnimationKey>>();
-                for (int prop = 0; prop < 6; prop++)
+                for (int iProperty = 0; iProperty < 6; iProperty++)
                 {
-                    AnimatableProperty property = (AnimatableProperty)prop;
+                    AnimatableProperty property = (AnimatableProperty)iProperty;
                     keyList.Add(property, new List<AnimationKey>());
                     int firstKey = objectData.Solver.previousKeyIndex;
                     int lastKey = objectData.Solver.nextKeyIndex;
-                    for (int i = firstKey; i <= lastKey; i++)
+                    for (int iKey = firstKey; iKey <= lastKey; iKey++)
                     {
-                        keyList[property].Add(objectData.Solver.ObjectAnimation.GetCurve(property).keys[i]);
+                        keyList[property].Add(objectData.Solver.ObjectAnimation.GetCurve(property).keys[iKey]);
                     }
                 }
                 new CommandAddKeyframes(Target, Frame, startFrame, endFrame, keyList).Submit();

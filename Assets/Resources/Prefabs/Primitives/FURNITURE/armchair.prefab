@@ -13,7 +13,7 @@ GameObject:
   - component: {fileID: 3565568747532763499}
   - component: {fileID: 1929011837480575318}
   m_Layer: 0
-  m_Name: fauteuil
+  m_Name: armchair
   m_TagString: PhysicObject
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
